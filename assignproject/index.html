@@ -9,75 +9,81 @@
         maximum-scale=5.0,
         minimum-scale=1.0,
         user-scalable=yes" />
-    <meta name="description" content="여기에 텍스트 입력" />
-    <title>Practice-01</title>
+    <meta name="description" content="1만 시간의 법칙 - 전문가가 되기 위한 훈련 시간 계산기" />
+    <title>1만 시간의 법칙</title>
 
     <link rel="stylesheet" href="./styles/reset.css" />
     <link rel="stylesheet" href="./styles/base.css" />
     <link rel="stylesheet" href="./styles/layout.css" />
     <link rel="stylesheet" href="./styles/main.css" />
+    <link rel="stylesheet" href="./styles/components.css" />
 </head>
 <body>
-    <div class="pageone">
+    <div class="page-wrapper">
         <main>
             <section class="hero">
-                <div class="hero-img">
+                <h2 class="sr-only">소개</h2>
+                <figure class="hero-img">
                     <img class="hero-title" src="./img/title.png" alt="1만 시간의 법칙"/>
                     <img class="hero-clock" src="./img/clock.png" alt="" />
-                </div>
+                </figure>
                 <p class="hero-say">
-                    “연습은 어제의 당신보다 당신을 더 낫게 만든다.”
+                    "연습은 어제의 당신보다 당신을 더 낫게 만든다."
                 </p>
             </section>
             <section class="description">
-                <div class="dercription-img">
-                    <img class="description-quoteleft" src="./img/“.png" alt="" />
+                <h2 class="sr-only">1만 시간의 법칙 설명</h2>
+                <blockquote class="description-inner">
+                    <img class="description-quote-open" src="./img/%E2%80%9C.png" alt="" />
                     <p class="description-text">
                         <span>1만 시간의 법칙</span>은 <br />
                         어떤 분야의 전문가가 되기 위해서는 <br />
                         최소한 1만 시간의 훈련이 필요하다는 법칙이다.
                     </p>
-                    <img class="description-quoteright" src="./img/”.png" alt="" />
-                </div>
+                    <img class="description-quote-close" src="./img/%E2%80%9D.png" alt="" />
+                </blockquote>
             </section>
             <section class="aim">
-                <div class="aim-input">
+                <h2 class="sr-only">훈련 시간 계산기</h2>
+                <fieldset class="aim-input">
+                    <legend class="sr-only">훈련 목표 입력</legend>
                     <label class="aim-label aim-label-goal">
                         <span>나는</span>
-                        <input class="aim-label-goal" type="text" placeholder="예&#41;프로그래밍">
+                        <input class="aim-label-goal" type="text" placeholder="예&#41;프로그래밍" aria-label="목표 분야 입력">
                         <span>전문가가 될 것이다.</span>
                     </label>
                     <br>
                     <label class="aim-label aim-label-time">
                         <span>그래서 앞으로 매일 하루에</span>
-                        <input class="aim-label-time" type="text" placeholder="예&#41;5시간">
+                        <input class="aim-label-time" type="text" placeholder="예&#41;5시간" aria-label="하루 훈련 시간 입력">
                         <span>시간씩 훈련할 것이다.</span>
                     </label>
-                </div>
+                </fieldset>
                 <div class="aim-submit">
-                    <button class="btn btn-yellow">
+                    <button class="btn btn-calculate">
                         나는 며칠 동안 훈련을 해야 1만 시간이 될까?
                     </button>
                     <img src="./img/click.png" alt="" />
                 </div>
-                <div class="aim-output">
-                    <div class="row1">
+                <output class="aim-output" aria-live="polite">
+                    <p class="aim-result-row-goal">
                         <span>당신은</span>
                         <span class="aim-result-goal">프로그래밍</span>
                         <span>전문가가 되기 위해서</span>
-                    </div>
-                    <div class="row2">
+                    </p>
+                    <p class="aim-result-row-days">
                         <span>대략</span>
-                        <span class="aim-result-days">1111</span>
+                        <span class="aim-result-days">5110</span>
                         <span>일 이상 훈련하셔야 합니다! :&#41</span>
-                    </div>
-                </div>
+                    </p>
+                </output>
             </section>
             <section class="action">
-                <button class="btn btn_yellow" onclick="openModal()">
+                <h2 class="sr-only">훈련 시작</h2>
+                <button class="btn btn-primary" onclick="openModal()">
                     훈련하러 가기 GO! GO!
                 </button>
-                <button class="btn btn-white">
+                <button class="btn btn-secondary">
                     공유하기
                 </button>
             </section>
@@ -89,24 +95,24 @@
             </p>
         </footer>
     </div>
-    <div class="cheer-page" id="cheerPage">
+    <dialog class="cheer-page" id="cheerPage" role="dialog" aria-modal="true" aria-labelledby="cheerTitle">
         <div class="cheer-box">
-            <h2 class="cheer-title">화이팅!!♥♥♥</h2>
-            <p class="cheer-sub">당신의 꿈을 응원합니다!</p>
+            <h2 class="cheer-title" id="cheerTitle">화이팅!!♥♥♥</h2>
+            <p class="cheer-subtitle">당신의 꿈을 응원합니다!</p>
             <img class="cheer-img" src="./img/라이캣.png" alt="응원 캐릭터 라이캣" />
             <button class="btn cheer-btn" onclick="closeCheer()">
                 종료하고 진짜 훈련하러 가기 GO!GO!
             </button>
         </div>
-    </div>
+    </dialog>
 
     <script>
         function openModal() {
-            document.getElementById('cheerPage').classList.add('active');
-        }
+    document.getElementById('cheerPage').showModal();
+}
         function closeCheer() {
-            document.getElementById('cheerPage').classList.remove('active');
-        }
+    document.getElementById('cheerPage').close();
+}
     </script>
 </body>
 </html>

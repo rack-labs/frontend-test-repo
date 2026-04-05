@@ -1,9 +1,10 @@
 body {
   background-color: #5b2386;
   font-family: "GMarketSans", sans-serif;
+  text-align: center;
 }
 
-.pageone {
+.page-wrapper {
   max-width: 1920px;
   width: 100%;
   display: flex;
@@ -14,8 +15,8 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60px 20px 80px;
-  gap: 80px;
+  padding: 6rem 2rem 13rem;
+  gap: 12rem;
 }
 
 .hero {
@@ -33,34 +34,47 @@ main {
 
 .hero-title {
   position: absolute;
-  width: 480px;
+  width: 56.4rem;
+  height: 11.2rem;
+}
+
+.hero-clock {
+  width: 26.1rem;
+  height: 26.5rem;
+}
+
+.hero-say {
+  margin-top: 8rem;
 }
 
 .description {
   display: flex;
   text-align: center;
-  margin-top: -20px;
+  margin-top: 4rem;
 }
 
-.dercription-img {
+.description-inner {
   display: flex;
   flex-direction: row;
   justify-content: center;
   align-items: center;
+  gap: 1rem;
 }
 
-.description-quoteleft {
-  width: 33px;
+.description-quote-open {
+  width: 3.3rem;
   flex-shrink: 0;
   align-self: flex-start;
-  margin-top: -8px;
 }
 
-.description-quoteright {
-  width: 33px;
+.description-text {
+  line-height: 1.7;
+}
+
+.description-quote-close {
+  width: 3.3rem;
   flex-shrink: 0;
   align-self: flex-start;
-  margin-bottom: -8px;
 }
 
 .aim {
@@ -68,7 +82,7 @@ main {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  gap: 60px;
+  gap: 6rem;
 }
 
 .aim-input {
@@ -85,75 +99,82 @@ main {
 }
 
 .aim-label input {
-  width: 228px;
-  height: 57px;
-  border-radius: 7px;
+  width: 22.8rem;
+  height: 5.7rem;
+  border-radius: 0.7rem;
   border: none;
-  padding: 0 16px;
-  margin-left: 15px;
-  margin-right: 15px;
+  padding: 0 1.6rem;
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
 }
 
 .aim-submit {
   position: relative;
-  margin-bottom: 5rem;
+  margin-bottom: 8rem;
 }
 
 .aim-output {
   display: flex;
   flex-direction: column;
+  gap: 1.7rem;
 }
 
-.btn-yellow {
-  width: 565px;
-  height: 66px;
-  border-radius: 56px;
+.btn-calculate {
+  width: 56.5rem;
+  height: 6.6rem;
+  border-radius: 5.6rem;
   border: none;
   background-color: #fcee21;
-  padding: 21px 49px;
-  gap: 10px;
+  padding: 2.1rem 4.9rem;
+  gap: 1rem;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-  margin-top: 40px;
+  margin-top: 4rem;
 }
 
-.btn_yellow {
-  width: 356px;
-  height: 66px;
-  border-radius: 56px;
+.btn-primary {
+  width: 35.6rem;
+  height: 6.6rem;
+  border-radius: 5.6rem;
   border: none;
   background-color: #fcee21;
   white-space: nowrap;
-  padding: 21px 49px;
-  gap: 10px;
+  padding: 2.1rem 4.9rem;
+  gap: 1rem;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-  margin-right: 18px;
+  margin-right: 1.8rem;
 }
 
-.btn-white {
-  width: 191px;
-  height: 66px;
-  border-radius: 56px;
+.btn-secondary {
+  width: 19.1rem;
+  height: 6.6rem;
+  border-radius: 5.6rem;
   border: none;
-  padding: 21px 49px;
-  gap: 10px;
+  padding: 2.1rem 4.9rem;
+  gap: 1rem;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
 }
 
 .aim-submit img {
-  width: 4.3rem;
-  height: 4.8rem;
+  width: 6.88rem;
+  height: 7.68rem;
   position: absolute;
-  top: 3.2rem;
-  left: 36rem;
+  top: 5.12rem;
+  left: 57.6rem;
 }
 
 .action {
   display: flex;
   align-items: center;
+  margin-top: 1rem;
 }
 
 footer {
-  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.4rem;
+  margin-top: 13rm;
+  margin-bottom: 7rem;
 }
 
 .footer-logo {
@@ -161,17 +182,18 @@ footer {
 }
 
 .cheer-page {
-  display: none;
-  position: fixed;
-  width: 800px;
-  height: 800px;
-  border-radius: 30px;
-  inset: 0;
+  width: 80rem;
+  height: 80rem;
+  border-radius: 3rem;
   background-color: #ffffff;
+  border: none;
+  padding: 0;
+}
+
+.cheer-page[open] {
+  display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 100;
-  margin: 0 auto;
 }
 
 .cheer-page.active {
@@ -182,25 +204,25 @@ footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  margin-top: -50px;
+  gap: 2rem;
+  margin-top: 3rem;
 }
 
 .cheer-img {
-  width: 433px;
-  height: 337px;
-  top: 355px;
-  left: 184px;
-  margin-bottom: 50px;
+  width: 43.3rem;
+  height: 33.7rem;
+  top: 35.5rem;
+  left: 18.4rem;
+  margin-bottom: 5rem;
 }
 
 .cheer-btn {
-  height: 66px;
-  border-radius: 56px;
+  height: 6.6rem;
+  border-radius: 5.6rem;
   border: none;
   background-color: #fcee21;
-  padding: 21px 49px;
-  gap: 10px;
+  padding: 2.1rem 4.9rem;
+  gap: 1rem;
   white-space: nowrap;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
   cursor: pointer;

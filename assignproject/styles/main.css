@@ -1,80 +1,76 @@
-body {
-  text-align: center;
-}
-
 .hero-say {
   font-family: "Escoredream", sans-serif;
-  font-weight: bold;
-  font-size: 36px;
+  font-weight: normal;
+  font-size: 3.6rem;
   color: #f5df4d;
 }
 
 .description-text {
   font-family: "GMarketSans", sans-serif;
   font-weight: 400;
-  font-size: 1.125rem;
-  line-height: 1.7;
-  margin-top: -30px;
+  font-size: 1.8rem;
+  margin-top: -3rem;
   color: #ffffff;
 }
 
 .description-text span {
   font-family: "GMarketSans", sans-serif;
   font-weight: 700;
-  font-size: 24px;
+  font-size: 2.4rem;
   color: #ffffff;
 }
 
 .aim-input {
   font-family: "GMarketSans", sans-serif;
   font-weight: 400;
-  font-size: 24px;
+  font-size: 2.4rem;
   color: #ffffff;
 }
 
 .aim-label input {
   font-family: "GMarketSans", sans-serif;
   font-weight: 400;
-  font-size: 24px;
+  font-size: 2.4rem;
+  color: #babcbe;
   text-align: center;
 }
 
 .btn {
   font-weight: 700;
-  font-size: 24px;
+  font-size: 2.4rem;
   color: #5b2386;
 }
 
-.btn-yellow {
+.btn-calculate {
   font-family: "GMarketSans", sans-serif;
   font-weight: 700;
-  font-size: 24px;
+  font-size: 2.4rem;
   color: #5b2386;
   text-align: center;
-  line-height: 24px;
+  line-height: 2.4rem;
 }
 
-.btn_yellow {
+.btn-primary {
   font-family: "GMarketSans", sans-serif;
   font-weight: 700;
-  font-size: 24px;
+  font-size: 2.4rem;
   color: #5b2386;
   text-align: center;
-  line-height: 24px;
+  line-height: 2.4rem;
 }
 
-.btn-white {
+.btn-secondary {
   font-family: "GMarketSans", sans-serif;
   font-weight: 700;
-  font-size: 24px;
+  font-size: 2.4rem;
   color: #5b2386;
   text-align: center;
-  line-height: 24px;
+  line-height: 2.4rem;
 }
 
 .aim-output {
   font-weight: 400;
-  font-size: 24px;
+  font-size: 2.4rem;
   text-align: center;
   color: #ffffff;
 }
@@ -82,38 +78,39 @@ body {
 .aim-result-goal,
 .aim-result-days {
   font-weight: 700;
-  font-size: 72px;
+  font-size: 7.2rem;
   color: #ffffff;
 }
 
 .copyright {
   font-family: "NotoSansKR", sans-serif;
   font-weight: 400;
-  font-size: 12px;
+  font-size: 1.2rem;
+  line-height: 1.5;
   color: #ffffff;
 }
 
 .cheer-title {
   font-family: "JoyfulStory", sans-serif;
   font-weight: 700;
-  font-size: 96px;
+  font-size: 9.6rem;
   color: #5b2386;
   margin: 0;
 }
 
-.cheer-sub {
+.cheer-subtitle {
   font-family: "JoyfulStory", sans-serif;
   font-weight: 400;
-  font-size: 36px;
+  font-size: 3.6rem;
   color: #5b2386;
   margin: 0;
-  margin-top: -25px;
+  margin-top: -2.5rem;
 }
 
 .cheer-btn {
   font-family: "GMarketSans", sans-serif;
   font-weight: 700;
-  font-size: 24px;
+  font-size: 2.4rem;
   display: flex;
   justify-content: center;
   align-items: center;
