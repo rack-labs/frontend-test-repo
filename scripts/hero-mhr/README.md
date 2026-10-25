@@ -2,7 +2,7 @@
 
 The landing hero plays the post-processed MHR body of one real set, rendered
 on the page colour. This folder rebuilds that loop from a set's body file.
-Nothing here ships; `site/assets/hero-mhr-*.{webm,mp4}`, `hero-mhr.webp` and
+Nothing here ships; `public/assets/hero-mhr-*.{webm,mp4}`, `hero-mhr.webp` and
 `og.png` are the outputs.
 
 Current loop: set `measure_20261005-174755_01`, recorded on the prototype rig
@@ -31,4 +31,4 @@ toward the first so the loop closes on itself.
 4. Encode and copy into the site:
 
        bash encode.sh
-       cp out/hero-mhr-2160.* out/hero-mhr-1080.* out/hero-mhr.webp out/og.png ../../site/assets/
+       cp out/hero-mhr-2160.* out/hero-mhr-1080.* out/hero-mhr.webp out/og.png ../../public/assets/

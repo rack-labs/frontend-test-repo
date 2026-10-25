@@ -2,7 +2,7 @@
 // checkout) into one ES module for this site, without touching pipeplot's
 // tracked files. Run from this repo:
 //   node scripts/build-pipeplot-live.mjs --pipeplot ../pipeplot
-// Output: site/assets/pipeplot-live.js (loaded on demand by index.html when
+// Output: public/assets/pipeplot-live.js (loaded on demand by index.html when
 // WebGL is available; the recorded video stays as the fallback).
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, copyFileSync, rmSync } from 'node:fs';
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 const argIdx = process.argv.indexOf('--pipeplot');
 const pipeplot = resolve(argIdx > 0 ? process.argv[argIdx + 1] : '../pipeplot');
 const here = fileURLToPath(new URL('..', import.meta.url));
-const out = join(here, 'site', 'assets');
+const out = join(here, 'public', 'assets');
 const tmp = mkdtempSync(join(tmpdir(), 'pipeplot-live-'));
 const entry = join(tmp, 'entry.js');
 const dist = join(tmp, 'dist');

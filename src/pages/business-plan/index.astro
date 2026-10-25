@@ -1,35 +1,19 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RackTracker business plan</title>
-  <meta name="description" content="Rack Labs business plan for RackTracker, September 2026: the problem in gym coaching, the three-camera device, validation results, the business model, the roadmap and the team." />
-  <meta property="og:type" content="article" />
-  <meta property="og:title" content="RackTracker business plan" />
-  <meta property="og:description" content="Problem, product, validation, business model, roadmap and team. Rack Labs, September 2026." />
-  <meta property="og:url" content="https://racktracker.dev/business-plan/" />
-  <meta property="og:image" content="https://racktracker.dev/assets/og.png" />
-  <link rel="icon" href="/favicon.ico" sizes="32x32" />
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap" />
-  <link rel="stylesheet" href="/style.css" />
-  <link rel="stylesheet" href="/doc.css" />
-</head>
-<body>
-  <header class="bar solid" id="bar">
-    <a class="brand" href="/">Rack Labs</a>
-    <nav aria-label="Sections">
-      <a href="/#racktracker">RackTracker</a>
-      <a href="/#prototype">Prototype</a>
-      <a href="/business-plan/" aria-current="page">Business plan</a>
-      <a href="/#open-source">Open source</a>
-      <a href="/#contact">Contact</a>
-    </nav>
-  </header>
+---
+import Base from '../../layouts/Base.astro';
+import SiteBar from '../../components/SiteBar.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+---
+<Base
+  lang="en"
+  title="RackTracker business plan"
+  description="Rack Labs business plan for RackTracker, September 2026: the problem in gym coaching, the three-camera device, validation results, the business model, the roadmap and the team."
+  ogType="article"
+  ogTitle="RackTracker business plan"
+  ogDescription="Problem, product, validation, business model, roadmap and team. Rack Labs, September 2026."
+  path="/business-plan/"
+  styles={['/style.css', '/doc.css']}
+>
+  <SiteBar current="/business-plan/" />
 
   <main class="doc-page">
     <p class="doc-top">
@@ -248,17 +232,5 @@
     </article>
   </main>
 
-  <footer class="foot" id="contact">
-    <div class="who">
-      <p class="brand">Rack Labs</p>
-      <p>An AI-native startup at the prototype stage. Our main business is RackTracker, a hardware edge device and its software supplied as one physical product. We build everything with Claude Code and open-source the tools we make along the way.</p>
-    </div>
-    <dl class="contact">
-      <div><dt>Founder</dt><dd>Hunkun Lee</dd></div>
-      <div><dt>Email</dt><dd><a href="mailto:dlgusrb6546@racktracker.dev">dlgusrb6546@racktracker.dev</a></dd></div>
-      <div><dt>GitHub</dt><dd><a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd></div>
-    </dl>
-    <p class="fine">Everything we ship is built with Claude Code. 2026 Rack Labs</p>
-  </footer>
-</body>
-</html>
+  <SiteFooter />
+</Base>

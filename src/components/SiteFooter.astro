@@ -1,0 +1,34 @@
+---
+// Footer. The home page also carries the copy-address button (script in
+// index.astro), the documents row and the business registration.
+interface Props {
+  home?: boolean;
+}
+
+const { home = false } = Astro.props;
+const email = 'dlgusrb6546@racktracker.dev';
+---
+<footer class="foot" id="contact">
+  <div class="who">
+    <p class="brand">Rack Labs</p>
+    <p>An AI-native startup at the prototype stage. Our main business is RackTracker, a hardware edge device and its software supplied as one physical product. We build everything with Claude Code and open-source the tools we make along the way.</p>
+  </div>
+  <dl class="contact">
+    <div><dt>Founder</dt><dd>Hunkun Lee</dd></div>
+    {home
+      ? <div><dt>Email</dt><dd><a href={`mailto:${email}`}>{email}</a> <button class="copybtn" type="button" data-copy={email}>Copy address</button></dd></div>
+      : <div><dt>Email</dt><dd><a href={`mailto:${email}`}>{email}</a></dd></div>}
+    <div><dt>GitHub</dt><dd><a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd></div>
+    {home && <div><dt>Documents</dt><dd><a href="/business-plan/">Business plan</a> <span class="alt">(<a href="/business-plan/ko/" hreflang="ko" lang="ko">한국어 원문</a>)</span></dd></div>}
+  </dl>
+  {home && (
+    <dl class="reg" aria-label="Business registration">
+      <div><dt>Business name</dt><dd>랙랩스 (RackLabs)</dd></div>
+      <div><dt>Registration no.</dt><dd>510-12-84645</dd></div>
+      <div><dt>Representative</dt><dd>Hunkun Lee (이현규)</dd></div>
+      <div><dt>Address</dt><dd>14 Pobangteo 6-gil, Seodaemun-gu, Seoul (서울특별시 서대문구 포방터6길 14, 홍은동)</dd></div>
+      <div><dt>Industry</dt><dd>Information and communications (정보통신업)</dd></div>
+    </dl>
+  )}
+  <p class="fine">Everything we ship is built with Claude Code. 2026 Rack Labs</p>
+</footer>

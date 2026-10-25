@@ -1,40 +1,24 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RackTracker by Rack Labs</title>
-  <meta name="description" content="RackTracker turns the power rack into a motion-capture studio: three synchronized cameras and an edge computer mounted on the rack show, for every rep, which joints took the load and which muscles carried it. Made by Rack Labs, an AI-native startup in Seoul that also publishes the open-source tools pipeplot and agent-workflow-kit." />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="RackTracker by Rack Labs" />
-  <meta property="og:description" content="Turn the power rack into a motion-capture studio. For every rep, see which joints took the load and which muscles carried it." />
-  <meta property="og:url" content="https://racktracker.dev/" />
-  <meta property="og:image" content="https://racktracker.dev/assets/og.png" />
-  <link rel="icon" href="/favicon.ico" sizes="32x32" />
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap" />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <header class="bar" id="bar">
-    <a class="brand" href="#top">Rack Labs</a>
-    <nav aria-label="Sections">
-      <a href="#racktracker">RackTracker</a>
-      <a href="#prototype">Prototype</a>
-      <a href="/business-plan/">Business plan</a>
-      <a href="#open-source">Open source</a>
-      <a href="#contact">Contact</a>
-    </nav>
-  </header>
+---
+import Base from '../layouts/Base.astro';
+import SiteBar from '../components/SiteBar.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+---
+<Base
+  lang="en"
+  title="RackTracker by Rack Labs"
+  description="RackTracker turns the power rack into a motion-capture studio: three synchronized cameras and an edge computer mounted on the rack show, for every rep, which joints took the load and which muscles carried it. Made by Rack Labs, an AI-native startup in Seoul that also publishes the open-source tools pipeplot and agent-workflow-kit."
+  ogType="website"
+  ogTitle="RackTracker by Rack Labs"
+  ogDescription="Turn the power rack into a motion-capture studio. For every rep, see which joints took the load and which muscles carried it."
+  path="/"
+>
+  <SiteBar home />
 
   <main id="top">
     <section class="hero" id="hero" aria-labelledby="hero-title">
       <div class="poster" aria-hidden="true">
         <video id="hero-video" muted loop playsinline disablepictureinpicture preload="none" poster="assets/hero-mhr.webp" width="1440" height="1200"></video>
-        <script>
+        <script is:inline>
           // The hero plays the post-processed MHR body of a real set recorded
           // on the prototype rig (5 October 2026), rendered from the same mesh
           // the kiosk's playback screen draws. Two rungs: 2160 px wide for
@@ -165,7 +149,7 @@
     <section class="pp" id="pipeplot" aria-labelledby="pp-title">
       <div class="poster" aria-hidden="true">
         <video id="pp-video" muted loop playsinline disablepictureinpicture preload="none" poster="assets/pipeplot-hero.webp"></video>
-        <script>
+        <script is:inline>
           // The scenes render live (assets/pipeplot-live.js, pipeplot's own
           // three.js hero) when WebGL is there and motion is allowed; the
           // recorded loop is the fallback. Two rungs for the video, as on
@@ -236,28 +220,9 @@
     </section>
   </main>
 
-  <footer class="foot" id="contact">
-    <div class="who">
-      <p class="brand">Rack Labs</p>
-      <p>An AI-native startup at the prototype stage. Our main business is RackTracker, a hardware edge device and its software supplied as one physical product. We build everything with Claude Code and open-source the tools we make along the way.</p>
-    </div>
-    <dl class="contact">
-      <div><dt>Founder</dt><dd>Hunkun Lee</dd></div>
-      <div><dt>Email</dt><dd><a href="mailto:dlgusrb6546@racktracker.dev">dlgusrb6546@racktracker.dev</a> <button class="copybtn" type="button" data-copy="dlgusrb6546@racktracker.dev">Copy address</button></dd></div>
-      <div><dt>GitHub</dt><dd><a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd></div>
-      <div><dt>Documents</dt><dd><a href="/business-plan/">Business plan</a> <span class="alt">(<a href="/business-plan/ko/" hreflang="ko" lang="ko">한국어 원문</a>)</span></dd></div>
-    </dl>
-    <dl class="reg" aria-label="Business registration">
-      <div><dt>Business name</dt><dd>랙랩스 (RackLabs)</dd></div>
-      <div><dt>Registration no.</dt><dd>510-12-84645</dd></div>
-      <div><dt>Representative</dt><dd>Hunkun Lee (이현규)</dd></div>
-      <div><dt>Address</dt><dd>14 Pobangteo 6-gil, Seodaemun-gu, Seoul (서울특별시 서대문구 포방터6길 14, 홍은동)</dd></div>
-      <div><dt>Industry</dt><dd>Information and communications (정보통신업)</dd></div>
-    </dl>
-    <p class="fine">Everything we ship is built with Claude Code. 2026 Rack Labs</p>
-  </footer>
+  <SiteFooter home />
 
-  <script>
+  <script is:inline>
     // Top bar turns solid as soon as the page scrolls
     (function () {
       var bar = document.getElementById('bar');
@@ -301,5 +266,4 @@
       v.replaceWith(img);
     })();
   </script>
-</body>
-</html>
+</Base>

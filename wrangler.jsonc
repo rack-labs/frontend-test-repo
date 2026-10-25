@@ -5,8 +5,11 @@
   "observability": {
     "enabled": true
   },
+  "build": {
+    "command": "npm run build"
+  },
   "assets": {
-    "directory": "site"
+    "directory": "dist"
   },
   "routes": [
     { "pattern": "racktracker.dev", "custom_domain": true },

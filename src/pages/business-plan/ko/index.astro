@@ -1,35 +1,19 @@
-<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RackTracker 사업계획서</title>
-  <meta name="description" content="파워랙에 고정한 AR0234 글로벌 셔터 센서 3대로 프리웨이트 운동을 3D 좌표로 기록하고, 운동 역학으로 분석해 세트마다 피드백을 주는 장치 RackTracker의 사업계획서입니다. 2026년 9월." />
-  <meta property="og:type" content="article" />
-  <meta property="og:title" content="RackTracker 사업계획서" />
-  <meta property="og:description" content="문제, 제품, 검증 결과, 사업 모델, 사업화 단계, 팀. Rack Labs, 2026년 9월." />
-  <meta property="og:url" content="https://racktracker.dev/business-plan/ko/" />
-  <meta property="og:image" content="https://racktracker.dev/assets/og.png" />
-  <link rel="icon" href="/favicon.ico" sizes="32x32" />
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap" />
-  <link rel="stylesheet" href="/style.css" />
-  <link rel="stylesheet" href="/doc.css" />
-</head>
-<body>
-  <header class="bar solid" id="bar">
-    <a class="brand" href="/">Rack Labs</a>
-    <nav aria-label="Sections">
-      <a href="/#racktracker">RackTracker</a>
-      <a href="/#prototype">Prototype</a>
-      <a href="/business-plan/" aria-current="page">Business plan</a>
-      <a href="/#open-source">Open source</a>
-      <a href="/#contact">Contact</a>
-    </nav>
-  </header>
+---
+import Base from '../../../layouts/Base.astro';
+import SiteBar from '../../../components/SiteBar.astro';
+import SiteFooter from '../../../components/SiteFooter.astro';
+---
+<Base
+  lang="ko"
+  title="RackTracker 사업계획서"
+  description="파워랙에 고정한 AR0234 글로벌 셔터 센서 3대로 프리웨이트 운동을 3D 좌표로 기록하고, 운동 역학으로 분석해 세트마다 피드백을 주는 장치 RackTracker의 사업계획서입니다. 2026년 9월."
+  ogType="article"
+  ogTitle="RackTracker 사업계획서"
+  ogDescription="문제, 제품, 검증 결과, 사업 모델, 사업화 단계, 팀. Rack Labs, 2026년 9월."
+  path="/business-plan/ko/"
+  styles={['/style.css', '/doc.css']}
+>
+  <SiteBar current="/business-plan/" />
 
   <main class="doc-page">
     <p class="doc-top">
@@ -244,17 +228,5 @@
     </article>
   </main>
 
-  <footer class="foot" id="contact">
-    <div class="who">
-      <p class="brand">Rack Labs</p>
-      <p>An AI-native startup at the prototype stage. Our main business is RackTracker, a hardware edge device and its software supplied as one physical product. We build everything with Claude Code and open-source the tools we make along the way.</p>
-    </div>
-    <dl class="contact">
-      <div><dt>Founder</dt><dd>Hunkun Lee</dd></div>
-      <div><dt>Email</dt><dd><a href="mailto:dlgusrb6546@racktracker.dev">dlgusrb6546@racktracker.dev</a></dd></div>
-      <div><dt>GitHub</dt><dd><a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd></div>
-    </dl>
-    <p class="fine">Everything we ship is built with Claude Code. 2026 Rack Labs</p>
-  </footer>
-</body>
-</html>
+  <SiteFooter />
+</Base>
