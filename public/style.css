@@ -2,25 +2,26 @@
    Plex Mono for figures), so the report, slide and business-plan pages it
    leads to read as the same paper. The pipeplot section keeps the dark
    tokens of pipeplot's own landing as one dark band. The one device of this
-   page is the sheet: every figure sits on a white drawing sheet with a
-   hairline, which marks it as a technical figure. --bg-rgb is --bg as
-   channels, for the translucent bar and veils. */
+   page is the sheet: every figure sits on an off-white drawing sheet with a
+   hairline, which marks it as a technical figure. The page is a step below
+   white and the sheet is not pure white either, so the page does not glare.
+   --bg-rgb is --bg as channels, for the translucent bar and veils. */
 :root {
   color-scheme: light;
-  --bg: #f5f6f8;
-  --bg-rgb: 245 246 248;
-  --bg2: #eceff3;
-  --line: #d9dee5;
-  --ink: #11151b;
-  --body: #2b323c;
-  --dim: #556070;
-  --muted: #667080;
-  --faint: #c3cad3;
+  --bg: #eceef1;
+  --bg-rgb: 236 238 241;
+  --bg2: #e3e6ea;
+  --line: #d2d7de;
+  --ink: #1a1f26;
+  --body: #2f3742;
+  --dim: #535d6c;
+  --muted: #5f6878;
+  --faint: #b9c0ca;
   --tint: #2c7272;
-  --sheet: #ffffff;
+  --sheet: #fafafa;
   --sheet-ink: #1b1f24;
   --sheet-dim: #5b6470;
-  --sheet-line: #e3e7ec;
+  --sheet-line: #e6e8eb;
   --display: 'Archivo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Malgun Gothic', monospace;
   --gutter: clamp(16px, 4vw, 56px);

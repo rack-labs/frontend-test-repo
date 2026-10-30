@@ -21,7 +21,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 /* ── palette for the light page. The canvas clears to the page colour, read from --bg where it
    mounts (style.css), and bg here is only the fallback ── */
 const PAL = {
-  bg: '#f5f6f8', grid: '#d5dbe2', rack: '#a9b2be', person: '#556070',
+  bg: '#eceef1', grid: '#cdd3da', rack: '#a9b2be', person: '#556070',
   px: '#e0611f', joint: '#11151b', mark: '#556070', tri: '#667080',
 };
 const CAM_COLORS = ['#e5483a', '#2f80e0', '#1fa36a'];
