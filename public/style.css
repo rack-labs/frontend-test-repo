@@ -132,6 +132,10 @@ img, video { display: block; max-width: 100%; height: auto; }
 }
 .hero .stage video { opacity: 0; }
 .hero[data-show="video"] .stage video, .hero[data-show="live"] .live canvas { opacity: 1; }
+/* the still only stands in until a layer is up. The live layer is not fully
+   opaque, so a still left under it would ghost through once the camera moves;
+   it goes once the layer above has faded in */
+.hero[data-show="live"] .stage .still, .hero[data-show="video"] .stage .still { opacity: 0; transition-delay: .9s; }
 /* the live scene can be dragged around; horizontal drags only on touch, so
    the page still scrolls vertically over it */
 .hero .live canvas { cursor: grab; touch-action: pan-y; }
