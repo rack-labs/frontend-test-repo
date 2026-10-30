@@ -1,7 +1,8 @@
 # Hero background: MHR playback
 
-The landing hero plays the post-processed MHR body of one real set, rendered
-on the page colour. This folder rebuilds that loop from a set's body file.
+The landing hero's second sequence plays the post-processed MHR body of one
+real set, rendered on the page colour (the first is the live measurement
+scene, `../hero-measure/`). This folder rebuilds that loop from a set's body file.
 Nothing here ships; `public/assets/hero-mhr-*.{webm,mp4}`, `hero-mhr.webp` and
 `og.png` are the outputs.
 

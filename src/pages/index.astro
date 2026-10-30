@@ -17,30 +17,74 @@ import SiteFooter from '../components/SiteFooter.astro';
   <main id="top">
     <section class="hero" id="hero" aria-labelledby="hero-title">
       <div class="poster" aria-hidden="true">
-        <video id="hero-video" muted loop playsinline disablepictureinpicture preload="none" poster="assets/hero-mhr.webp" width="1440" height="1200"></video>
-        <script is:inline>
-          // The hero plays the post-processed MHR body of a real set recorded
-          // on the prototype rig (5 October 2026), rendered from the same mesh
-          // the kiosk's playback screen draws. Two rungs: 2160 px wide for
-          // wide screens, 1080 for narrow ones. Reduced motion keeps the
-          // poster, and the loop pauses while the hero is scrolled away.
-          (function () {
-            var v = document.getElementById('hero-video');
-            if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-            var rung = matchMedia('(max-width: 900px)').matches ? 'hero-mhr-1080' : 'hero-mhr-2160';
-            [['webm', 'video/webm'], ['mp4', 'video/mp4']].forEach(function (t) {
-              var s = document.createElement('source');
-              s.src = 'assets/' + rung + '.' + t[0]; s.type = t[1]; v.appendChild(s);
-            });
-            v.preload = 'auto';
-            var play = function () { v.play().catch(function () {}); };
-            if (!('IntersectionObserver' in window)) { play(); return; }
-            new IntersectionObserver(function (es) {
-              es.forEach(function (e) { if (e.isIntersecting) play(); else v.pause(); });
-            }, { threshold: 0.05 }).observe(v);
-          })();
-        </script>
+        <div class="stage" id="hero-stage" data-show="still">
+          <img class="still" src="assets/hero-measure.webp" alt="" width="1440" height="1200">
+          <video id="hero-video" muted playsinline disablepictureinpicture preload="none" poster="assets/hero-mhr.webp" width="1440" height="1200"></video>
+        </div>
       </div>
+      <script>
+        // The hero runs in sequences. First, rendered live (three.js): how one
+        // frame becomes rack coordinates, rays from the three cameras through
+        // the detected joint, the point where they meet, all 33 joints, then
+        // the move from the floor frame to the rack frame. Visitors can drag
+        // it around. Second, the recorded loop of the post-processed MHR body
+        // of a real set on the prototype rig (5 October 2026), 2160 px wide
+        // for wide screens and 1080 for narrow ones. Then the first again.
+        // Without WebGL the recorded loop plays alone; reduced motion shows
+        // the finished live frame without playing it.
+        const stage = document.getElementById('hero-stage') as HTMLElement;
+        const v = document.getElementById('hero-video') as HTMLVideoElement;
+        const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const check = /hero=check/.test(location.hash);
+        let visible = true;
+        let live: { play(): void; setActive(on: boolean): void; seek(t: number): string } | null = null;
+        let sourced = false;
+        const source = () => {
+          if (sourced) return;
+          sourced = true;
+          const rung = matchMedia('(max-width: 900px)').matches ? 'hero-mhr-1080' : 'hero-mhr-2160';
+          for (const [ext, type] of [['webm', 'video/webm'], ['mp4', 'video/mp4']]) {
+            const s = document.createElement('source');
+            s.src = `assets/${rung}.${ext}`; s.type = type; v.appendChild(s);
+          }
+          v.preload = 'auto'; v.load();
+        };
+        const playVideo = (loop: boolean) => {
+          source();
+          v.loop = loop; v.currentTime = 0; stage.dataset.show = 'video';
+          if (visible) v.play().catch(() => {});
+        };
+        let webgl = false;
+        try { const c = document.createElement('canvas'); webgl = !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (_) { /* no WebGL */ }
+        if (!webgl) { if (!still) playVideo(true); }
+        else {
+          import('../lib/measure-hero.js')
+            .then(m => {
+              live = m.mountMeasureHero(stage, {
+                still: still || check,
+                focus: () => matchMedia('(max-width: 900px)').matches ? [0.5, 0.5] : [0.63, 0.44],
+                onEnd: () => { live!.setActive(false); playVideo(false); },
+                onFail: () => { live = null; playVideo(true); },
+              });
+              stage.dataset.show = 'live';
+              live.setActive(visible);
+              if (check) (window as any).__measureHero = live;
+              else if (!still) setTimeout(source, 6000);               // fetch the loop while the first sequence plays
+            })
+            .catch(e => { console.warn('[hero] live path failed:', e); if (!still) playVideo(true); });
+          v.addEventListener('ended', () => {
+            if (!live) return;
+            stage.dataset.show = 'live'; live.setActive(visible); live.play();
+          });
+        }
+        if ('IntersectionObserver' in window) {
+          new IntersectionObserver(es => es.forEach(e => {
+            visible = e.isIntersecting;
+            if (stage.dataset.show === 'live') live?.setActive(visible);
+            else if (stage.dataset.show === 'video') { if (visible) v.play().catch(() => {}); else v.pause(); }
+          }), { threshold: 0.05 }).observe(stage);
+        }
+      </script>
       <div class="veil" aria-hidden="true"></div>
       <div class="copy">
         <p class="kicker">RackTracker by Rack Labs</p>
