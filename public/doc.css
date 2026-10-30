@@ -1,5 +1,5 @@
 /* Document pages (the business plan). The whole document is one sheet:
-   the same paper-white plate the landing page uses for figures, so a
+   the same white plate the landing page uses for figures, so a
    reader who comes from the landing page recognises it as a document
    rather than a new site. Tokens come from style.css. */
 .doc-page { padding: 100px var(--gutter) var(--wing); }
@@ -13,7 +13,7 @@
   padding: clamp(24px, 5vw, 72px);
   background: var(--sheet); color: var(--sheet-ink);
   border-radius: var(--radius);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .08) inset, 0 20px 50px -30px rgba(0, 0, 0, .9);
+  box-shadow: 0 0 0 1px var(--line), 0 20px 50px -30px rgba(0, 0, 0, .3);
   font-size: 16px; line-height: 1.7;
 }
 .doc.ko { font-family: 'Noto Sans KR', 'Malgun Gothic', var(--display); }

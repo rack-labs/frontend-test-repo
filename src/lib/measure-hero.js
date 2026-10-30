@@ -13,13 +13,13 @@
 // back onto the automatic path.
 import * as THREE from 'three';
 
-/* ── palette: the page is #0b0d10; the canvas clears to it ── */
+/* ── palette: the page is #f5f6f8 (--bg in style.css); the canvas clears to it ── */
 const PAL = {
-  bg: '#0b0d10', grid: '#252d38', rack: '#3a4350', person: '#8b95a3',
-  px: '#f0773f', joint: '#e6eaf0', mark: '#a3adbb', tri: '#8a94a3',
+  bg: '#f5f6f8', grid: '#d5dbe2', rack: '#a9b2be', person: '#556070',
+  px: '#e0611f', joint: '#11151b', mark: '#556070', tri: '#667080',
 };
-const CAM_COLORS = ['#f0604f', '#4f9cf0', '#45c48a'];
-const AXIS_COLORS = ['#f0604f', '#45c48a', '#4f9cf0'];
+const CAM_COLORS = ['#e5483a', '#2f80e0', '#1fa36a'];
+const AXIS_COLORS = ['#e5483a', '#1fa36a', '#2f80e0'];
 
 /* ── thick lines: one thin cylinder per segment, one InstancedMesh per bundle (radius r in cm) ── */
 const UNIT_CYL = new THREE.CylinderGeometry(1, 1, 1, 6, 1, true); UNIT_CYL.userData.keep = true;

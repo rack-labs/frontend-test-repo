@@ -36,6 +36,10 @@ import SiteFooter from '../components/SiteFooter.astro';
         // for wide screens and 1080 for narrow ones. Then the first again.
         // Without WebGL the recorded loop plays alone; reduced motion shows
         // the finished live frame without playing it.
+        // The recorded loop was rendered on the old dark page colour, so on the
+        // light page it is off until it is rendered again on --bg: the live
+        // sequence repeats alone, and without WebGL the still stands in.
+        const mhr = false;
         const hero = document.getElementById('hero') as HTMLElement;
         const stage = document.getElementById('hero-stage') as HTMLElement;
         const liveBox = document.getElementById('hero-live') as HTMLElement;
@@ -65,7 +69,7 @@ import SiteFooter from '../components/SiteFooter.astro';
         };
         let webgl = false;
         try { const c = document.createElement('canvas'); webgl = !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (_) { /* no WebGL */ }
-        if (!webgl) { if (!still) playVideo(true); }
+        if (!webgl) { if (!still && mhr) playVideo(true); }
         else {
           import('../lib/measure-hero.js')
             .then(m => {
@@ -79,15 +83,15 @@ import SiteFooter from '../components/SiteFooter.astro';
                   const w = narrow.matches ? B.height * 1.2 : B.width;
                   return { x: B.right - L.left - w, y: B.top - L.top, w, h: B.height, fx: 0.63, fy: 0.44 };
                 },
-                onEnd: () => { live!.setActive(false); playVideo(false); },
-                onFail: () => { live = null; playVideo(true); },
+                onEnd: () => { if (!mhr) { live!.play(); return; } live!.setActive(false); playVideo(false); },
+                onFail: () => { live = null; if (mhr) playVideo(true); else hero.dataset.show = 'still'; },
               });
               hero.dataset.show = 'live';
               live.setActive(visible);
               if (check) (window as any).__measureHero = live;
-              else if (!still) setTimeout(source, 6000);               // fetch the loop while the first sequence plays
+              else if (!still && mhr) setTimeout(source, 6000);        // fetch the loop while the first sequence plays
             })
-            .catch(e => { console.warn('[hero] live path failed:', e); if (!still) playVideo(true); });
+            .catch(e => { console.warn('[hero] live path failed:', e); if (!still && mhr) playVideo(true); });
           v.addEventListener('ended', () => {
             if (!live) return;
             hero.dataset.show = 'live'; live.setActive(visible); live.play();

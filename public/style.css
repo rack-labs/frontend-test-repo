@@ -1,23 +1,26 @@
-/* Rack Labs landing. Tokens follow pipeplot's landing (dark page, Archivo
-   display, Noto Sans KR body, IBM Plex Mono for figures). The one device of
-   this page is the sheet: every figure sits on a paper-white drawing sheet,
-   which marks it as a technical figure and keeps the white-background
-   images from the business plan readable on the dark page. */
+/* Rack Labs landing. Light page (Archivo display, Noto Sans KR body, IBM
+   Plex Mono for figures), so the report, slide and business-plan pages it
+   leads to read as the same paper. The pipeplot section keeps the dark
+   tokens of pipeplot's own landing as one dark band. The one device of this
+   page is the sheet: every figure sits on a white drawing sheet with a
+   hairline, which marks it as a technical figure. --bg-rgb is --bg as
+   channels, for the translucent bar and veils. */
 :root {
-  color-scheme: dark;
-  --bg: #0b0d10;
-  --bg2: #11151b;
-  --line: #2a3340;
-  --ink: #e6eaf0;
-  --body: #cfd6e0;
-  --dim: #9aa4b2;
-  --muted: #64748b;
-  --faint: #3d4654;
-  --tint: #8fbcbc;
-  --sheet: #f4f5f7;
+  color-scheme: light;
+  --bg: #f5f6f8;
+  --bg-rgb: 245 246 248;
+  --bg2: #eceff3;
+  --line: #d9dee5;
+  --ink: #11151b;
+  --body: #2b323c;
+  --dim: #556070;
+  --muted: #667080;
+  --faint: #c3cad3;
+  --tint: #2c7272;
+  --sheet: #ffffff;
   --sheet-ink: #1b1f24;
   --sheet-dim: #5b6470;
-  --sheet-line: #dfe3e8;
+  --sheet-line: #e3e7ec;
   --display: 'Archivo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Malgun Gothic', monospace;
   --gutter: clamp(16px, 4vw, 56px);
@@ -53,7 +56,7 @@ img, video { display: block; max-width: 100%; height: auto; }
   border-bottom: 1px solid transparent;
   transition: background 240ms ease, border-color 240ms ease;
 }
-.bar.solid { background: rgba(11, 13, 16, .78); backdrop-filter: blur(10px); border-color: var(--line); }
+.bar.solid { background: rgb(var(--bg-rgb) / .85); backdrop-filter: blur(10px); border-color: var(--line); }
 .bar .brand { color: var(--ink); font: 600 17px/1 var(--display); letter-spacing: .18em; white-space: nowrap; }
 .bar nav { display: flex; gap: clamp(16px, 3vw, 32px); overflow-x: auto; white-space: nowrap; }
 .bar nav a { color: var(--dim); padding: 6px 0; }
@@ -76,12 +79,12 @@ img, video { display: block; max-width: 100%; height: auto; }
 .btn.ghost { border-color: var(--line); color: var(--dim); }
 .btn.ghost:hover { background: transparent; color: var(--ink); border-color: var(--dim); }
 
-/* the sheet: a paper-white plate for figures */
+/* the sheet: a white plate for figures, set off from the page by a hairline */
 .sheet {
   margin: 0; padding: clamp(14px, 2vw, 24px);
   background: var(--sheet); color: var(--sheet-ink);
   border-radius: var(--radius);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .08) inset, 0 20px 50px -30px rgba(0, 0, 0, .9);
+  box-shadow: 0 0 0 1px var(--line), 0 18px 40px -30px rgba(0, 0, 0, .35);
 }
 .sheet img { width: 100%; height: auto; }
 .sheet figcaption {
@@ -135,8 +138,8 @@ img, video { display: block; max-width: 100%; height: auto; }
 .hero .veil {
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(11,13,16,.5) 0%, rgba(11,13,16,0) 28%, rgba(11,13,16,0) 58%, rgba(11,13,16,.9) 100%),
-    linear-gradient(90deg, rgba(11,13,16,.75) 0%, rgba(11,13,16,.25) 45%, rgba(11,13,16,0) 70%);
+    linear-gradient(180deg, rgb(var(--bg-rgb) / .5) 0%, rgb(var(--bg-rgb) / 0) 28%, rgb(var(--bg-rgb) / 0) 58%, rgb(var(--bg-rgb) / .9) 100%),
+    linear-gradient(90deg, rgb(var(--bg-rgb) / .75) 0%, rgb(var(--bg-rgb) / .25) 45%, rgb(var(--bg-rgb) / 0) 70%);
 }
 .hero .copy { max-width: 880px; }
 .hero h1 {
@@ -176,7 +179,7 @@ img, video { display: block; max-width: 100%; height: auto; }
 .figs { display: grid; gap: 20px; }
 .figs .sheet.tall { max-width: 360px; }
 
-/* prototype photos: real photographs sit straight on the dark page, no
+/* prototype photos: real photographs sit straight on the page, no
    sheet, since the sheet marks a drawing. One row of four portraits, then
    the bench photo across two columns, a close-up and the parts list. */
 .photos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 16px; }
@@ -216,8 +219,13 @@ img, video { display: block; max-width: 100%; height: auto; }
 .timeline .when { display: block; font: 13px/1.4 var(--mono); color: var(--ink); margin-bottom: 6px; }
 .timeline .what { display: block; font-size: 14px; color: var(--dim); max-width: 30ch; }
 
-/* pipeplot: its own hero, carried over as is */
+/* pipeplot: its own hero, carried over as is, so it keeps pipeplot's dark
+   tokens; its live scene and fallback video are drawn for a dark page */
 .pp {
+  color-scheme: dark;
+  --bg: #0b0d10; --bg-rgb: 11 13 16; --bg2: #11151b; --line: #2a3340;
+  --ink: #e6eaf0; --body: #cfd6e0; --dim: #9aa4b2; --muted: #64748b; --faint: #3d4654; --tint: #8fbcbc;
+  background: var(--bg); color: var(--body);
   position: relative; min-height: 100svh; box-sizing: border-box; display: grid; align-items: end;
   padding: 100px var(--gutter) clamp(40px, 8vh, 96px); overflow: hidden; isolation: isolate;
   border-top: 1px solid var(--line);
@@ -233,8 +241,8 @@ img, video { display: block; max-width: 100%; height: auto; }
 .pp .veil {
   position: absolute; inset: 0; z-index: -1;
   background:
-    linear-gradient(180deg, rgba(11,13,16,.55) 0%, rgba(11,13,16,0) 30%, rgba(11,13,16,0) 55%, rgba(11,13,16,.92) 100%),
-    linear-gradient(90deg, rgba(11,13,16,.55) 0%, rgba(11,13,16,0) 50%);
+    linear-gradient(180deg, rgb(var(--bg-rgb) / .55) 0%, rgb(var(--bg-rgb) / 0) 30%, rgb(var(--bg-rgb) / 0) 55%, rgb(var(--bg-rgb) / .92) 100%),
+    linear-gradient(90deg, rgb(var(--bg-rgb) / .55) 0%, rgb(var(--bg-rgb) / 0) 50%);
 }
 .pp .copy { max-width: 880px; }
 .pp h2 {
