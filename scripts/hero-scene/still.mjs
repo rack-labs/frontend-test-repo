@@ -31,10 +31,10 @@ const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle',
 const page = await browser.newPage({ viewport: { width: 1500, height: 1000 }, deviceScaleFactor: 1.5 });
 page.on('pageerror', e => console.error('[pageerror]', e.message));
 await page.goto(`http://127.0.0.1:${server.address().port}/#hero=check`, { waitUntil: 'load' });
-await page.waitForFunction(() => !!window.__measureHero, null, { timeout: 30000 });
+await page.waitForFunction(() => !!window.__heroScene, null, { timeout: 30000 });
 // the canvas fills the section; the still is the part inside the stage box
 const url = await page.evaluate(async t => {
-  const src = new Image(); src.src = window.__measureHero.seek(t); await src.decode();
+  const src = new Image(); src.src = window.__heroScene.seek(t); await src.decode();
   const c = document.querySelector('.hero .live canvas'), C = c.getBoundingClientRect(), B = document.getElementById('hero-stage').getBoundingClientRect();
   const k = c.width / C.width, out = document.createElement('canvas');
   out.width = Math.round(B.width * k); out.height = Math.round(B.height * k);

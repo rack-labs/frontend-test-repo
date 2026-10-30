@@ -19,16 +19,17 @@ import SiteFooter from '../components/SiteFooter.astro';
       <div class="live" id="hero-live" aria-hidden="true"></div>
       <div class="poster" aria-hidden="true">
         <div class="stage" id="hero-stage">
-          <img class="still" src="assets/hero-measure.webp" alt="" width="1440" height="1200">
+          <img class="still" src="assets/hero-scene.webp" alt="" width="1440" height="1200">
           <video id="hero-video" muted playsinline disablepictureinpicture preload="none" poster="assets/hero-mhr.webp" width="1440" height="1200"></video>
         </div>
       </div>
       <script>
-        // The hero runs in sequences. First, rendered live (three.js): how one
-        // frame becomes rack coordinates, rays from the three cameras through
-        // the detected joint, the point where they meet, all 33 joints, then
-        // the move from the floor frame to the rack frame. Visitors can drag
-        // it around. On wide screens its canvas fills the whole section, framed
+        // The hero runs in sequences. First, rendered live (three.js) as one
+        // scene: the rig as built (rack, three cameras, tablet, compute
+        // enclosure, cable runs), then how one frame becomes rack coordinates,
+        // rays from the three cameras through the detected joint, the point
+        // where they meet, all 33 joints, then the move from the floor frame
+        // to the rack frame. Visitors can drag it around. On wide screens its canvas fills the whole section, framed
         // so the view through the stage box is what the box alone would show;
         // on narrow ones it sits in the box. Second, the recorded loop of the
         // post-processed MHR body
@@ -71,9 +72,9 @@ import SiteFooter from '../components/SiteFooter.astro';
         try { const c = document.createElement('canvas'); webgl = !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (_) { /* no WebGL */ }
         if (!webgl) { if (!still && mhr) playVideo(true); }
         else {
-          import('../lib/measure-hero.js')
+          import('../lib/hero-scene.js')
             .then(m => {
-              live = m.mountMeasureHero(liveBox, {
+              live = m.mountHeroScene(liveBox, {
                 still: still || check,
                 // framed for a 6:5 box with the target right of centre, clear of the
                 // copy; on narrow screens that box is the square stage cropped the way
@@ -88,7 +89,7 @@ import SiteFooter from '../components/SiteFooter.astro';
               });
               hero.dataset.show = 'live';
               live.setActive(visible);
-              if (check) (window as any).__measureHero = live;
+              if (check) (window as any).__heroScene = live;
               else if (!still && mhr) setTimeout(source, 6000);        // fetch the loop while the first sequence plays
             })
             .catch(e => { console.warn('[hero] live path failed:', e); if (!still && mhr) playVideo(true); });

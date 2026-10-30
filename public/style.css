@@ -94,11 +94,12 @@ img, video { display: block; max-width: 100%; height: auto; }
 }
 
 /* hero: the background runs in sequences, rendered on the page colour with
-   a floor grid: first the live measurement scene (src/lib/measure-hero.js),
-   whose canvas (.live) fills the section on wide screens and the stage box
-   on narrow ones; then the loop of the post-processed MHR body from a real
-   set on the prototype rig (assets/hero-mhr-*.webm/mp4) in the stage box.
-   Until the scene mounts the box shows its first frame (hero-measure.webp).
+   a floor grid: first the live scene, the rig and then the measurement
+   (src/lib/hero-scene.js), whose canvas (.live) fills the section on wide
+   screens and the stage box on narrow ones; then the loop of the
+   post-processed MHR body from a real set on the prototype rig
+   (assets/hero-mhr-*.webm/mp4) in the stage box. Until the scene mounts the
+   box shows its first frame (hero-scene.webp).
    The layers cross-fade by the section's data-show. A radial mask fades the
    box edges into the page so no rectangle shows, and the veil keeps the copy
    legible over both */

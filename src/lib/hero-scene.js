@@ -1,19 +1,25 @@
-// Live hero, first sequence: how one frame of a set becomes rack coordinates.
-// Three rays leave the cameras through the detected left knee, the point
-// nearest the three rays is the 3D joint, the same is done for all 33 joints,
-// and the floor frame is moved to the rack frame. The scene, data and timing
-// are those of the measurement-principle animation (rack-tracker, cameras
-// K/R/t from the 28 August 2026 PVC rig calibration, example pose), cut to
-// its rays .. rack-coordinates beats, with every label, caption and the image
-// inset removed and the colours set for the dark page.
+// Live hero: the rig, then how one frame of a set becomes rack coordinates,
+// as one continuous scene. First the rig as built (the rig layout render): the
+// rack, three cameras on the storage posts, the tablet, the compute enclosure
+// and the cable runs. The gear then fades and the measurement-principle
+// animation takes over in the same space: three rays leave the cameras through
+// the detected left knee, the point nearest the three rays is the 3D joint,
+// the same is done for all 33 joints, and the floor frame is moved to the rack
+// frame. Data are those of rack-tracker (cameras K/R/t from the 28 August 2026
+// PVC rig calibration, example pose); every label, caption, dimension and the
+// image inset are left out.
 //
 // The camera follows the key moments on its own. Dragging takes it over
 // (rotate; wheel or pinch zooms once the scene has been grabbed, so the page
 // still scrolls under a plain wheel), and after a few idle seconds it eases
 // back onto the automatic path.
 import * as THREE from 'three';
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 
-/* ── palette: the page is #f5f6f8 (--bg in style.css); the canvas clears to it ── */
+/* ── palette for the light page. The canvas clears to the page colour, read from --bg where it
+   mounts (style.css), and bg here is only the fallback ── */
 const PAL = {
   bg: '#f5f6f8', grid: '#d5dbe2', rack: '#a9b2be', person: '#556070',
   px: '#e0611f', joint: '#11151b', mark: '#556070', tri: '#667080',
@@ -116,7 +122,7 @@ const undistort = (xd, yd, c) => {
   return [x, y];
 };
 
-/* ── cameras: centre, image plane 28 cm in front, projection and back-projection ── */
+/* ── cameras: centre, viewing axis, image up, image plane 28 cm in front, projection and back-projection ── */
 const CAMS = RAW.map((c, i) => {
   const Rn = mm(c.R, F), Rt = tr(Rn), C = mul(mv(Rt, c.t), -1);
   const K = { fx: c.K[0][0], fy: c.K[1][1], cx: c.K[0][2], cy: c.K[1][2] };
@@ -124,7 +130,7 @@ const CAMS = RAW.map((c, i) => {
   const corners = [[0, 0], [IMG_W, 0], [IMG_W, IMG_H], [0, IMG_H]].map(([u, v]) => planePt((u - K.cx) / K.fx, (v - K.cy) / K.fy));
   const project = P => { const p = add(mv(Rn, P), c.t); if (p[2] < 1) return null; const x = p[0] / p[2], y = p[1] / p[2], d = distort(x, y, COEF); return { u: K.fx * d[0] + K.cx, v: K.fy * d[1] + K.cy }; };
   const pxToNorm = (u, v) => undistort((u - K.cx) / K.fx, (v - K.cy) / K.fy, COEF);
-  return { i, color: CAM_COLORS[i], C, corners, pp: planePt(0, 0), planePt, project, pxToNorm };
+  return { i, color: CAM_COLORS[i], C, axis: mv(Rt, [0, 0, 1]), up: mv(Rt, [0, -1, 0]), corners, pp: planePt(0, 0), planePt, project, pxToNorm };
 });
 
 /* ── rack frame: origin shift + yaw from the floor frame ── */
@@ -176,8 +182,177 @@ const FIG = (() => {
   return { P, O, T };
 })();
 
-/* ── timeline: the rays .. rack-coordinates beats of the original, then a short hold ── */
+/* ── the rig as built (the rig layout render): rack members, the cameras in their housings on the
+   storage posts, C3 on a magic arm, the tablet, the compute enclosure (Jetson Orin NX and the
+   trigger board) and the cable runs. Built in rack coordinates (cage floor centre, x right,
+   z front) and placed on the calibration floor frame as one group: the layout moved the
+   calibration by x −17 cm and z −46.05 cm so the cameras sit on the storage posts, and the
+   group undoes that, so its cameras are the scene's cameras ── */
+const SPEC = { W: 118, D: 106, H: 241, U: 7.6, CS: 7.6, holePitch: 5, holeFirst: 6.8, holeLast: 240,
+  jcupW: 11, jcupH: 12, jcupReach: 15, jcupNose: 3.5, jcupHeight: 130, safetyW: 7.6, safetyT: 10.2, safetyHeight: 60,
+  storageOffset: 38.4, storageHeight: 241, storageU: 7.6 };
+const SZC = -SPEC.D / 2 - SPEC.storageOffset - SPEC.storageU / 2;               // storage post centre z (−95.2)
+const FACE_FS = SZC + SPEC.storageU / 2, FACE_RS = SZC - SPEC.storageU / 2;     // storage post front face z −91.4 · back face −99.0
+const SHIFT_Z = (FACE_FS + 2.35) - (-43.0);                                     // C1·C2 at z≈−43 → 2.35 in front of the storage posts
+const RIG_OFF = [17, 0, -SHIFT_Z];                                              // rack coordinates + RIG_OFF = floor frame
+const RIG_COL = { steel: 0xcdd3da, edge: 0x6b7280, dark: 0x23272e, box: 0x2f343c, box2: 0x5b6473, cable: 0x23272e,
+  clip: 0x4b5563, hole: 0x5b6675, led: 0x2fa36b, arm: 0x7a8290, glass: 0x0b0d10, screen: 0xeef1f5 };
+
+function rigGroup(fat) {
+  const M = {
+    steel: new THREE.MeshLambertMaterial({ color: RIG_COL.steel, transparent: true, opacity: 0.38, depthWrite: false }),
+    dark: new THREE.MeshLambertMaterial({ color: RIG_COL.dark }), box: new THREE.MeshLambertMaterial({ color: RIG_COL.box }),
+    box2: new THREE.MeshLambertMaterial({ color: RIG_COL.box2 }), cable: new THREE.MeshLambertMaterial({ color: RIG_COL.cable }),
+    clip: new THREE.MeshLambertMaterial({ color: RIG_COL.clip }), arm: new THREE.MeshLambertMaterial({ color: RIG_COL.arm }),
+    led: new THREE.MeshBasicMaterial({ color: RIG_COL.led }), glass: new THREE.MeshBasicMaterial({ color: RIG_COL.glass }),
+    screen: new THREE.MeshBasicMaterial({ color: RIG_COL.screen }),
+    hole: new THREE.PointsMaterial({ color: RIG_COL.hole, size: 1.4, sizeAttenuation: true }),
+  };
+  /* edges are 1 CSS px wide at any pixel ratio (LineSegments2; the resolution is set on every draw) */
+  const edge = new LineMaterial({ color: RIG_COL.edge, linewidth: 1, transparent: true, opacity: 0.85 });
+  fat.push(edge);
+  const root = new THREE.Group(); root.position.set(...RIG_OFF);
+  const rack = new THREE.Group(), gear = new THREE.Group(), cables = new THREE.Group();
+  root.add(rack, gear, cables);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  function box(parent, w, h, d, [x, y, z], mat = M.steel, edges = true) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); parent.add(m);
+    if (edges) { const e = new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(m.geometry)), edge); e.position.copy(m.position); parent.add(e); }
+    return m;
+  }
+  const { W, D, H, U, CS } = SPEC, SU = SPEC.storageU;
+  const CW = (W - U) / 2, CD = (D - U) / 2;
+  {
+    const corners = [[-CW, -CD], [CW, -CD], [CW, CD], [-CW, CD]];
+    for (const [x, z] of corners) box(rack, U, H, U, [x, H / 2, z]);
+    for (let k = 0; k < 4; k++) {
+      const [ax, az] = corners[k], [bx, bz] = corners[(k + 1) % 4];
+      const span = Math.hypot(bx - ax, bz - az) - U, horiz = Math.abs(bz - az) < 1e-6;
+      box(rack, horiz ? span : CS, CS, horiz ? CS : span, [(ax + bx) / 2, H - CS / 2, (az + bz) / 2]);
+    }
+    for (const sx of [-1, 1]) box(rack, CS, CS, 2 * CD - U, [sx * CW, CS / 2, 0]);
+    const holes = [];
+    for (let y = SPEC.holeFirst; y <= Math.min(SPEC.holeLast, H); y += SPEC.holePitch)
+      for (const [x, z] of corners) holes.push(x - Math.sign(x) * U / 2, y, z);
+    const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.Float32BufferAttribute(holes, 3));
+    rack.add(new THREE.Points(hg, M.hole));
+    for (const sx of [-1, 1]) {
+      box(rack, SPEC.jcupW, SPEC.jcupH, SPEC.jcupReach, [sx * (W / 2 - SPEC.jcupW / 2), SPEC.jcupHeight, -(D / 2 - SPEC.jcupReach / 2 + SPEC.jcupNose)]);
+      box(rack, SPEC.safetyW, SPEC.safetyT, D - U, [sx * CW, SPEC.safetyHeight, 0]);
+    }
+    const SH = SPEC.storageHeight, gap = SPEC.storageOffset;
+    for (const sx of [-1, 1]) {
+      box(rack, SU, SH, SU, [sx * CW, SH / 2, SZC]);
+      box(rack, CS, CS, gap, [sx * CW, CS / 2, -D / 2 - gap / 2]);
+      box(rack, CS, CS, gap, [sx * CW, SH - CS / 2, -D / 2 - gap / 2]);
+    }
+    box(rack, 2 * CW - SU, CS, CS, [0, SH - CS / 2, SZC]);
+  }
+  /* cameras in rack coordinates: the scene's centres, axes and image-up directions */
+  const cams = CAMS.map(c => ({ centre: V(c.C[0] - RIG_OFF[0], c.C[1] - RIG_OFF[1], c.C[2] - RIG_OFF[2]), axis: V(...c.axis), up: V(...c.up) }));
+  for (const info of cams) {
+    const g = new THREE.Group(); g.position.copy(info.centre); g.up.copy(info.up); g.lookAt(info.centre.clone().add(info.axis));
+    const body = box(g, 3.8, 3.8, 3.8, [0, 0, 0], M.dark);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.05, 1.4, 24), M.dark); lens.rotation.x = Math.PI / 2; lens.position.z = 2.6; g.add(lens);
+    const glass = new THREE.Mesh(new THREE.CircleGeometry(0.7, 24), M.glass); glass.position.z = 3.31; g.add(glass);
+    const port = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 0.7), M.box2); port.position.set(0, -0.6, -2.2); g.add(port);
+    gear.add(g);
+  }
+  for (const i of [0, 1]) { const p = cams[i].centre; box(gear, 3, 3, 0.9, [p.x, p.y, FACE_FS + 0.45], M.box2); }
+  function rod(a, b, r, mat) {
+    const d = b.clone().sub(a), len = d.length();
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 12), mat);
+    m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); gear.add(m);
+  }
+  const ball = (p, r, mat) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 14), mat); m.position.copy(p); gear.add(m); };
+  { // C3 magic arm: clamp on the left storage post → arm → elbow → arm → ball behind the housing
+    const c3 = cams[2], back = c3.centre.clone().sub(c3.axis.clone().multiplyScalar(2.4));
+    const clamp = V(-CW, 190, FACE_FS + 1.2), a0 = V(-CW, 190, FACE_FS + 2.6), elbow = V(-50, 198, -33 + SHIFT_Z);
+    box(gear, 6, 5, 2.4, [clamp.x, clamp.y, clamp.z], M.box2);
+    rod(a0, elbow, 1.0, M.arm); ball(elbow, 1.5, M.arm); rod(elbow, back, 1.0, M.arm); ball(back, 1.2, M.arm);
+  }
+  /* tablet (Galaxy Tab S8 Ultra, portrait) on the right storage post at 150 cm, screen to the lifter */
+  const TAB = { w: 20.8, h: 32.6, t: 0.55, x: 48.0, y: 150, z: FACE_FS + 9.0 };
+  {
+    const clamp = V(CW, TAB.y, FACE_FS + 1.2), a0 = V(CW, TAB.y, FACE_FS + 2.6), back = V(TAB.x, TAB.y, TAB.z - TAB.t / 2 - 0.9);
+    box(gear, 6, 5, 2.4, [clamp.x, clamp.y, clamp.z], M.box2);
+    rod(a0, back, 1.0, M.arm); ball(back, 1.2, M.arm);
+    box(gear, TAB.w, TAB.h, TAB.t, [TAB.x, TAB.y, TAB.z], M.dark);
+    box(gear, TAB.w - 1.6, TAB.h - 1.6, 0.06, [TAB.x, TAB.y, TAB.z + TAB.t / 2 + 0.03], M.screen, false);
+  }
+  /* compute enclosure: Jetson Orin NX carrier above, trigger board below, on the outer face of the
+     left storage post at 161..179 cm, lid facing out (−x) */
+  const S_OUT = -CW - SU / 2;
+  const ENC = { w: 13.5, h: 17.5, d: 5.6, y: 170, z: SZC, face: S_OUT };
+  const ENC_TOP = ENC.y + ENC.h / 2, ENC_BOT = ENC.y - ENC.h / 2, ENC_X = ENC.face - 0.4 - ENC.d / 2;
+  {
+    const g = new THREE.Group(); g.position.set(ENC.face, ENC.y, ENC.z); g.rotation.y = -Math.PI / 2; gear.add(g);
+    box(g, 10, 19, 0.4, [0, 0, 0.2], M.box2);
+    box(g, ENC.w, ENC.h, ENC.d, [0, 0, 0.4 + ENC.d / 2], M.box);
+    const lidZ = 0.4 + ENC.d + 0.15, divY = -ENC.h / 2 + 4.2;
+    const upTop = ENC.h / 2 - 0.6, upBot = divY + 0.15, loTop = divY - 0.15, loBot = -ENC.h / 2 + 0.6;
+    box(g, ENC.w - 1.2, upTop - upBot, 0.3, [0, (upTop + upBot) / 2, lidZ], M.box2, false);
+    box(g, ENC.w - 1.2, loTop - loBot, 0.3, [0, (loTop + loBot) / 2, lidZ], M.box2, false);
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 10), M.led); led.position.set(5.0, ENC.h / 2 - 1.6, lidZ + 0.15); g.add(led);
+    for (let k = 0; k < 5; k++) box(g, 0.25, 0.6, 4.0, [-3 + k * 1.5, ENC.h / 2 + 0.3, 0.4 + ENC.d / 2], M.box2, false);
+  }
+  /* cables: every camera is on the storage posts, so the runs keep to the storage posts and the
+     storage cross-member, one lane per face, a clip every 30 cm */
+  const XO = S_OUT - 0.6, ZB = FACE_RS - 0.6, LANE_A = SZC + 1.6, LANE_B = SZC - 1.6;
+  function tube(pts, r = 0.45) {
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+    cables.add(new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(48, pts.length * 24), r, 8, false), M.cable));
+  }
+  const CLIP = { vz: [1.6, 1.0, 1.1], vx: [1.1, 1.0, 1.6], hz: [1.0, 1.6, 1.1], hy: [1.0, 1.1, 1.6], vx2: [1.1, 1.0, 4.6] };
+  const clip = (x, y, z, kind = 'vz') => { const [w, h, d] = CLIP[kind]; const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M.clip); m.position.set(x, y, z); cables.add(m); };
+  const camBack = (i, d = 2.2) => cams[i].centre.clone().sub(cams[i].axis.clone().multiplyScalar(d));
+  const intoTop = lane => [V(XO, ENC_TOP + 2.5, lane), V(XO - 0.8, ENC_TOP + 1.0, lane), V(ENC_X + 1.2, ENC_TOP, lane)];
+  const intoBot = lane => [V(XO, ENC_BOT - 6, lane), V(XO, ENC_BOT - 2.5, lane), V(XO - 0.8, ENC_BOT - 1.0, lane), V(ENC_X + 1.2, ENC_BOT, lane)];
+  { // C1: right storage post → back face up → storage cross-member ← → left storage post down → lane B
+    const b = camBack(0), xr = CW + 1.8, yc = SPEC.H - SPEC.CS / 2 - 0.8;
+    tube([b, V(CW - 4.4, b.y + 0.3, FACE_FS - 2.0), V(CW - 4.4, b.y + 0.6, ZB), V(CW + 0.8, b.y + 1.2, ZB), V(xr, b.y + 3.5, ZB),
+      V(xr, 60, ZB), V(xr, 120, ZB), V(xr, 180, ZB), V(xr, 228, ZB), V(xr, yc - 1.8, ZB), V(xr - 2.0, yc, ZB),
+      V(30, yc, ZB), V(0, yc, ZB), V(-30, yc, ZB), V(-xr + 2.0, yc, ZB), V(-xr, yc - 1.8, ZB), V(-xr, 228, ZB), V(-xr, 205, ZB), V(-xr, 190, ZB),
+      V(-xr - 1.6, 187.2, ZB + 0.6), V(XO, 185.5, LANE_B), ...intoTop(LANE_B)]);
+    for (let y = 60; y < 225; y += 30) clip(xr, y, ZB + 0.1, 'vz');
+    for (const x of [30, 0, -30]) clip(x, yc, ZB + 0.1, 'hz');
+    for (const y of [225, 200]) clip(-xr, y, ZB + 0.1, 'vz');
+  }
+  { // C2: left storage post → outer face lane A up → under the enclosure
+    const b = camBack(1);
+    tube([b, V(-CW - 1.0, b.y + 0.3, FACE_FS + 0.6), V(S_OUT - 0.3, b.y + 0.6, FACE_FS + 0.2), V(XO, b.y + 0.4, LANE_A + 1.2), V(XO, b.y + 4, LANE_A),
+      V(XO, 60, LANE_A), V(XO, 100, LANE_A), V(XO, 140, LANE_A), ...intoBot(LANE_A)]);
+  }
+  { // C3: magic arm → left storage post → lane A down → top of the enclosure
+    const b = camBack(2, 2.8);
+    tube([b, V(-49.8, 200.2, -33.2 + SHIFT_Z), V(-54.6, 191.8, -43.0 + SHIFT_Z), V(-57.6, 191.0, FACE_FS + 0.8), V(XO, 191.2, LANE_A + 1.0),
+      V(XO, 188.5, LANE_A), V(XO, ENC_TOP + 5, LANE_A), ...intoTop(LANE_A)]);
+  }
+  { // tablet USB: right storage post up → over the storage cross-member → left post down → top of the enclosure
+    const XOR = CW + SU / 2 + 0.6, YT = SPEC.H + 0.6, port = V(TAB.x, TAB.y - TAB.h / 2, TAB.z);
+    tube([port, V(TAB.x + 0.5, port.y - 2.5, TAB.z - 1.2), V(TAB.x + 2.5, port.y - 3.2, FACE_FS + 2.5), V(CW + 1.5, port.y - 2.8, FACE_FS + 0.6),
+      V(XOR - 0.3, port.y - 2.4, FACE_FS + 0.2), V(XOR, port.y - 1.6, SZC + 1.0), V(XOR, port.y + 2, SZC), V(XOR, 160, SZC), V(XOR, 200, SZC), V(XOR, 230, SZC),
+      V(XOR, SPEC.H - 1.5, SZC), V(XOR - 0.8, SPEC.H + 0.3, SZC), V(CW + 2, YT, SZC), V(30, YT, SZC), V(0, YT, SZC), V(-30, YT, SZC), V(-CW - 2, YT, SZC),
+      V(XO + 0.8, SPEC.H + 0.3, SZC), V(XO, SPEC.H - 1.5, SZC), V(XO, 215, SZC), V(XO, 195, SZC), V(XO, ENC_TOP + 2.5, SZC), V(XO - 0.8, ENC_TOP + 1.0, SZC), V(ENC_X + 1.2, ENC_TOP, SZC)]);
+    for (const y of [160, 190, 220]) clip(CW + SU / 2 + 0.5, y, SZC, 'vx');
+    for (const x of [30, 0, -30]) clip(x, SPEC.H + 0.5, SZC, 'hy');
+    for (const y of [228, 205]) clip(S_OUT - 0.5, y, SZC, 'vx');
+  }
+  { // power: under the enclosure → lane B down → floor → out behind the rack
+    const end = V(-84, 0.6, -112);
+    tube([...intoBot(LANE_B).reverse(), V(XO, 100, LANE_B), V(XO, 50, LANE_B), V(XO, 12, LANE_B), V(XO, 3, LANE_B - 0.5),
+      V(XO - 2, 0.6, -100.5), V(-68, 0.6, -105), V(-77, 0.6, -109), end]);
+    box(cables, 2.4, 1.2, 3.6, [end.x, end.y, end.z], M.box2);
+  }
+  for (const y of [183, 40, 70, 100, 130]) clip(S_OUT - 0.5, y, SZC, 'vx2');
+  return root;
+}
+
+/* ── timeline: the rig, then the rays .. rack-coordinates beats of the measurement animation,
+   then a short hold ── */
+const RIG = 12.0;
 const BEATS = [
+  { stage: 1, key: 'rig', dur: RIG },
   { stage: 2, key: 'rays', dur: 3.8 },
   { stage: 3, key: 'meet', dur: 3.8 },
   { stage: 3, key: 'all', dur: 5.2 },
@@ -190,7 +365,14 @@ const locate = T => { let t0 = 0; for (let i = 0; i < BEATS.length; i++) { if (T
 
 /* ── automatic camera: keys over the whole timeline (seconds), smoothstep between them.
    theta/phi orbit the target: theta 0 looks from +z (behind the person), π from the cameras ── */
-const KEYS = [
+const RIG_KEYS = [
+  { at: 0.0,  target: [17, 100, 11],  theta: -2.0,  phi: 1.2,  radius: 540 },  // rig: from behind the camera wall
+  { at: 2.6,  target: [12, 110, 0],   theta: -2.15, phi: 1.18, radius: 480 },
+  { at: 5.0,  target: [-38, 176, -39], theta: -2.25, phi: 1.24, radius: 200 }, // in on the compute enclosure and the C3 arm
+  { at: 7.2,  target: [-38, 172, -39], theta: -2.45, phi: 1.22, radius: 190 },
+  { at: 9.6,  target: [12, 100, -10], theta: -2.95, phi: 1.15, radius: 440 },  // out and across the camera wall
+];
+const MEASURE_KEYS = [
   { at: 0.0,  target: [15, 98, 0],  theta: 2.25, phi: 1.2,  radius: 390 },     // rays: the cameras and the person
   { at: 3.4,  target: [12, 90, 4],  theta: 2.05, phi: 1.16, radius: 360 },
   { at: 5.4,  target: [2, 46, 16],  theta: 1.85, phi: 1.02, radius: 175 },     // meet: in on the knee
@@ -201,6 +383,7 @@ const KEYS = [
   { at: 16.6, target: [10, 38, 22], theta: 1.25, phi: 0.92, radius: 295 },
   { at: 18.8, target: [12, 46, 22], theta: 1.15, phi: 0.98, radius: 320 },
 ];
+const KEYS = RIG_KEYS.concat(MEASURE_KEYS.map(k => ({ ...k, at: k.at + RIG })));
 function autoCam(T) {
   const K = KEYS;
   if (T <= K[0].at) return K[0];
@@ -224,9 +407,9 @@ function sceneBuilder() {
   const mats = obj => { const o = []; obj.traverse(x => { if (x.material) { const m = x.material; if (m.userData.base === undefined) m.userData.base = m.opacity; m.transparent = true; o.push(m); } }); return o; };
   const b = {
     G, anims, V,
-    fade(obj, reveal) {
+    fade(obj, reveal, { out = false } = {}) {
       const ms = mats(obj);
-      anims.push(t => { const k = prog(t, reveal); obj.visible = k > 0.001; ms.forEach(m => { m.opacity = m.userData.base * k; }); });
+      anims.push(t => { let k = prog(t, reveal); if (out) k = 1 - k; obj.visible = k > 0.001; ms.forEach(m => { m.opacity = m.userData.base * k; }); });
     },
     /* in, hold, out: [start, in, hold, out] */
     pulse(obj, [s, din, hold, dout]) {
@@ -322,14 +505,15 @@ function sceneBuilder() {
 /* per-beat scene: what earlier beats of the same stage produced is already in place, only
    what this beat produces carries a reveal */
 function buildScene(bt) {
-  const b = sceneBuilder(), S = bt.stage, K = bt.key, Fg = FIG;
+  const b = sceneBuilder(), S = bt.stage, K = bt.key, Fg = FIG, fat = [];
   const pairsOf = (pts, bones) => bones.map(([i, j]) => [pts[i], pts[j]]);
-
-  /* there from the start: rack, the three cameras, the person before measuring (faint) */
-  b.rack({ origin: S === 4 });
+  /* the measurement's opening state: rack, the person before measuring (faint) */
+  const base = () => {
+    b.rack({ origin: S === 4 });
+    b.lines(pairsOf(Fg.P, BONES_BODY), 'person', { opacity: 0.22, r: 1.3 });
+    b.dot(headOf(Fg.P), 'person', 7.5, { opacity: 0.22 });
+  };
   CAMS.forEach(c => b.camera(c));
-  b.lines(pairsOf(Fg.P, BONES_BODY), 'person', { opacity: 0.22, r: 1.3 });
-  b.dot(headOf(Fg.P), 'person', 7.5, { opacity: 0.22 });
 
   const planes2d = () => CAMS.forEach(c => b.grouped(() => {
     const O = Fg.O[c.i];
@@ -340,6 +524,14 @@ function buildScene(bt) {
   const rayEnd = (c, j) => add(c.C, mul(unit(sub(Fg.O[c.i][j].pt, c.C)), nrm(sub(Fg.T[j], c.C)) + 30));
   const rays = (j, { reveal = null, stagger = 0.5 } = {}) => CAMS.forEach(c => b.lines([[c.C, rayEnd(c, j)]], c.color, { r: 0.45, opacity: 0.95, reveal: reveal ? [reveal[0] + c.i * stagger, reveal[1]] : null }));
   const normArrows = () => CAMS.forEach(c => { b.dot(c.pp, c.color, 0.7); b.arrow(c.pp, Fg.O[c.i][FEAT].pt, c.color, { head: 2.2 }); });
+
+  /* 1 the rig: the gear fades out and the measurement's opening state fades in, so the rays
+     beat starts on exactly what this one ends on */
+  if (S === 1) {
+    const rig = rigGroup(fat); b.G.add(rig);
+    b.fade(rig, [RIG - 2.6, 1.8], { out: true });
+    b.grouped(() => { base(); planes2d(); featOnPlanes(); normArrows(); }, [RIG - 2.2, 1.8]);
+  } else base();
 
   /* 2 rays: follow the left knee; principal point → knee pixel is the normalised coordinate,
      the line through it from the camera centre is the ray */
@@ -379,12 +571,12 @@ function buildScene(bt) {
     b.arrow([0, 0.6, 0], [RACK_O[0], 0.6, RACK_O[2]], 'mark', { thick: true, reveal: [0.9, 1.0] });
     b.triad(RACK_O, [EX, EY, EZ], 40, { reveal: [1.9, 0.6] });
   }
-  return { group: b.G, anims: b.anims };
+  return { group: b.G, anims: b.anims, fat };
 }
 
 /* floor grid: 1-px lines that fade into the page towards the edges */
-function floorGrid() {
-  const c0 = new THREE.Color(PAL.grid), bg = new THREE.Color(PAL.bg), cx = 20, cz = 30, R0 = 140, R1 = 420, step = 25, half = 450;
+function floorGrid(page) {
+  const c0 = new THREE.Color(PAL.grid), bg = new THREE.Color(page), cx = 20, cz = 30, R0 = 140, R1 = 420, step = 25, half = 450;
   const pos = [], cols = [], tmp = new THREE.Color();
   const push = (x, z) => { const d = Math.hypot(x - cx, z - cz), k = smooth(clamp01((d - R0) / (R1 - R0))); tmp.copy(c0).lerp(bg, k); pos.push(x, 0, z); cols.push(tmp.r, tmp.g, tmp.b); };
   for (let a = -half; a <= half; a += step) for (let s = -half; s < half; s += step) {
@@ -407,14 +599,18 @@ function floorGrid() {
            resize. The canvas may be larger than the box: the view through the box stays the
            same and the canvas only shows more around it. Default: the whole canvas, centred
    Returns { play() from the start, setActive(bool) to stop drawing while off screen, dispose() } */
-export function mountMeasureHero(host, { still = false, onEnd = null, onFail = null, frame = null } = {}) {
+export function mountHeroScene(host, { still = false, onEnd = null, onFail = null, frame = null } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setClearColor(PAL.bg, 1);
+  const page = getComputedStyle(host).getPropertyValue('--bg').trim() || PAL.bg;
+  renderer.setClearColor(page, 1);
   const el = renderer.domElement;
   el.className = 'live-canvas';
   host.appendChild(el);
   const scene = new THREE.Scene();
-  scene.add(floorGrid());
+  scene.add(floorGrid(page));
+  /* the rig's solid parts are lit as in the rig layout render; everything else is unlit */
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x6b7280, 1.1));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(120, 300, 200); scene.add(sun);
   const cam = new THREE.PerspectiveCamera(40, 1, 1, 6000);
 
   let T = still ? TOTAL : 0, beatI = -1, S = null, active = true, playing = !still, ended = false;
@@ -461,6 +657,7 @@ export function mountMeasureHero(host, { still = false, onEnd = null, onFail = n
     const { i, t } = locate(Math.min(T, TOTAL));
     setBeat(i);
     S.anims.forEach(a => a(t));
+    S.fat.forEach(m => m.resolution.set(el.clientWidth, el.clientHeight));   // 1 CSS px edges
     applyCam(currentCam(now));
     renderer.render(scene, cam);
   };
