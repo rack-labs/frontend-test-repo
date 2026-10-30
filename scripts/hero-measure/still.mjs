@@ -1,6 +1,6 @@
 // The hero's still frame: serve dist/, open the home page with #hero=check
 // (the live scene mounts paused and exposes seek), and save the frame at
-// --t seconds as PNG. Playwright is borrowed from another checkout
+// --t seconds, cut to the stage box, as PNG. Playwright is borrowed from another checkout
 // (--playwright <dir that has node_modules/playwright>, default the rack-tracker
 // checkout beside this repo).
 //   node still.mjs --t 0 --out still.png
@@ -26,13 +26,21 @@ const server = createServer((req, res) => {
 });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 
-// 1500 x 1000 at 1.5x puts the stage at 960 x 800 CSS px, a 1440 x 1200 canvas
+// 1500 x 1000 at 1.5x puts the stage box at 960 x 800 CSS px, 1440 x 1200 in the canvas
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1500, height: 1000 }, deviceScaleFactor: 1.5 });
 page.on('pageerror', e => console.error('[pageerror]', e.message));
 await page.goto(`http://127.0.0.1:${server.address().port}/#hero=check`, { waitUntil: 'load' });
 await page.waitForFunction(() => !!window.__measureHero, null, { timeout: 30000 });
-const url = await page.evaluate(t => window.__measureHero.seek(t), t);
+// the canvas fills the section; the still is the part inside the stage box
+const url = await page.evaluate(async t => {
+  const src = new Image(); src.src = window.__measureHero.seek(t); await src.decode();
+  const c = document.querySelector('.hero .live canvas'), C = c.getBoundingClientRect(), B = document.getElementById('hero-stage').getBoundingClientRect();
+  const k = c.width / C.width, out = document.createElement('canvas');
+  out.width = Math.round(B.width * k); out.height = Math.round(B.height * k);
+  out.getContext('2d').drawImage(src, Math.round((B.left - C.left) * k), Math.round((B.top - C.top) * k), out.width, out.height, 0, 0, out.width, out.height);
+  return out.toDataURL('image/png');
+}, t);
 writeFileSync(out, Buffer.from(url.split(',')[1], 'base64'));
 console.log('wrote', out);
 await browser.close(); server.close();

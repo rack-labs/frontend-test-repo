@@ -90,13 +90,15 @@ img, video { display: block; max-width: 100%; height: auto; }
   font-size: 13px; line-height: 1.5; color: var(--sheet-dim);
 }
 
-/* hero: the background runs in sequences on one stage, rendered on the
-   page colour with a floor grid: first the live measurement scene (canvas,
-   src/lib/measure-hero.js, still frame assets/hero-measure.webp until it
-   mounts), then the loop of the post-processed MHR body from a real set on
-   the prototype rig (assets/hero-mhr-*.webm/mp4). The layers cross-fade by
-   data-show. A radial mask fades the frame edges into the page so no
-   rectangle shows, and the veil keeps the copy legible over it */
+/* hero: the background runs in sequences, rendered on the page colour with
+   a floor grid: first the live measurement scene (src/lib/measure-hero.js),
+   whose canvas (.live) fills the section on wide screens and the stage box
+   on narrow ones; then the loop of the post-processed MHR body from a real
+   set on the prototype rig (assets/hero-mhr-*.webm/mp4) in the stage box.
+   Until the scene mounts the box shows its first frame (hero-measure.webp).
+   The layers cross-fade by the section's data-show. A radial mask fades the
+   box edges into the page so no rectangle shows, and the veil keeps the copy
+   legible over both */
 .hero {
   position: relative; min-height: 100svh; box-sizing: border-box;
   display: grid; grid-template-columns: 1fr; align-items: end;
@@ -104,7 +106,7 @@ img, video { display: block; max-width: 100%; height: auto; }
   overflow: hidden; isolation: isolate;
 }
 .hero .poster {
-  position: absolute; inset: 0; z-index: -2; pointer-events: none;
+  position: absolute; inset: 0; z-index: -3; pointer-events: none;
   display: flex; justify-content: flex-end; align-items: center;
   padding: 72px calc(var(--gutter) * .5) 0 0;
 }
@@ -118,13 +120,18 @@ img, video { display: block; max-width: 100%; height: auto; }
   position: absolute; inset: 0; width: 100%; height: 100%; display: block;
   object-fit: cover; transition: opacity .9s ease;
 }
-.hero .stage video, .hero .stage canvas { opacity: 0; }
-.hero .stage[data-show="video"] video, .hero .stage[data-show="live"] canvas { opacity: 1; }
+.hero > .live { position: absolute; inset: 0; z-index: -2; pointer-events: none; opacity: .92; }
+.hero .live canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  opacity: 0; transition: opacity .9s ease;
+}
+.hero .stage video { opacity: 0; }
+.hero[data-show="video"] .stage video, .hero[data-show="live"] .live canvas { opacity: 1; }
 /* the live scene can be dragged around; horizontal drags only on touch, so
    the page still scrolls vertically over it */
-.hero .stage canvas { cursor: grab; touch-action: pan-y; }
-.hero .stage[data-show="live"] canvas { pointer-events: auto; }
-.hero .stage canvas.grabbing { cursor: grabbing; }
+.hero .live canvas { cursor: grab; touch-action: pan-y; }
+.hero[data-show="live"] .live canvas { pointer-events: auto; }
+.hero .live canvas.grabbing { cursor: grabbing; }
 .hero .veil {
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
@@ -279,6 +286,7 @@ img, video { display: block; max-width: 100%; height: auto; }
   .hero .poster { position: static; display: block; width: min(92vw, 56vh); margin: 0 auto 8px; padding: 0; }
   .hero .stage { width: 100%; max-width: none; aspect-ratio: 1 / 1; opacity: .95; }
   .hero .stage video { object-position: 50% 45%; }
+  .hero .stage .still { object-position: 100% 50%; }
   .hero .veil, .hero .cue { display: none; }
   .cols, .foot { grid-template-columns: 1fr; }
   .timeline { grid-template-columns: 1fr; gap: 0; }

@@ -402,10 +402,12 @@ function floorGrid() {
    still   draw the finished frame and do not play (reduced motion); dragging still works
    onEnd   called once when the sequence and its hold are over and nobody is steering
    onFail  called if WebGL goes away
-   focus   () => [x, y]: where on the canvas (0..1) the orbit target sits, read on every resize;
-           the hero keeps the action clear of the copy on wide screens
+   frame   () => ({ x, y, w, h, fx, fy }): the box the camera is framed for, in CSS px from the
+           canvas's top-left, and where in it (0..1) the orbit target sits. Read on every
+           resize. The canvas may be larger than the box: the view through the box stays the
+           same and the canvas only shows more around it. Default: the whole canvas, centred
    Returns { play() from the start, setActive(bool) to stop drawing while off screen, dispose() } */
-export function mountMeasureHero(host, { still = false, onEnd = null, onFail = null, focus = () => [0.5, 0.5] } = {}) {
+export function mountMeasureHero(host, { still = false, onEnd = null, onFail = null, frame = null } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setClearColor(PAL.bg, 1);
   const el = renderer.domElement;
@@ -444,11 +446,15 @@ export function mountMeasureHero(host, { still = false, onEnd = null, onFail = n
   const fit = () => {
     const w = host.clientWidth, h = host.clientHeight;
     if (w < 4 || h < 4) return false;
-    /* cap the drawing buffer near 4 Mpx so a large hero on a 2x screen stays light */
-    const dpr = Math.min(devicePixelRatio || 1, 2, Math.sqrt(4.2e6 / (w * h)));
+    /* cap the drawing buffer near 6 Mpx so a full-screen hero on a 2x screen stays light */
+    const dpr = Math.min(devicePixelRatio || 1, 2, Math.sqrt(6e6 / (w * h)));
     renderer.setPixelRatio(dpr); renderer.setSize(w, h, false);
-    const [fx, fy] = focus();
-    cam.aspect = w / h; cam.setViewOffset(w, h, (0.5 - fx) * w, (0.5 - fy) * h, w, h);
+    /* the projection is set up for the box (fov over its height, its aspect), and the canvas
+       is a window onto that projection, offset by where the box sits in the canvas */
+    const f = (frame && frame()) || { x: 0, y: 0, w, h, fx: 0.5, fy: 0.5 };
+    if (f.w < 4 || f.h < 4) return false;
+    cam.aspect = f.w / f.h;
+    cam.setViewOffset(f.w, f.h, (0.5 - f.fx) * f.w - f.x, (0.5 - f.fy) * f.h - f.y, w, h);
     return true;
   };
   const draw = now => {

@@ -15,9 +15,10 @@ import SiteFooter from '../components/SiteFooter.astro';
   <SiteBar home />
 
   <main id="top">
-    <section class="hero" id="hero" aria-labelledby="hero-title">
+    <section class="hero" id="hero" aria-labelledby="hero-title" data-show="still">
+      <div class="live" id="hero-live" aria-hidden="true"></div>
       <div class="poster" aria-hidden="true">
-        <div class="stage" id="hero-stage" data-show="still">
+        <div class="stage" id="hero-stage">
           <img class="still" src="assets/hero-measure.webp" alt="" width="1440" height="1200">
           <video id="hero-video" muted playsinline disablepictureinpicture preload="none" poster="assets/hero-mhr.webp" width="1440" height="1200"></video>
         </div>
@@ -27,13 +28,21 @@ import SiteFooter from '../components/SiteFooter.astro';
         // frame becomes rack coordinates, rays from the three cameras through
         // the detected joint, the point where they meet, all 33 joints, then
         // the move from the floor frame to the rack frame. Visitors can drag
-        // it around. Second, the recorded loop of the post-processed MHR body
+        // it around. On wide screens its canvas fills the whole section, framed
+        // so the view through the stage box is what the box alone would show;
+        // on narrow ones it sits in the box. Second, the recorded loop of the
+        // post-processed MHR body
         // of a real set on the prototype rig (5 October 2026), 2160 px wide
         // for wide screens and 1080 for narrow ones. Then the first again.
         // Without WebGL the recorded loop plays alone; reduced motion shows
         // the finished live frame without playing it.
+        const hero = document.getElementById('hero') as HTMLElement;
         const stage = document.getElementById('hero-stage') as HTMLElement;
+        const liveBox = document.getElementById('hero-live') as HTMLElement;
         const v = document.getElementById('hero-video') as HTMLVideoElement;
+        const narrow = matchMedia('(max-width: 900px)');
+        const place = () => { const home = narrow.matches ? stage : hero; if (liveBox.parentElement !== home) home.append(liveBox); };   // in the box: above the still and the video
+        place(); narrow.addEventListener('change', place);
         const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const check = /hero=check/.test(location.hash);
         let visible = true;
@@ -42,7 +51,7 @@ import SiteFooter from '../components/SiteFooter.astro';
         const source = () => {
           if (sourced) return;
           sourced = true;
-          const rung = matchMedia('(max-width: 900px)').matches ? 'hero-mhr-1080' : 'hero-mhr-2160';
+          const rung = narrow.matches ? 'hero-mhr-1080' : 'hero-mhr-2160';
           for (const [ext, type] of [['webm', 'video/webm'], ['mp4', 'video/mp4']]) {
             const s = document.createElement('source');
             s.src = `assets/${rung}.${ext}`; s.type = type; v.appendChild(s);
@@ -51,7 +60,7 @@ import SiteFooter from '../components/SiteFooter.astro';
         };
         const playVideo = (loop: boolean) => {
           source();
-          v.loop = loop; v.currentTime = 0; stage.dataset.show = 'video';
+          v.loop = loop; v.currentTime = 0; hero.dataset.show = 'video';
           if (visible) v.play().catch(() => {});
         };
         let webgl = false;
@@ -60,13 +69,20 @@ import SiteFooter from '../components/SiteFooter.astro';
         else {
           import('../lib/measure-hero.js')
             .then(m => {
-              live = m.mountMeasureHero(stage, {
+              live = m.mountMeasureHero(liveBox, {
                 still: still || check,
-                focus: () => matchMedia('(max-width: 900px)').matches ? [0.5, 0.5] : [0.63, 0.44],
+                // framed for a 6:5 box with the target right of centre, clear of the
+                // copy; on narrow screens that box is the square stage cropped the way
+                // the still is (object-position 100%), so the two line up
+                frame: () => {
+                  const L = liveBox.getBoundingClientRect(), B = stage.getBoundingClientRect();
+                  const w = narrow.matches ? B.height * 1.2 : B.width;
+                  return { x: B.right - L.left - w, y: B.top - L.top, w, h: B.height, fx: 0.63, fy: 0.44 };
+                },
                 onEnd: () => { live!.setActive(false); playVideo(false); },
                 onFail: () => { live = null; playVideo(true); },
               });
-              stage.dataset.show = 'live';
+              hero.dataset.show = 'live';
               live.setActive(visible);
               if (check) (window as any).__measureHero = live;
               else if (!still) setTimeout(source, 6000);               // fetch the loop while the first sequence plays
@@ -74,14 +90,14 @@ import SiteFooter from '../components/SiteFooter.astro';
             .catch(e => { console.warn('[hero] live path failed:', e); if (!still) playVideo(true); });
           v.addEventListener('ended', () => {
             if (!live) return;
-            stage.dataset.show = 'live'; live.setActive(visible); live.play();
+            hero.dataset.show = 'live'; live.setActive(visible); live.play();
           });
         }
         if ('IntersectionObserver' in window) {
           new IntersectionObserver(es => es.forEach(e => {
             visible = e.isIntersecting;
-            if (stage.dataset.show === 'live') live?.setActive(visible);
-            else if (stage.dataset.show === 'video') { if (visible) v.play().catch(() => {}); else v.pause(); }
+            if (hero.dataset.show === 'live') live?.setActive(visible);
+            else if (hero.dataset.show === 'video') { if (visible) v.play().catch(() => {}); else v.pause(); }
           }), { threshold: 0.05 }).observe(stage);
         }
       </script>
