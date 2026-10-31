@@ -2,11 +2,74 @@
 import Base from '../layouts/Base.astro';
 import SiteBar from '../components/SiteBar.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import { getHeadings } from '../report/project-report.md';
+
+// The home page is the review in one scroll: the hero, the rig (three live 3D viewers from
+// public/hardware/), the demo video, the slide deck (built into public/slides/ by
+// scripts/slides/build.mjs) and the Project Report (/report/, from scripts/report/import.mjs).
+// The deeper pages, How it works, Research and Open source, hang off the top bar.
+const chapters = getHeadings().filter((h) => h.depth === 2);
+
+// The demo video. Until the narrated demo of a full set is cut, the slot plays the clip of the
+// rig turning (scene 7 of that video's script). A YouTube id, when set, adds a link beside it.
+const DEMO = {
+  src: '/assets/demo/rig-hw-spin.mp4', type: 'video/mp4', poster: '/assets/demo/rig-hw-spin.webp', width: 1920, height: 1080,
+  youtube: '',
+  note: 'Preview clip: the rig and its parts. The narrated demo of a full set, about five minutes, is being cut and will take this slot.',
+};
+// The PowerPoint export of the deck (75 MB) is served from object storage, not with the page files; empty until it is up.
+const PPTX = '';
+const PDF = { href: '/report/RackTracker_Project_Report.pdf', size: '8 MB', pages: 40 };
+
+const parts = [
+  {
+    id: 'rig', tab: 'Rig layout', title: 'Rig layout, 3D', kicker: 'The rig as built',
+    lede: 'A power-rack mock-up with the three cameras on its rear storage posts, the tablet on the right post and the compute enclosure on the left one. The camera poses are the real ones from the position calibration of 28 August 2026, so what the viewer shows is where the cameras actually look.',
+    spec: [
+      ['Rack', '118 × 106 × 241 cm', 'PVC mock-up of a power rack, built to measure'],
+      ['Cameras', '3, on the rear posts', 'turned 90° so a person 2 m away fits one frame top to toe'],
+      ['Trigger', 'one pulse to all three', 'exposure spread across the cameras 0.12 ms (median)'],
+      ['Capture', '1920 × 1200 at 30 fps', 'MJPG, three cameras on one powered USB 3 hub'],
+      ['Compute', 'Jetson Orin NX 16 GB', 'in one enclosure with the trigger board and the hub'],
+      ['Display', 'tablet, USB tethered', 'a closed link: no video leaves the rack'],
+      ['Sync', '100% of pulses', '900 of 900 per camera once USB 3 power saving was off'],
+    ],
+    links: [['/report/#4-리그-하드웨어', 'Report, chapter 4'], ['/how-it-works/', 'How it works']],
+  },
+  {
+    id: 'carrier', tab: 'Compute unit', title: 'Compute carrier, 3D', kicker: 'Jetson Orin NX on an Advantech MIC-711D-OX',
+    lede: 'The computer beside the rack. An NVIDIA Jetson Orin NX module sits on an Advantech carrier in a fanless aluminium case; the board is drawn from photographs of the unit in the rig, every part taller than a millimetre in place. It runs the joint detector, the triangulation and everything after it.',
+    spec: [
+      ['Module', 'Jetson Orin NX 16 GB', 'Super mode: 157 TOPS, 8-core Arm Cortex-A78AE at 2.0 GHz'],
+      ['GPU', '1,024 CUDA cores, 1,173 MHz', 'Ampere, with two DLA engines'],
+      ['Memory', '16 GB LPDDR5', 'NVMe SSD on the M.2 2280 slot'],
+      ['Power', '10 to 40 W', 'passive cooling, no fan'],
+      ['Carrier', 'MIC-711D-OX', '125 × 124.14 × 50.62 mm'],
+      ['I/O used', 'USB 3.2 Gen1 × 2, USB 2.0, GbE', 'the cameras on one hub, the tablet on the other port'],
+      ['Software', 'JetPack 6.2.1, TensorRT', 'the rig OS and the kiosk server, Linux'],
+    ],
+    links: [['https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/', 'NVIDIA Jetson Orin'], ['https://www.advantech.com/en/search?q=MIC-711D-OX', 'Advantech MIC-711D-OX'], ['/report/#4-2-연산-장비와-usb', 'Report, 4-2']],
+  },
+  {
+    id: 'camera', tab: 'Camera module', title: 'Camera module, 3D', kicker: 'DECXIN-3081V1 with the onsemi AR0234 sensor',
+    lede: 'One of the three cameras, without its housing: a 38 mm board with a global-shutter sensor and a wide, low-distortion M12 lens. The three fire together on one hardware trigger line, so a fast bar and limbs are caught straight and at the same instant in all three views.',
+    spec: [
+      ['Sensor', 'onsemi AR0234CS', '1/2.6-inch, 2.3 MP, global shutter'],
+      ['Resolution', '1920 × 1200', 'used at 30 fps per camera'],
+      ['Lens', 'M12, 4.1 mm, F2.0', 'about 120°, low distortion; calibrated per camera'],
+      ['Board', '38 × 38 mm', 'four M2 holes on a 34 mm pitch'],
+      ['Interface', 'USB 3.0, USB-C', 'UVC; MJPG when three stream on one hub'],
+      ['Trigger', 'TRG / STRB / GND header', 'one frame per rising edge of the external trigger'],
+      ['Exposure', 'fixed per session', 'auto exposure, white balance and focus are off'],
+    ],
+    links: [['https://www.onsemi.com/products/sensors/image-sensors/ar0234cs', 'onsemi AR0234CS'], ['/report/#4-1-카메라와-동기-트리거', 'Report, 4-1'], ['/how-it-works/#shutter', 'Shutter, how it works']],
+  },
+];
 ---
 <Base
   lang="en"
   title="RackTracker by Rack Labs"
-  description="RackTracker turns the power rack into a motion-capture studio: three synchronized cameras and an edge computer mounted on the rack show, for every rep, which joints took the load and which muscles carried it. Made by Rack Labs, an AI-native startup in Seoul that also publishes the open-source tools pipeplot and agent-workflow-kit."
+  description="RackTracker turns the power rack into a motion-capture studio: three synchronized cameras and an edge computer mounted on the rack show, for every rep, which joints took the load and which muscles carried it. The rig in 3D, the demo video, the review slides and the project report."
   ogType="website"
   ogTitle="RackTracker by Rack Labs"
   ogDescription="Turn the power rack into a motion-capture studio. For every rep, see which joints took the load and which muscles carried it."
@@ -112,173 +175,174 @@ import SiteFooter from '../components/SiteFooter.astro';
         <h1 id="hero-title">Turn the power rack into a <span class="nb">motion-capture</span> studio.</h1>
         <p class="lede">Three synchronized cameras and an edge computer, mounted on the rack, show the trainer where the weight went on every rep: which joints took the load, and which muscles carried it.</p>
         <div class="cta">
-          <a class="btn" href="#racktracker">RackTracker</a>
-          <a class="btn ghost" href="#open-source">Open source</a>
+          <a class="btn" href="#hardware">See the rig</a>
+          <a class="btn ghost" href="#demo">Watch the demo</a>
         </div>
       </div>
       <div class="cue" aria-hidden="true"><i></i>scroll</div>
     </section>
 
-    <section class="wing" id="racktracker" aria-labelledby="rt-title">
+    <section class="wing" id="hardware" aria-labelledby="hw-title">
       <div class="head">
-        <h2 id="rt-title">RackTracker</h2>
-        <p>Our main business, from the camera trigger to the trainer's report</p>
+        <h2 id="hw-title">The rig</h2>
+        <p>Three cameras, a trigger board, an edge computer and a tablet, fixed to one power rack</p>
       </div>
       <div class="cols">
         <div class="text">
-          <p class="lede">RackTracker is our main business, and it is a physical product: a hardware edge device and the software that runs on it, supplied and installed as one unit per power rack. The device is three global-shutter cameras and an NVIDIA Jetson fixed to the rack.</p>
-          <p>The cameras fire on one electrical trigger. The joints found in each view are intersected from three directions, and when one view is occluded the other two carry it, which gives cm-level 3D coordinates.</p>
-          <p>Every set is logged as center-of-mass shift, left-right asymmetry, trunk lean and squat depth, and handed back to the member and the trainer. Thresholds are set per person from body proportions.</p>
-          <p>Because the setup never changes, a new session compares with the last one on the same footing. Processing finishes on the computer beside the rack, on a closed network, so member video never leaves the gym.</p>
-          <dl class="facts">
-            <div><dt>What we supply</dt><dd>Edge device + software<small>one unit per rack, installed by us</small></dd></div>
-            <div><dt>Shutter skew across three cameras</dt><dd>0.12 ms<small>measured with a logic analyzer</small></dd></div>
-            <div><dt>Joints recovered with three cameras</dt><dd>70%<small>CMU Panoptic. Standard triangulation: 40%</small></dd></div>
-            <div><dt>Joint position error</dt><dd>~3 cm<small>the same as with two cameras</small></dd></div>
-            <div><dt>Where processing runs</dt><dd>NVIDIA Jetson beside the rack<small>closed network, no video leaves the gym</small></dd></div>
-          </dl>
-          <div class="cta">
-            <a class="btn" href="/business-plan/">Read the business plan</a>
+          <p class="lede">RackTracker is a physical product: three global-shutter cameras and an NVIDIA Jetson fixed to the rack, with the software that runs on it, installed as one unit per rack. The cameras fire on one electrical trigger, the joints found in each view are intersected from three directions, and when one view is occluded the other two carry it.</p>
+          <p>Because the setup never changes, every session compares with the last one on the same footing. Processing finishes on the computer beside the rack, on a closed network, so member video never leaves the gym.</p>
+        </div>
+        <dl class="facts">
+          <div><dt>Shutter spread across three cameras</dt><dd>0.12 ms<small>measured with a logic analyzer</small></dd></div>
+          <div><dt>Joints recovered with three cameras</dt><dd>70%<small>CMU Panoptic. Standard triangulation: 40%</small></dd></div>
+          <div><dt>Joint position error</dt><dd>~3 cm<small>the same as with two cameras</small></dd></div>
+        </dl>
+      </div>
+
+      <div class="hw">
+        <div class="sheet hw-sheet">
+          <div class="hw-frame" id="hw-frame">
+            <img class="hw-still" id="hw-still" src="/hardware/still/rig.webp" width="1200" height="900" alt="Rig layout drawing: the rack, three cameras, the tablet and the compute enclosure">
+            <iframe id="hw-view" title="Rig layout, 3D" loading="lazy" allow="fullscreen"></iframe>
+          </div>
+          <div class="hw-bar">
+            <span class="hint">Drag to turn. Pinch to zoom, or grab it first and then scroll.</span>
+            <span class="hw-actions">
+              <button type="button" class="mini" id="hw-full">Full screen</button>
+              <a class="mini" id="hw-open" href="/hardware/rig.html" target="_blank" rel="noopener">Open in a new tab</a>
+            </span>
           </div>
         </div>
-        <div class="figs">
-          <figure class="sheet tall">
-            <img src="assets/demo-hd.webp" width="371" height="597" alt="Analysis view of a squat at the bottom position: joint angles, per-joint load and the center-of-mass line drawn over the lifter" />
-            <figcaption>Figure 1. Joint load and center-of-mass analysis.</figcaption>
-          </figure>
-          <figure class="sheet">
-            <img src="assets/photo/jetson-rig.webp" width="960" height="720" alt="NVIDIA Jetson compute unit on the bench with the trigger board and camera modules wired to it" />
-            <figcaption>Figure 2. Jetson edge rig with the trigger board.</figcaption>
-          </figure>
+        <div class="hw-side">
+          <div class="hw-tabs" role="tablist" aria-label="Part">
+            {parts.map((p, i) => <button type="button" role="tab" id={`tab-${p.id}`} aria-selected={i === 0 ? 'true' : 'false'} aria-controls={`hw-${p.id}`} data-page={p.id} data-title={p.title}>{p.tab}</button>)}
+          </div>
+          {parts.map((p, i) => (
+            <div class="hw-panel" id={`hw-${p.id}`} role="tabpanel" aria-labelledby={`tab-${p.id}`} hidden={i !== 0}>
+              <p class="kicker">{p.kicker}</p>
+              <p>{p.lede}</p>
+              <dl class="spec">
+                {p.spec.map(([k, v, s]) => <div><dt>{k}</dt><dd>{v}<small>{s}</small></dd></div>)}
+              </dl>
+              <p class="links">{p.links.map(([href, label]) => <a href={href} rel={href.startsWith('http') ? 'noopener' : undefined}>{label}</a>)}</p>
+            </div>
+          ))}
         </div>
       </div>
-      <ol class="timeline" aria-label="Roadmap">
-        <li><span class="when">Now</span><span class="what">Working prototype: three-camera capture, calibration, 3D joint reconstruction and automatic set logging</span></li>
-        <li><span class="when">Q4 2026</span><span class="what">Validation against marker-based motion capture</span></li>
-        <li><span class="when">H1 2027</span><span class="what">Gym pilot</span></li>
-        <li><span class="when">H2 2027</span><span class="what">Production unit</span></li>
-      </ol>
-    </section>
+      <script>
+        // One viewer frame, three pages behind it (public/hardware/*.html). The page loads only once the
+        // section is near the screen; until its first frame is drawn (it posts {hw:'ready'}) the still
+        // of that part stands in, and it stays if WebGL is missing. Full screen takes the frame; where
+        // the API is missing (iOS) the page opens in its own tab instead.
+        const frame = document.getElementById('hw-frame') as HTMLElement;
+        const view = document.getElementById('hw-view') as HTMLIFrameElement;
+        const stillImg = document.getElementById('hw-still') as HTMLImageElement;
+        const open = document.getElementById('hw-open') as HTMLAnchorElement;
+        const tabs = [...document.querySelectorAll<HTMLButtonElement>('.hw-tabs [role=tab]')];
+        let near = false;
+        const pageOf = (id: string) => `/hardware/${id}.html`;
+        const load = (id: string) => { frame.classList.remove('ready'); view.src = pageOf(id) + '?bg=fafafa'; };
+        const show = (btn: HTMLButtonElement) => {
+          const id = btn.dataset.page!;
+          tabs.forEach(b => { const on = b === btn; b.setAttribute('aria-selected', String(on)); (document.getElementById(b.getAttribute('aria-controls')!) as HTMLElement).hidden = !on; });
+          stillImg.src = `/hardware/still/${id}.webp`; view.title = btn.dataset.title!; open.href = pageOf(id);
+          if (near) load(id); else frame.classList.remove('ready');
+        };
+        tabs.forEach(b => b.addEventListener('click', () => show(b)));
+        addEventListener('message', e => { if (e.data && e.data.hw === 'ready') frame.classList.add('ready'); });
+        const start = () => { near = true; const on = tabs.find(b => b.getAttribute('aria-selected') === 'true')!; load(on.dataset.page!); };
+        if ('IntersectionObserver' in window) {
+          const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); start(); } }, { rootMargin: '300px 0px' });
+          io.observe(frame);
+        } else start();
+        document.getElementById('hw-full')!.addEventListener('click', () => {
+          if (frame.requestFullscreen) frame.requestFullscreen().catch(() => window.open(open.href, '_blank'));
+          else window.open(open.href, '_blank');
+        });
+      </script>
 
-    <section class="wing" id="prototype" aria-labelledby="pt-title">
-      <div class="head">
-        <h2 id="pt-title">Prototype</h2>
-        <p>Photographed 17 September 2026 on the PVC rack mock-up</p>
-      </div>
-      <div class="photos">
+      <div class="photos hw-photos" aria-label="The prototype, photographed 17 September 2026">
         <figure>
           <img src="assets/photo/rig.webp" width="720" height="960" alt="PVC power-rack mock-up in a lab room with three cameras clamped to the uprights and a tablet on the bench" loading="lazy" decoding="async" />
           <figcaption>PVC rack mock-up, three cameras mounted</figcaption>
         </figure>
         <figure>
-          <img src="assets/photo/rig-board.webp" width="720" height="960" alt="ChArUco calibration board leaning on the rig beside a laptop running the kiosk" loading="lazy" decoding="async" />
-          <figcaption>Calibration board on the rig</figcaption>
-        </figure>
-        <figure>
-          <img src="assets/photo/kiosk-camera.webp" width="633" height="960" alt="Live camera view in the kiosk with a green grid while a person holds the calibration board" loading="lazy" decoding="async" />
-          <figcaption>Kiosk camera view during calibration</figcaption>
-        </figure>
-        <figure>
           <img src="assets/photo/trigger-board.webp" width="720" height="960" alt="Hand-built trigger board on a breadboard, held over the Jetson with its jumper wires" loading="lazy" decoding="async" />
           <figcaption>Trigger board, one pulse to three cameras</figcaption>
-        </figure>
-        <figure class="wide">
-          <img src="assets/photo/jetson-rig.webp" width="960" height="720" alt="NVIDIA Jetson compute unit on the bench with the trigger board and camera modules wired to it" loading="lazy" decoding="async" />
-          <figcaption>Jetson edge unit, cameras and trigger wiring</figcaption>
         </figure>
         <figure>
           <img src="assets/photo/carrier-board.webp" width="720" height="960" alt="Jetson module with its heatsink on the carrier board, case opened on the bench" loading="lazy" decoding="async" />
           <figcaption>Jetson module on the carrier board</figcaption>
         </figure>
-        <dl class="parts" aria-label="Prototype parts">
-          <div><dt>Cameras</dt><dd>3 AR0234 global-shutter sensors, 120-degree low-distortion lens</dd></div>
-          <div><dt>Compute</dt><dd>NVIDIA Jetson, TensorRT inference</dd></div>
-          <div><dt>Trigger</dt><dd>Hand-built board, one pulse to all three cameras</dd></div>
-          <div><dt>Mock-up</dt><dd>PVC power rack, cameras on magic arms</dd></div>
-        </dl>
+        <figure>
+          <img src="assets/photo/rig-board.webp" width="720" height="960" alt="ChArUco calibration board leaning on the rig beside a laptop running the kiosk" loading="lazy" decoding="async" />
+          <figcaption>Calibration board on the rig</figcaption>
+        </figure>
       </div>
     </section>
 
-    <section class="wing" id="open-source" aria-labelledby="os-title">
+    <section class="wing" id="demo" aria-labelledby="demo-title">
       <div class="head">
-        <h2 id="os-title">Open source</h2>
-        <p>Tools we build along the way, published for other teams</p>
+        <h2 id="demo-title">Demo</h2>
+        <p>How a set is measured on the rig, from the trigger pulse to the report</p>
       </div>
-      <p class="lede">Two projects come out of building RackTracker with Claude Code. pipeplot is live now, and its code will be released as open source. agent-workflow-kit is already on GitHub under the MIT license.</p>
-      <dl class="facts" aria-label="Open-source projects">
-        <div><dt><a href="#pipeplot">pipeplot</a></dt><dd>Open-source release planned<small>live at pipeplot.pages.dev</small></dd></div>
-        <div><dt><a href="#agent-workflow-kit">agent-workflow-kit</a></dt><dd>MIT, v0.2.13<small>github.com/lhk0721/agent-workflow-kit</small></dd></div>
-      </dl>
+      <figure class="sheet demo">
+        <video controls playsinline preload="metadata" poster={DEMO.poster} width={DEMO.width} height={DEMO.height}>
+          <source src={DEMO.src} type={DEMO.type} />
+        </video>
+        <figcaption>{DEMO.note}{DEMO.youtube && <> <a href={`https://www.youtube.com/watch?v=${DEMO.youtube}`} rel="noopener">Watch on YouTube</a>.</>}</figcaption>
+      </figure>
     </section>
 
-    <section class="pp" id="pipeplot" aria-labelledby="pp-title">
-      <div class="poster" aria-hidden="true">
-        <video id="pp-video" muted loop playsinline disablepictureinpicture preload="none" poster="assets/pipeplot-hero.webp"></video>
-        <script is:inline>
-          // The scenes render live (assets/pipeplot-live.js, pipeplot's own
-          // three.js hero) when WebGL is there and motion is allowed; the
-          // recorded loop is the fallback. Two rungs for the video, as on
-          // pipeplot: 1080p for wide screens, 720p for narrow ones.
-          (function () {
-            var v = document.getElementById('pp-video');
-            var rung = matchMedia('(max-width: 900px)').matches ? 'pipeplot-hero' : 'pipeplot-hero-1080';
-            [['webm', 'video/webm'], ['mp4', 'video/mp4']].forEach(function (t) {
-              var s = document.createElement('source');
-              s.src = 'assets/' + rung + '.' + t[0]; s.type = t[1]; v.appendChild(s);
-            });
-            var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-            var webgl = false;
-            try { var c = document.createElement('canvas'); webgl = !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) {}
-            var playVideo = function () { v.hidden = false; v.preload = 'auto'; v.play().catch(function () {}); };
-            if (still) return;                 // the poster still stands alone
-            if (!webgl) { playVideo(); return; }
-            import('./assets/pipeplot-live.js')
-              .then(function (m) {
-                return m.mountHeroLive(v.parentNode, {
-                  force: /hero=live/.test(location.hash),   // skip the frame-time gate, for checks
-                  onLive: function () { v.pause(); v.hidden = true; },
-                  onFallback: playVideo
-                });
-              })
-              .catch(function (e) { console.warn('[pipeplot hero] live path failed:', e); playVideo(); });
-          })();
-        </script>
+    <section class="wing" id="slides" aria-labelledby="slides-title">
+      <div class="head">
+        <h2 id="slides-title">Review deck</h2>
+        <p>Eleven slides, three minutes, as presented at the graduation review (Korean)</p>
       </div>
-      <div class="veil" aria-hidden="true"></div>
-      <div class="copy">
-        <p class="kicker">pipeplot, open-source release planned</p>
-        <h2 id="pp-title">Neural networks,<br>built layer by layer<br>in walkable space.</h2>
-        <p class="lede">One page per model. Model pages stand real trained weights and activations up in 3D space, and concept pages stack scenes in the order one person came to understand the idea.</p>
-        <p class="lede">Four models so far, AlexNet, VGG-16, GoogLeNet and ResNet-34, plus concept pages. It is growing into a place to learn ML and DL, and a community around it. The code will be released as open source.</p>
-        <div class="cta">
-          <a class="btn" href="https://pipeplot.pages.dev" rel="noopener">Open pipeplot</a>
-          <a class="btn ghost" href="https://pipeplot.pages.dev/#models" rel="noopener">See the models</a>
+      <div class="sheet deck">
+        <div class="deck-frame" id="deck-frame">
+          <iframe src="/slides/?embed#/graduation-review/1" title="RackTracker review deck" loading="lazy" allow="fullscreen"></iframe>
+        </div>
+        <div class="deck-bar">
+          <span class="hint">Click the deck, then step through it with the arrow keys.</span>
+          <span class="deck-actions">
+            <button type="button" class="mini" id="deck-full">Full screen</button>
+            <a class="mini" href="/slides/#/graduation-review/1" target="_blank" rel="noopener">Open in a new tab</a>
+            {PPTX
+              ? <a class="mini strong" href={PPTX} download>Download PowerPoint</a>
+              : <span class="mini off" title="The PowerPoint export is being put up">PowerPoint, soon</span>}
+          </span>
         </div>
       </div>
+      <script>
+        const deck = document.getElementById('deck-frame') as HTMLElement;
+        document.getElementById('deck-full')!.addEventListener('click', () => {
+          const tab = () => window.open('/slides/#/graduation-review/1', '_blank');
+          if (deck.requestFullscreen) deck.requestFullscreen().catch(tab); else tab();
+        });
+      </script>
     </section>
 
-    <section class="wing" id="agent-workflow-kit" aria-labelledby="awk-title">
+    <section class="wing" id="report" aria-labelledby="report-title">
       <div class="head">
-        <h2 id="awk-title">agent-workflow-kit</h2>
-        <p>Open source under MIT. A workflow, a Markdown document store and backstops for repositories where Claude Code does the work</p>
+        <h2 id="report-title">Project Report</h2>
+        <p>The full write-up for the review, in Korean: nine chapters, 29 figures, 7 tables</p>
       </div>
       <div class="cols">
         <div class="text">
-          <p class="lede">Agent Workflow Kit gives a repository three things: a workflow that turns a request into an issue, a branch and a document, and runs many of them at once on git; a document store kept in Markdown and engineered so the agent's context stays small and true; and backstops that fire when a step was skipped.</p>
-          <p>This repo is the single source: each target repo gets git-tracked copies through install.mjs, so a fix made here reaches every repo on its next update instead of drifting per copy.</p>
-          <dl class="facts">
-            <div><dt>Version</dt><dd>0.2.13<small>updated with the release notes</small></dd></div>
-            <div><dt>Skills</dt><dd>9<small>issue-start, post-pr-cleanup, ui-evidence, ko-writing and more</small></dd></div>
-            <div><dt>License</dt><dd>MIT<small>Node 20 or newer</small></dd></div>
-          </dl>
+          <p class="lede">Why the rig exists, what it is made of, how the rig OS, the camera calibration and the 3D measurement work, how the load on each joint is computed, and how all of it was validated.</p>
+          <ol class="chapters">
+            {chapters.map((c) => <li><a href={`/report/#${c.slug}`}>{c.text}</a></li>)}
+          </ol>
           <div class="cta">
-            <a class="btn" href="https://github.com/lhk0721/agent-workflow-kit" rel="noopener">View on GitHub</a>
+            <a class="btn" href="/report/">Read it online</a>
+            <a class="btn ghost" href={PDF.href} download>Download the PDF ({PDF.size}, {PDF.pages} pages)</a>
           </div>
         </div>
         <div class="figs">
           <figure class="sheet">
-            <img src="assets/awk-work-unit.png" width="1323" height="520" alt="Flow of one work unit: issue, branch and worktree, management document and pointer, then edits, review gate, commit, and PR with cleanup" />
-            <figcaption>Figure 3. One work unit, from issue to cleanup.</figcaption>
+            <img src="/report/figures/fig08_flow.jpg" alt="The four procedures of the rig as kiosk screens: diagnosis, lens calibration, position calibration and measurement" loading="lazy" decoding="async" />
+            <figcaption>From the report: the four procedures, diagnosis, lens calibration, position calibration and measurement.</figcaption>
           </figure>
         </div>
       </div>
@@ -321,14 +385,6 @@ import SiteFooter from '../components/SiteFooter.astro';
           fallback();
         }
       });
-    })();
-    // Reduced motion: show the still instead of the video
-    (function () {
-      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      var v = document.getElementById('pp-video');
-      var img = document.createElement('img');
-      img.src = v.getAttribute('poster'); img.alt = ''; img.decoding = 'async';
-      v.replaceWith(img);
     })();
   </script>
 </Base>

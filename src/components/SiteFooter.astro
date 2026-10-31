@@ -1,6 +1,6 @@
 ---
 // Footer. The home page also carries the copy-address button (script in
-// index.astro), the documents row and the business registration.
+// index.astro) and the business registration; the documents row is on every page.
 interface Props {
   home?: boolean;
 }
@@ -19,7 +19,7 @@ const email = 'dlgusrb6546@racktracker.dev';
       ? <div><dt>Email</dt><dd><a href={`mailto:${email}`}>{email}</a> <button class="copybtn" type="button" data-copy={email}>Copy address</button></dd></div>
       : <div><dt>Email</dt><dd><a href={`mailto:${email}`}>{email}</a></dd></div>}
     <div><dt>GitHub</dt><dd><a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd></div>
-    {home && <div><dt>Documents</dt><dd><a href="/business-plan/">Business plan</a> <span class="alt">(<a href="/business-plan/ko/" hreflang="ko" lang="ko">한국어 원문</a>)</span></dd></div>}
+    <div><dt>Documents</dt><dd><a href="/report/" hreflang="ko">Project report</a> <span class="alt">(<a href="/report/RackTracker_Project_Report.pdf" download>PDF</a>)</span>, <a href="/slides/#/graduation-review/1" hreflang="ko">Review deck</a>, <a href="/business-plan/">Business plan</a> <span class="alt">(<a href="/business-plan/ko/" hreflang="ko" lang="ko">한국어 원문</a>)</span></dd></div>
   </dl>
   {home && (
     <dl class="reg" aria-label="Business registration">

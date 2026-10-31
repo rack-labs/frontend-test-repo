@@ -1,7 +1,8 @@
 ---
-// Top bar. On the home page the links jump within the page and the bar turns
-// solid on scroll (script in index.astro); on other pages it starts solid and
-// the section links go back to the home page.
+// Top bar. On the home page the section links jump within the page and the bar
+// turns solid on scroll (script in index.astro); on other pages it starts solid
+// and the section links go back to the home page. The page links are the same
+// everywhere; the one for the current page is marked.
 interface Props {
   home?: boolean;
   current?: string;
@@ -10,10 +11,13 @@ interface Props {
 const { home = false, current } = Astro.props;
 const at = home ? '' : '/';
 const links = [
-  { href: `${at}#racktracker`, label: 'RackTracker' },
-  { href: `${at}#prototype`, label: 'Prototype' },
-  { href: '/business-plan/', label: 'Business plan' },
-  { href: `${at}#open-source`, label: 'Open source' },
+  { href: `${at}#hardware`, label: 'The rig' },
+  { href: `${at}#demo`, label: 'Demo' },
+  { href: `${at}#slides`, label: 'Slides' },
+  { href: '/report/', label: 'Report' },
+  { href: '/how-it-works/', label: 'How it works' },
+  { href: '/research/', label: 'Research' },
+  { href: '/open-source/', label: 'Open source' },
   { href: `${at}#contact`, label: 'Contact' },
 ];
 ---
