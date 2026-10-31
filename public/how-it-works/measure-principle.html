@@ -1,0 +1,1161 @@
+<!doctype html><html lang="ko"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>측정 산출 원리</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* 레이아웃: 「렌즈 보정 산출 원리」와 같다. 3D 뷰(격벽 뷰어)가 화면 전체, 단계 탭과 시점 버튼은 위, 재생기(자막·진행 막대·버튼)는 아래 가운데.
+   C1 이 보는 이미지는 오른쪽 위 작은 창. 밝은 테마 하나로 고정한다 */
+:root{
+  --bg:#e9edf2; --panel:#ffffff; --pane:#f2f5f8; --grid:#c9d2db; --edge:#aeb9c4;
+  --fg:#1b1f27; --muted:#5b6270; --line:#d5dce4; --accent:#1f5fb0; --spike:#1b1f27;
+  --rack:#6b7480; --person:#9aa3ad; --px:#d2571f; --pt:#d2571f; --joint:#1b1f27; --metric:#1f8a5b; --load:#a8307f; --anchor:#c99400; --tri:#7a838f;
+  --font:'IBM Plex Sans KR',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+html,body{height:100%}
+body{margin:0;padding:0;background:var(--panel);color:var(--fg);font:14px/1.5 var(--font);overflow:hidden}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.wrap{position:fixed;inset:0}
+.v3d{position:absolute;inset:0;background:var(--panel);overflow:hidden;touch-action:none}
+.v3d canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ov{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.ov .tick{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;font:600 10.5px/1 var(--mono);color:var(--muted);will-change:transform}
+.ov .ttl{font-weight:700;color:var(--fg)}
+.ov .lbl{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;font:600 11px/1.2 var(--mono);padding:2px 4px;color:var(--fg);will-change:transform,opacity}
+.ov .lbl.k{font-weight:500;color:var(--muted)}
+.ov .lbl.rep{font-size:13px;padding:3px 7px;border-radius:5px;background:var(--fg);color:#fff}
+.ov .lead{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ov .lead line{stroke-width:1.2;opacity:.8}
+.ov .lead circle{opacity:.9}
+.ov .tip{position:absolute;left:0;top:0;display:none;z-index:3;padding:6px 9px;border-radius:6px;background:var(--panel);border:1px solid var(--line);
+  box-shadow:0 2px 8px rgba(0,0,0,.18);font:600 11px/1.45 var(--mono);white-space:nowrap}
+.ov .tip div+div{color:var(--muted);font-weight:500}
+
+/* 위: 단계 탭(왼쪽) · 시점(오른쪽). 좁으면 두 줄로 */
+.top{position:absolute;z-index:5;top:max(10px,env(safe-area-inset-top,0px));left:0;right:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;pointer-events:none}
+.top>*{pointer-events:auto}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 92%,transparent);font-weight:500;font-size:13px;display:flex;gap:7px;align-items:center}
+.tabs button b{font:600 11px/1 var(--mono);color:var(--muted)}
+.tabs button[aria-selected="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tabs button[aria-selected="true"] b{color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:color-mix(in srgb,var(--panel) 92%,transparent)}
+.seg button{padding:6px 11px;font-size:13px;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.seg button[disabled]{opacity:.45;cursor:default}
+
+/* 오른쪽 위: C1 이 보는 이미지. 시점 버튼 아래. 좁은 화면에서는 숨긴다.
+   C1 은 센서의 긴 변이 위아래가 되게 세로로 달려 있어서(R 의 x 축이 바닥 쪽) 사진을 세워서 보여 준다 */
+.inset{position:absolute;z-index:4;right:max(16px,env(safe-area-inset-right,0px));top:calc(max(10px,env(safe-area-inset-top,0px)) + 46px);
+  width:min(176px,19vw);aspect-ratio:1200/1920;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--pane)}
+.inset canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.inset .tag{position:absolute;left:7px;top:5px;font:600 10.5px/1 var(--mono);color:var(--muted);pointer-events:none}
+@media (max-width:640px){ .inset{display:none} }
+
+/* 아래: 재생기 */
+.player{position:absolute;z-index:5;left:0;right:0;bottom:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:max(12px,env(safe-area-inset-bottom,0px));
+  display:flex;justify-content:center;pointer-events:none}
+.card{pointer-events:auto;width:min(760px,100%);min-width:0;background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-radius:10px;
+  padding:10px 14px 12px;display:grid;gap:8px;box-shadow:0 2px 12px rgba(27,31,39,.10)}
+.meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font:600 11px/1 var(--mono);color:var(--muted)}
+.meta .file{padding:3px 6px;border-radius:4px;background:var(--pane);color:var(--fg);font-weight:500}
+.meta .hint{margin-left:auto;font-weight:500}
+.cap{font-size:14px;line-height:1.5;min-height:3em;text-wrap:pretty;max-width:62ch}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ctl{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
+.ctl button{padding:6px 12px;font-size:13px;border-right:1px solid var(--line)}
+.ctl button:last-child{border-right:0}
+.ctl button[disabled]{opacity:.4;cursor:default}
+.ctl .play{min-width:78px;font-weight:600;background:var(--accent);color:#fff}
+.bar{flex:1;min-width:180px;display:flex;gap:7px;height:14px;align-items:stretch}
+.bar .st{display:flex;gap:2px;flex:var(--w) 1 0;min-width:0}
+.bar .sg{flex:var(--d) 1 0;min-width:4px;padding:0;background:var(--line);border-radius:2px;position:relative;overflow:hidden;display:block}
+.bar .sg i{position:absolute;inset:0;width:0;background:var(--accent);display:block}
+.bar .sg[aria-current="true"]{box-shadow:inset 0 0 0 1px var(--accent)}
+@media (max-width:560px){ .meta .hint{display:none} .cap{min-height:4.5em} }
+/* 영상 저장용(?video=1): 단계 탭·시점·진행 막대·버튼·안내를 다 숨기고 자막 카드와 이미지 창만 남긴다 */
+body.video .top,body.video .row,body.video .hint{display:none}
+body.video .v3d{bottom:124px}
+body.video .inset{top:12px;right:12px}
+body.video .card{background:none;border:0;box-shadow:none;width:min(1100px,100%);padding:0 0 14px;gap:8px;justify-items:center;text-align:center}
+body.video .meta{font-size:13px;justify-content:center}
+body.video .meta .file{background:none;padding:0;color:var(--muted)}
+body.video .cap{font-size:20px;line-height:1.55;min-height:0;max-width:none;text-align:center;text-wrap:balance}
+.err{display:flex;align-items:center;justify-content:center;height:100%;font:600 12px/1.4 var(--mono);color:var(--muted);padding:16px;text-align:center}
+</style>
+
+<main class="wrap">
+  <div class="v3d" id="v3d"></div>
+  <div class="top">
+    <nav class="tabs" id="tabs" role="tablist" aria-label="단계">
+      <button role="tab" data-stage="1" aria-selected="true"><b>1</b>2D 관절</button>
+      <button role="tab" data-stage="2" aria-selected="false"><b>2</b>광선</button>
+      <button role="tab" data-stage="3" aria-selected="false"><b>3</b>삼각측량</button>
+      <button role="tab" data-stage="4" aria-selected="false"><b>4</b>랙 좌표·지표</button>
+    </nav>
+    <div class="seg" id="views" aria-label="시점">
+      <button data-view="free" aria-pressed="true">자유</button>
+      <button data-view="top" aria-pressed="false">위</button>
+      <button data-view="front" aria-pressed="false">정면</button>
+      <button data-view="side" aria-pressed="false">옆</button>
+    </div>
+  </div>
+  <div class="inset" id="inset" aria-label="C1 이 보는 이미지"><canvas id="imgview"></canvas><span class="tag">C1 이미지 · 세로 장착</span></div>
+  <div class="player">
+    <div class="card">
+      <div class="meta"><span id="meta-stage">1 2D 관절 · 촬영</span><span class="file" id="meta-file" hidden></span><span class="hint">끌어서 돌리기 · 휠로 확대 · 점을 짚으면 좌표</span></div>
+      <p class="cap" id="cap"></p>
+      <div class="row">
+        <div class="ctl">
+          <button id="prev" type="button">이전</button>
+          <button id="play" class="play" type="button" aria-pressed="false">재생</button>
+          <button id="next" type="button">다음</button>
+        </div>
+        <div class="bar" id="bar" aria-label="진행"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+let THREE;
+try { THREE = await import('/vendor/three/three.module.min.js'); }
+catch (_) { THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js'); }
+
+/* ═══════════════════ 굵은 선 ═══════════════════
+   WebGL 의 선은 늘 1 장치 픽셀이라 고해상도 화면·캡처에서 머리카락처럼 가늘어진다. 선분 하나를 가는 원기둥 하나로 그리고
+   한 묶음을 InstancedMesh 하나에 담는다(굵기 r 은 cm). 점선은 대시마다 원기둥 하나 */
+const UNIT_CYL = new THREE.CylinderGeometry(1, 1, 1, 6, 1, true); UNIT_CYL.userData.keep = true;
+const UP_Y = new THREE.Vector3(0, 1, 0);
+const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3(), _d = new THREE.Vector3();
+class Segs {
+  constructor(parent, color, { opacity = 1, r = 0.4, dashed = false, dash = 3.5, gap = 2.2 } = {}) {
+    this.r = r; this.dashed = dashed; this.dash = dash; this.gap = gap; this.cap = 0; this.mesh = null;
+    this.mat = new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity });
+    this.g = new THREE.Group(); parent.add(this.g);
+  }
+  ensure(n) {
+    if (this.mesh && n <= this.cap) return;
+    if (this.mesh) { this.g.remove(this.mesh); this.mesh.dispose(); }
+    this.cap = Math.max(8, Math.ceil(n * 1.25));
+    this.mesh = new THREE.InstancedMesh(UNIT_CYL, this.mat, this.cap); this.mesh.frustumCulled = false; this.g.add(this.mesh);
+  }
+  update(pairs) {
+    const segs = [];
+    for (const [a, b] of pairs) {
+      if (!this.dashed) { segs.push(a, b); continue; }
+      _d.subVectors(b, a); const L = _d.length(); if (L < 1e-6) continue; _d.divideScalar(L);
+      for (let s = 0; s < L; s += this.dash + this.gap) { const e = Math.min(L, s + this.dash); segs.push(a.clone().addScaledVector(_d, s), a.clone().addScaledVector(_d, e)); }
+    }
+    const n = segs.length / 2; this.ensure(n);
+    for (let i = 0; i < n; i++) {
+      const a = segs[2 * i], b = segs[2 * i + 1];
+      _d.subVectors(b, a); const L = _d.length();
+      if (L < 1e-6) { _s.set(0, 0, 0); _q.identity(); } else { _d.divideScalar(L); _q.setFromUnitVectors(UP_Y, _d); _s.set(this.r, L, this.r); }
+      _p.addVectors(a, b).multiplyScalar(0.5); _m4.compose(_p, _q, _s); this.mesh.setMatrixAt(i, _m4);
+    }
+    this.mesh.count = n; this.mesh.instanceMatrix.needsUpdate = true;
+    return this;
+  }
+}
+const toPairs = flat => { const o = []; for (let i = 0; i + 1 < flat.length; i += 2) o.push([flat[i], flat[i + 1]]); return o; };
+const disposeTree = root => root.traverse(o => { if (o.isInstancedMesh) o.dispose(); if (o.geometry && !o.geometry.userData.keep) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+
+/* ═══════════════════ 데이터 ═══════════════════
+   카메라 K·R·t: 2026-08-28 PVC 리그 회차의 calibration_floor.json (당시 규약 y 아래, 「위치 보정 산출 원리」와 같은 값). 읽으면서 y 위로 바꾼다.
+   기준 카메라는 C3. 왜곡 계수는 C1 의 렌즈 보정값(「렌즈 보정 산출 원리」와 같은 값)이고, C2·C3 는 같은 렌즈라 이 값을 빌려 쓴다(예시).
+   랙 자세는 예시값, 랙 치수는 프리셋 pvc_prototype 실측. 사람의 자세는 뼈 길이와 관절 각도로 만든 예시(선 자세 ↔ 바닥 자세). 단위 cm.
+   2D 관절에는 카메라·관절마다 고정된 ±2.5 px 의 검출 오차를 넣어 광선이 정확히 만나지 않게 했다(재투영 오차가 생기는 이유). */
+const RAW = {
+  cams: [
+    { unit: 'C1', ref: false, color: '#D9483B', K: [[754.3885, 0, 958.3901], [0, 754.0707, 589.3091], [0, 0, 1]],
+      R: [[-0.15571322513590607, 0.9097554007454354, -0.38483568224930287], [0.8648641536539832, -0.06266303658242406, -0.4980796518335677], [-0.47724562569200496, -0.41038817558597096, -0.7770573711747831]],
+      t: [51.590955807405955, -39.45737480615681, 54.95397136017899] },
+    { unit: 'C2', ref: false, color: '#2E7DD1', K: [[753.0304, 0, 913.8973], [0, 753.1349, 606.1174], [0, 0, 1]],
+      R: [[-0.225324469469351, -0.9297371771486811, 0.29123472472553313], [-0.8913797239970729, 0.07606163234231916, -0.4468297390867395], [0.39328243172719657, -0.3602824024470577, -0.8458874153111148]],
+      t: [-39.82676917611968, -9.86989754651869, 42.398635742616285] },
+    { unit: 'C3', ref: true,  color: '#2FA36B', K: [[751.4181, 0, 979.4653], [0, 751.3425, 602.4515], [0, 0, 1]],
+      R: [[0.20999218404048606, -0.7846917494500244, -0.5832342076618673], [-0.8915870591669028, 0.09110655694011054, -0.44359002604728537], [0.4012178941273924, 0.6131545104030289, -0.6804893443724163]],
+      t: [-133.78484504711085, 2.2732873447759743, 145.3864252187952] },
+  ],
+};
+const COEF = { k1: 0.02881, k2: -0.07958, k3: 0.01993, p1: 0.000553, p2: -0.001256 };
+const RACK = { W: 118, D: 106, H: 241, u: 7.6, Wi: 109, Di: 95.8, storage: 38.4, cs: 7.6, holePitch: 5, holeFirst: 6.8, holeLast: 240,
+  jcupW: 11, jcupH: 12, jcupReach: 15, jcupNose: 3.5, jcupHeight: 130, safetyW: 7.6, safetyT: 10.2, safetyHeight: 60 };
+const RACK_POSE = { c: [17.0, 0, 45.0], yaw: -1.1 };
+const IMG_W = 1920, IMG_H = 1200, PLANE_D = 28;
+const RANGE = { x: [-50, 100], y: [0, 250], z: [-100, 150] }, STEP = 50;
+const FEAT = 25;                                                                // 따라가는 관절 = 왼 무릎
+const REP_DROP = 15, REP_BACK = 8;                                              // rep 문턱(#484, 잠정): 선 자세보다 15 cm 넘게 내려갔다 8 cm 안으로 돌아오면 한 번
+const NOISE_PX = 2.5;
+const BODY_KG = 75, BAR_KG = 60, BAR_UP = 5, BAR_HALF = 60;                // 하중 장면의 예시: 체중 75 kg · 바 60 kg 하이바(어깨 중점 5 cm 위) · 바 길이의 반 60 cm
+
+/* ── 작은 수학 ── */
+const F = [[1, 0, 0], [0, -1, 0], [0, 0, -1]];
+const mm = (A, B) => A.map(r => B[0].map((_, j) => r.reduce((s, a, k) => s + a * B[k][j], 0)));
+const mv = (A, v) => A.map(r => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
+const tr = A => A[0].map((_, j) => A.map(r => r[j]));
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const nrm = a => Math.hypot(a[0], a[1], a[2]);
+const unit = a => mul(a, 1 / (nrm(a) || 1));
+const lerp = (a, b, k) => a + (b - a) * k;
+const lerp3 = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
+const fmt = (v, n = 1) => { const s = (Math.round(Math.abs(v) * 10 ** n) / 10 ** n).toFixed(n); return (v < 0 && s !== (0).toFixed(n) ? '−' : '') + s; };
+const vec = (p, n = 1) => `(${fmt(p[0], n)}, ${fmt(p[1], n)}, ${fmt(p[2], n)})`;
+const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+const easeOut = k => 1 - (1 - k) ** 3;
+const easeInOut = k => k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+const prog = (t, r) => clamp01((t - r[0]) / Math.max(r[1], 1e-3));
+const hash = n => { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+const det3 = m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+const solve3 = (A, b) => { const D = det3(A); if (Math.abs(D) < 1e-9) return null; return [0, 1, 2].map(i => { const M = A.map(r => r.slice()); for (let r = 0; r < 3; r++) M[r][i] = b[r]; return det3(M) / D; }); };
+
+/* ── 렌즈 모델(OpenCV 식)과 그 거꾸로 — undistortPoints 가 하는 반복 풀이 ── */
+const distort = (xp, yp, c) => {
+  const r2 = xp * xp + yp * yp, r4 = r2 * r2, r6 = r4 * r2;
+  const rad = 1 + c.k1 * r2 + c.k2 * r4 + c.k3 * r6;
+  return [xp * rad + 2 * c.p1 * xp * yp + c.p2 * (r2 + 2 * xp * xp), yp * rad + c.p1 * (r2 + 2 * yp * yp) + 2 * c.p2 * xp * yp];
+};
+const undistort = (xd, yd, c) => {
+  let x = xd, y = yd;
+  for (let i = 0; i < 10; i++) {
+    const r2 = x * x + y * y, r4 = r2 * r2, r6 = r4 * r2, rad = 1 + c.k1 * r2 + c.k2 * r4 + c.k3 * r6;
+    const dx = 2 * c.p1 * x * y + c.p2 * (r2 + 2 * x * x), dy = c.p1 * (r2 + 2 * y * y) + 2 * c.p2 * x * y;
+    x = (xd - dx) / rad; y = (yd - dy) / rad;
+  }
+  return [x, y];
+};
+
+/* ── 카메라: y 위로 바꾸고 중심·축·이미지 평면(광학 중심에서 28 cm)·투영·역투영 ── */
+const CAMS = RAW.cams.map((c, i) => {
+  const Rn = mm(c.R, F), Rt = tr(Rn), C = mul(mv(Rt, c.t), -1);
+  const K = { fx: c.K[0][0], fy: c.K[1][1], cx: c.K[0][2], cy: c.K[1][2] };
+  const planePt = (x, y) => mv(Rt, sub([x * PLANE_D, y * PLANE_D, PLANE_D], c.t));
+  const corners = [[0, 0], [IMG_W, 0], [IMG_W, IMG_H], [0, IMG_H]].map(([u, v]) => planePt((u - K.cx) / K.fx, (v - K.cy) / K.fy));
+  const project = P => { const p = add(mv(Rn, P), c.t); if (p[2] < 1) return null; const x = p[0] / p[2], y = p[1] / p[2], d = distort(x, y, COEF); return { u: K.fx * d[0] + K.cx, v: K.fy * d[1] + K.cy, Z: p[2] }; };
+  const pxToNorm = (u, v) => undistort((u - K.cx) / K.fx, (v - K.cy) / K.fy, COEF);
+  return { ...c, i, K, Rn, Rt, C, axes: Rn, corners, pp: planePt(0, 0), planePt, project, pxToNorm };
+});
+const REF = CAMS.find(c => c.ref);
+
+/* ── 랙 좌표계: 바닥 좌표에서 원점 이동 + yaw ── */
+const yaw = RACK_POSE.yaw * Math.PI / 180;
+const EX = [Math.cos(yaw), 0, Math.sin(yaw)], EY = [0, 1, 0], EZ = [-Math.sin(yaw), 0, Math.cos(yaw)];
+const r2f = p => [RACK_POSE.c[0] + p[0] * EX[0] + p[2] * EZ[0], p[1], RACK_POSE.c[2] + p[0] * EX[2] + p[2] * EZ[2]];
+const f2r = p => { const q = sub(p, RACK_POSE.c); return [dot3(q, EX), q[1], dot3(q, EZ)]; };
+const RACK_O = r2f([0, 0, 0]);
+
+/* ── 사람: MediaPipe 관절 33개. 랙 좌표(케이지 바닥 중심 원점), 카메라 쪽(−z)을 보고 선다. 왼쪽 = −x ── */
+const JOINT = ['코', '왼 눈 안쪽', '왼 눈', '왼 눈 바깥', '오른 눈 안쪽', '오른 눈', '오른 눈 바깥', '왼 귀', '오른 귀', '입 왼쪽', '입 오른쪽',
+  '왼 어깨', '오른 어깨', '왼 팔꿈치', '오른 팔꿈치', '왼 손목', '오른 손목', '왼 새끼손가락', '오른 새끼손가락', '왼 검지', '오른 검지', '왼 엄지', '오른 엄지',
+  '왼 골반', '오른 골반', '왼 무릎', '오른 무릎', '왼 발목', '오른 발목', '왼 발꿈치', '오른 발꿈치', '왼 발끝', '오른 발끝'];
+const BONES_BODY = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28], [27, 29], [29, 31], [27, 31], [28, 30], [30, 32], [28, 32]];
+const BONES_FACE = [[0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10]];
+const BONES_HAND = [[15, 17], [15, 19], [15, 21], [17, 19], [16, 18], [16, 20], [16, 22], [18, 20]];
+const BONES = BONES_BODY.concat(BONES_FACE, BONES_HAND);
+const LEN = { shin: 40, thigh: 44, trunk: 50, neck: 11 };
+const ANG = { stand: [3, 3, 0], bottom: [32, 55, 40] };                         // 정강이·허벅지·몸통이 연직과 이루는 각(°)
+const LAT = { ankle: 14, knee: 15, hip: 11, sh: 19, elbow: 31, wrist: 28, ear: 7.5, eyeIn: 3, eye: 4.5, eyeOut: 6, mouth: 2.5, pinky: 30, index: 29, thumb: 26 };
+/* k = 0 선 자세, 1 바닥 자세. 뼈 길이는 고정이고 각도만 보간한다 */
+function poseAt(k) {
+  const [ts, tt, tb] = ANG.stand.map((a, i) => lerp(a, ANG.bottom[i], k) * Math.PI / 180);
+  const ankle = [0, 8, 0];
+  const knee = [0, ankle[1] + LEN.shin * Math.cos(ts), -LEN.shin * Math.sin(ts)];
+  const hip = [0, knee[1] + LEN.thigh * Math.cos(tt), knee[2] + LEN.thigh * Math.sin(tt)];
+  const up = [0, Math.cos(tb), -Math.sin(tb)], fw = [0, -Math.sin(tb), -Math.cos(tb)];
+  const at = (o, du, df) => add(o, add(mul(up, du), mul(fw, df)));
+  const sh = at(hip, LEN.trunk, 0), neck = at(sh, LEN.neck, 0);
+  const nose = at(neck, 3, 9.5), eyeIn = at(neck, 6, 8), eye = at(neck, 6, 7.5), eyeOut = at(neck, 6, 6.5), ear = at(neck, 4.5, 0), mouth = at(neck, 0, 8.5);
+  const elbow = at(sh, -11, -12), wrist = at(sh, 6, -5), pinky = at(wrist, 3, -1.5), index = at(wrist, 3.5, 1), thumb = at(wrist, 1.5, 2.5);
+  const heel = [0, 2, 8], toe = [0, 1, -15];
+  const L = (p, x) => [-x, p[1], p[2]], R = (p, x) => [x, p[1], p[2]];
+  return [nose, L(eyeIn, LAT.eyeIn), L(eye, LAT.eye), L(eyeOut, LAT.eyeOut), R(eyeIn, LAT.eyeIn), R(eye, LAT.eye), R(eyeOut, LAT.eyeOut), L(ear, LAT.ear), R(ear, LAT.ear), L(mouth, LAT.mouth), R(mouth, LAT.mouth),
+    L(sh, LAT.sh), R(sh, LAT.sh), L(elbow, LAT.elbow), R(elbow, LAT.elbow), L(wrist, LAT.wrist), R(wrist, LAT.wrist), L(pinky, LAT.pinky), R(pinky, LAT.pinky), L(index, LAT.index), R(index, LAT.index), L(thumb, LAT.thumb), R(thumb, LAT.thumb),
+    L(hip, LAT.hip), R(hip, LAT.hip), L(knee, LAT.knee), R(knee, LAT.knee), L(ankle, LAT.ankle), R(ankle, LAT.ankle), L(heel, LAT.ankle), R(heel, LAT.ankle), L(toe, LAT.ankle), R(toe, LAT.ankle)];
+}
+const headOf = P => mul(add(add(P[7], P[8]), add(P[2], P[5])), 0.25);
+const STAND_HIP = (poseAt(0)[23][1] + poseAt(0)[24][1]) / 2;
+
+/* ── 지표(랙 좌표): 골반 중점 높이 · 무릎 각도 · 몸통 기울기 · 무게중심(몸+바) · 두 발 몫 · 발 중점 · 전후 쏠림 · 다리별 모멘트 팔 ── */
+function metricsOf(R) {
+  const mid = (a, b) => mul(add(a, b), 0.5);
+  const hipMid = mid(R[23], R[24]), shMid = mid(R[11], R[12]);
+  const ang = (a, b, c) => { const u = unit(sub(a, b)), w = unit(sub(c, b)); return Math.acos(Math.max(-1, Math.min(1, dot3(u, w)))) * 180 / Math.PI; };
+  const tv = sub(shMid, hipMid), trunk = Math.acos(Math.max(-1, Math.min(1, tv[1] / nrm(tv)))) * 180 / Math.PI;
+  /* 몸 무게중심: 리그와 같은 분절표 — de Leva 1996 남성(분절 시작에서 무게중심까지 비율, 질량 비율). 머리 6.94 %, 몸통 43.46 %,
+     위팔 2.71 %·아래팔 1.62 %·손 0.61 % ×2, 허벅지 14.16 %·정강이 4.33 %·발 1.37 % ×2 */
+  const segs = [[headOf(R), 0.0694], [lerp3(shMid, hipMid, 0.4486), 0.4346],
+    [lerp3(R[11], R[13], 0.5772), 0.0271], [lerp3(R[12], R[14], 0.5772), 0.0271], [lerp3(R[13], R[15], 0.4574), 0.0162], [lerp3(R[14], R[16], 0.4574), 0.0162],
+    [lerp3(R[15], R[19], 0.79), 0.0061], [lerp3(R[16], R[20], 0.79), 0.0061],
+    [lerp3(R[23], R[25], 0.4095), 0.1416], [lerp3(R[24], R[26], 0.4095), 0.1416], [lerp3(R[25], R[27], 0.4459), 0.0433], [lerp3(R[26], R[28], 0.4459), 0.0433],
+    [lerp3(R[29], R[31], 0.4415), 0.0137], [lerp3(R[30], R[32], 0.4415), 0.0137]];
+  const wsum = segs.reduce((s, [, w]) => s + w, 0);
+  const body = segs.reduce((s, [p, w]) => add(s, mul(p, w / wsum)), [0, 0, 0]);
+  /* 바는 어깨 중점 5 cm 위의 질점. 바가 있으면 쏠림과 두 발 몫은 바를 더한 무게중심으로 잰다(리그 #649) */
+  const bar = add(shMid, [0, BAR_UP, 0]);
+  const com = mul(add(mul(body, BODY_KG), mul(bar, BAR_KG)), 1 / (BODY_KG + BAR_KG));
+  const flat = p => [p[0], 0, p[2]];
+  const footC = flat(mul(add(add(R[29], R[30]), add(R[31], R[32])), 0.25));   // 발 중점 = 양 발꿈치와 양 발끝의 평균
+  const footLen = (nrm(sub(flat(R[31]), flat(R[29]))) + nrm(sub(flat(R[32]), flat(R[30])))) / 2;
+  const fwd = footC[2] - com[2];                                                // 앞(−z)으로 쏠리면 양수
+  /* 두 발 몫: 무게중심 연직선이 바닥에 닿는 점 P 를 왼발 중심 → 오른발 중심 선에 내린 자리로 지렛대처럼 나눈다.
+     두 발이 누르는 점(압력 중심)은 각 발 중심에서 P 와 같은 만큼 앞뒤로 옮긴 자리(두 발이 같은 앞뒤 지점을 누른다는 가정) */
+  const fL = flat(mid(R[29], R[31])), fR = flat(mid(R[30], R[32])), P = flat(com), d = sub(fR, fL);
+  const u = Math.max(0, Math.min(1, dot3(sub(P, fL), d) / dot3(d, d)));
+  const off = sub(P, add(fL, mul(d, u))), copL = add(fL, off), copR = add(fR, off);
+  /* 다리별 모멘트 팔: 관절에서 그 발이 받는 힘의 선(압력 중심을 지나는 연직선)까지의 수평 거리 — 앞뒤와 안팎 */
+  const arm = (j, cop) => ({ fb: Math.abs(R[j][2] - cop[2]), ml: Math.abs(R[j][0] - cop[0]) });
+  return { hipMid, shMid, hipH: hipMid[1], kneeL: ang(R[23], R[25], R[27]), kneeR: ang(R[24], R[26], R[28]), trunk, body, bar, com, footC, footLen, fwd, ratio: fwd / footLen,
+    copL, copR, shareL: 1 - u, shareR: u, arms: { kneeL: arm(25, copL), kneeR: arm(26, copR), hipL: arm(23, copL), hipR: arm(24, copR) } };
+}
+
+/* ── 한 프레임의 산출: 2D 관측(검출 오차 포함) → 정규화 좌표 → 평면 위 점 → 광선 → 삼각측량(세 광선에 가장 가까운 점) → 재투영 오차 ── */
+/* f 는 프레임 번호라 검출 오차가 프레임마다 다르다 */
+const noise = (ci, j, a, f) => (hash(ci * 1000 + j * 10 + a + f * 7919) - 0.5) * 2 * NOISE_PX;
+const obs = (c, P, j, f) => { const pr = c.project(P); const u = pr.u + noise(c.i, j, 0, f), v = pr.v + noise(c.i, j, 1, f), [x, y] = c.pxToNorm(u, v); return { u, v, x, y, pt: c.planePt(x, y), Z: pr.Z }; };
+const triangulate = lines => {
+  const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], bb = [0, 0, 0];
+  for (const { C, d } of lines) for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { const m = (i === j ? 1 : 0) - d[i] * d[j]; A[i][j] += m; bb[i] += m * C[j]; }
+  return solve3(A, bb);
+};
+function mkFigure() {
+  const Fg = { k: 1, R: null, P: null, O: null, T: null, E: null, M: null, items: [] };
+  Fg.on = fn => Fg.items.push(fn);
+  Fg.set = (k, f = 0) => {
+    Fg.k = k; Fg.f = f; Fg.R = poseAt(k); Fg.P = Fg.R.map(r2f);
+    Fg.O = CAMS.map(c => Fg.P.map((p, j) => obs(c, p, j, f)));
+    Fg.T = Fg.P.map((_, j) => triangulate(CAMS.map(c => ({ C: c.C, d: unit(sub(Fg.O[c.i][j].pt, c.C)) }))));
+    Fg.E = Fg.T.map((T, j) => CAMS.map(c => { const pr = c.project(T), o = Fg.O[c.i][j]; return Math.hypot(pr.u - o.u, pr.v - o.v); }));
+    Fg.M = metricsOf(Fg.T.map(f2r));
+    Fg.items.forEach(fn => fn(Fg));
+  };
+  Fg.sync = () => Fg.items.forEach(fn => fn(Fg));
+  Fg.set(1);
+  return Fg;
+}
+
+/* ═══════════════════ 타임라인 ═══════════════════
+   원칙: 먼저 있던 것(랙·카메라·사람)은 바로 놓고, 산출되는 것만 움직인다.
+   광선이 그어진 뒤 점이 찍히고, 화살표가 다 자란 뒤 그 끝에서 이름표가 나타난다. */
+const STAGE_NAME = { 1: '2D 관절', 2: '광선', 3: '삼각측량', 4: '랙 좌표·지표' };
+const STAGE_VIEW = { 1: [2.45, 1.12], 2: [2.45, 1.12], 3: [2.45, 1.12], 4: [1.65, 1.18] };
+const SHOT_T = 0.6;                                                             // 1 단계 '촬영': 셔터가 열리는 초
+const PLANE_S = i => 0.3 + i * 0.8;                                             // 1 단계 '2D 관절': i 번째 카메라의 관절이 나타나는 초
+const ALL_S = j => 0.2 + j * 0.08;                                              // 3 단계 '33 관절': j 번째 관절이 나오는 초
+const REP_T = [[0.3, 1.9, 1, 0], [1.9, 3.5, 0, 1], [3.5, 5.1, 1, 0]];          // 4 단계 '반복': [시작, 끝, k 시작, k 끝]
+const kOf = t => { for (const [s, e, a, c] of REP_T) if (t < e) return lerp(a, c, easeInOut(prog(t, [s, e - s]))); return 0; };
+/* 3 단계 '연속 프레임': 프레임 간격은 0.36초에서 0.15초까지 줄고, 그동안 몸은 바닥 자세에서 같은 빠르기로 스쿼트를 두 번 한다.
+   그래서 첫 프레임과 마지막 프레임은 바닥 자세 그대로다. 프레임마다 자세·2D 관측·3D 관절을 미리 낸다 */
+const BURST = { t0: 0.35, first: 0.36, min: 0.15, decay: 0.85, hold: 0.5, dur: 6.0, reps: 2, rayIn: 0.06 };
+const BURST_AT = [];
+for (let t = BURST.t0, i = 0; t < BURST.dur - BURST.hold; i++) { BURST_AT.push(t); t += Math.max(BURST.min, BURST.first * BURST.decay ** i); }
+const burstK = t => (1 - Math.cos(Math.PI * (1 + 2 * BURST.reps * clamp01((t - BURST.t0) / (BURST_AT[BURST_AT.length - 1] - BURST.t0))))) / 2;
+const BURST_FR = (() => {
+  const g = mkFigure(), n = BURST_AT.length;
+  return BURST_AT.map((t, i) => { const end = i === 0 || i === n - 1; g.set(end ? 1 : burstK(t), end ? 0 : i); return { k: g.k, f: g.f, T: g.T, O: g.O }; });
+})();
+const BEATS = [
+  { stage: 1, key: 'shot',     name: '촬영',     dur: 3.0, cap: '카메라 세 대가 같은 순간에 한 프레임씩 찍습니다. 트리거 신호 하나로 셔터가 같이 열립니다.' },
+  { stage: 1, key: 'joints2d', name: '2D 관절',  dur: 4.0, cap: '사진마다 MediaPipe 가 관절 33개의 픽셀 자리를 찾습니다. 아직 깊이는 모릅니다. 사진 한 장은 평면이기 때문입니다.' },
+  { stage: 2, key: 'undist',   name: '왜곡 벗김', dur: 3.8, cap: '관절 하나를 따라갑니다. 픽셀에 K 의 역을 곱하고 왜곡 계수로 휨을 벗겨 정규화 좌표로 바꿉니다. 렌즈 보정의 숫자 아홉 개를 여기서 씁니다.' },
+  { stage: 2, key: 'rays',     name: '광선',     dur: 3.8, cap: '정규화 좌표는 카메라 중심에서 나가는 광선의 방향입니다. 위치 보정의 R·t 로 세 광선을 한 좌표계에 놓습니다.' },
+  { stage: 3, key: 'meet',     name: '만나기',   dur: 3.8, cap: '세 광선에 가장 가까운 점이 관절의 3D 위치입니다. 검출 오차 때문에 광선이 정확히 만나지는 않고, 남는 어긋남이 재투영 오차입니다. 두 대 이상이 본 관절만 냅니다.' },
+  { stage: 3, key: 'all',      name: '33 관절',  dur: 5.2, cap: '관절 33개에 같은 계산을 합니다. 프레임 하나에서 관절 위치 33개가 나오고, 이것이 잠정값입니다.' },
+  { stage: 3, key: 'burst',    name: '연속 프레임', dur: BURST.dur, cap: '다음 프레임도 같은 계산을 합니다. 세 대가 함께 찍을 때마다 2D 관절이 새로 나오고, 관절 33개의 광선이 한꺼번에 모여 그 프레임의 관절 위치가 됩니다.' },
+  { stage: 4, key: 'frame',    name: '랙 좌표',  dur: 3.8, cap: '광선을 놓은 좌표계는 위치 보정 파일의 바닥 좌표입니다. 랙 앵커 파일의 원점과 yaw 로 랙 좌표로 옮기면 앞뒤와 좌우가 랙 기준이 되고, 높이는 바닥에서의 높이입니다.' },
+  { stage: 4, key: 'metrics',  name: '지표',     dur: 4.6, cap: '랙 좌표가 되면 지표를 셀 수 있습니다. 골반 중점의 높이, 무릎 각도, 어깨와 골반을 이은 선의 기울기입니다.' },
+  { stage: 4, key: 'load',     name: '하중',     dur: 6.4, cap: '무게가 어디로 갔는지가 핵심입니다. 바까지 더한 무게중심의 연직선이 두 발 사이 어디에 떨어지는지로 두 발이 받는 몫과 전후 쏠림을 잽니다. 다리마다 무릎과 골반에서 그 발이 받는 힘의 선까지 앞뒤·안팎 거리가 모멘트의 팔이고, 움직일 때는 몸 각 부분의 가속도와 회전까지 더합니다.' },
+  { stage: 4, key: 'rep',      name: '반복',     file: 'tracks/NN_skeleton.json', dur: 5.6, cap: '세트 동안 프레임마다 이 계산을 되풀이합니다. 골반이 선 자세보다 15 cm 넘게 내려갔다 돌아오면 rep 하나입니다. 잠정값은 바로 화면에 가고, tail 이 다듬은 확정값은 파일에 남아 리포트가 됩니다.' },
+];
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (s, el = document) => el.querySelector(s);
+const Q = new URLSearchParams(location.search);
+const VIDEO = Q.get('video') === '1', RENDER = Q.get('render') === '1';
+if (VIDEO) document.body.classList.add('video');
+
+/* ═══════════════════ 뷰어 (격벽·눈금·점 짚기·궤도 + 프레임 갱신·시점 보간) ═══════════════════ */
+const VIEWS = { free: [2.45, 1.12], top: [Math.PI, 0.05], front: [Math.PI, 1.42], side: [Math.PI / 2, 1.42] };
+const pickStep = span => [5, 10, 20, 25, 50, 100, 200].find(s => span / s <= 9) || 500;
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const hex = name => new THREE.Color(css(name));
+
+function createViewer(host, { reserve = () => ({}) } = {}) {
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  host.appendChild(renderer.domElement);
+  const overlay = document.createElement('div'); overlay.className = 'ov'; host.appendChild(overlay);
+  const tip = document.createElement('div'); tip.className = 'tip'; overlay.appendChild(tip);
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const lead = document.createElementNS(SVG_NS, 'svg'); lead.setAttribute('class', 'lead'); overlay.prepend(lead);
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(42, 1, 1, 6000);
+  let theta = VIEWS.free[0], phi = VIEWS.free[1], radius = 400, userZoomed = false, needFit = true;
+  let S = null, W = null, picked = null, tween = null;
+  const labelEls = [];
+  const tickEls = [];
+
+  function buildWalls(R, step) {
+    if (W) { scene.remove(W.group); disposeTree(W.group); }
+    tickEls.splice(0).forEach(t => t.el.remove());
+    const g = new THREE.Group(); scene.add(g);
+    const paneMat = new THREE.MeshBasicMaterial({ color: hex('--pane'), side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+    const ticks = a => { const o = []; for (let v = R[a][0]; v <= R[a][1] + 1e-6 && o.length < 200; v += step) o.push(v); return o; };
+    const size = a => R[a][1] - R[a][0], mid = a => (R[a][0] + R[a][1]) / 2;
+    const mkWall = (u, v, n) => {
+      const w = new THREE.Group();
+      const pane = new THREE.Mesh(new THREE.PlaneGeometry(size(u), size(v)), paneMat);
+      if (n === 'y') pane.rotation.x = -Math.PI / 2; else if (n === 'x') pane.rotation.y = Math.PI / 2;
+      w.add(pane);
+      const seg = [], edge = [];
+      const P = (a, va, b, vb) => { const p = new THREE.Vector3(); p[a] = va; p[b] = vb; return p; };
+      ticks(u).forEach((t, i, arr) => (i === 0 || i === arr.length - 1 ? edge : seg).push(P(u, t, v, R[v][0]), P(u, t, v, R[v][1])));
+      ticks(v).forEach((t, i, arr) => (i === 0 || i === arr.length - 1 ? edge : seg).push(P(v, t, u, R[u][0]), P(v, t, u, R[u][1])));
+      const c = new THREE.Vector3(); c[u] = mid(u); c[v] = mid(v);
+      const local = arr => arr.map(p => p.clone().sub(c));
+      new Segs(w, hex('--grid'), { r: 0.2 }).update(toPairs(local(seg)));
+      new Segs(w, hex('--edge'), { r: 0.28 }).update(toPairs(local(edge)));
+      w.position.copy(c); g.add(w); return w;
+    };
+    const floor = mkWall('x', 'z', 'y'), back = mkWall('x', 'y', 'z'), side = mkWall('z', 'y', 'x');
+    floor.position.y = R.y[0];
+    const far = { x: R.x[1], z: R.z[0] }, near = { x: R.x[0], z: R.z[1] };
+    const mkText = (txt, cls) => { const d = document.createElement('div'); d.className = 'tick' + (cls ? ' ' + cls : ''); d.textContent = txt; overlay.appendChild(d); return d; };
+    const off = step * 0.45, tOff = step * 1.3;
+    ticks('x').forEach(t => tickEls.push({ el: mkText(String(Math.round(t))), at: () => new THREE.Vector3(t, R.y[0], near.z + (near.z > far.z ? off : -off)) }));
+    ticks('z').forEach(t => tickEls.push({ el: mkText(String(Math.round(t))), at: () => new THREE.Vector3(near.x + (near.x > far.x ? off : -off), R.y[0], t) }));
+    ticks('y').forEach(t => tickEls.push({ el: mkText(String(Math.round(t))), at: () => new THREE.Vector3(near.x + (near.x > far.x ? off : -off), t, far.z) }));
+    tickEls.push({ el: mkText('x (cm)', 'ttl'), at: () => new THREE.Vector3(mid('x'), R.y[0], near.z + (near.z > far.z ? tOff : -tOff)) });
+    tickEls.push({ el: mkText('z (cm)', 'ttl'), at: () => new THREE.Vector3(near.x + (near.x > far.x ? tOff : -tOff), R.y[0], mid('z')) });
+    tickEls.push({ el: mkText('높이 (cm)', 'ttl'), at: () => new THREE.Vector3(near.x + (near.x > far.x ? tOff : -tOff), mid('y'), far.z) });
+    const spikeGeo = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 6 }, () => new THREE.Vector3()));
+    const spike = new THREE.LineSegments(spikeGeo, new THREE.LineDashedMaterial({ color: hex('--spike'), dashSize: step * 0.12, gapSize: step * 0.08, transparent: true, opacity: 0.85 }));
+    const marker = new THREE.Mesh(new THREE.SphereGeometry(Math.max(1.2, step * 0.06), 10, 10), new THREE.MeshBasicMaterial({ color: hex('--spike') }));
+    spike.visible = marker.visible = false; g.add(spike, marker);
+    /* 궤도 중심은 상자 가운데보다 조금 아래 — 아래 재생기 카드에 바닥 눈금이 가리지 않게 장면을 위로 올린다 */
+    const target = new THREE.Vector3(mid('x'), mid('y') - size('y') * 0.12, mid('z'));
+    const c0 = target.clone();
+    const fitRadius = aspect => {
+      const s = Math.hypot(size('x') + 2 * tOff, size('y'), size('z') + 2 * tOff) / 2;
+      const half = Math.min(cam.fov / 2, Math.atan(Math.tan(cam.fov / 2 * Math.PI / 180) * aspect) * 180 / Math.PI) * Math.PI / 180;
+      return s / Math.sin(half) * 0.66;
+    };
+    const layoutSpike = () => {
+      if (!picked) return;
+      const p = picked.p, a = spikeGeo.attributes.position;
+      [p, new THREE.Vector3(p.x, R.y[0], p.z), p, new THREE.Vector3(p.x, p.y, far.z), p, new THREE.Vector3(far.x, p.y, p.z)].forEach((q, i) => a.setXYZ(i, q.x, q.y, q.z));
+      a.needsUpdate = true; spike.computeLineDistances();
+    };
+    const apply = () => {
+      cam.position.set(target.x + radius * Math.sin(phi) * Math.sin(theta), target.y + radius * Math.cos(phi), target.z + radius * Math.sin(phi) * Math.cos(theta));
+      cam.lookAt(target);
+      const fx = cam.position.x > c0.x ? 0 : 1, fz = cam.position.z > c0.z ? 0 : 1;
+      far.x = R.x[fx]; near.x = R.x[1 - fx]; far.z = R.z[fz]; near.z = R.z[1 - fz];
+      side.position.x = far.x; back.position.z = far.z;
+      layoutSpike();
+    };
+    W = { group: g, R, step, apply, fitRadius, spike, marker, layoutSpike, target, key: ['x', 'y', 'z'].map(a => R[a].join(':')).join('|') };
+  }
+
+  const tmp = new THREE.Vector3();
+  const place = (el, p, dx, dy) => {
+    tmp.copy(p).project(cam);
+    const hidden = tmp.z > 1 || Math.abs(tmp.x) > 1.3 || Math.abs(tmp.y) > 1.3;
+    el.style.visibility = hidden ? 'hidden' : 'visible';
+    if (!hidden) el.style.transform = `translate(${dx || '-50%'},${dy || '-50%'}) translate(${((tmp.x + 1) / 2 * renderer.domElement.clientWidth).toFixed(1)}px,${((1 - tmp.y) / 2 * renderer.domElement.clientHeight).toFixed(1)}px)`;
+  };
+  /* 이름표 배치: 그림 위에 두지 않는다. 닻점이 장면 중심의 왼쪽이면 왼쪽 여백 열, 오른쪽이면 오른쪽 여백 열.
+     아직 안 나타난 이름표(k=0)는 자리도 차지하지 않는다. 오른쪽 열은 이미지 창 아래부터 */
+  const layoutLabels = (Wd, Hd) => {
+    const proj = p => { tmp.copy(p).project(cam); return { x: (tmp.x + 1) / 2 * Wd, y: (1 - tmp.y) / 2 * Hd, hidden: tmp.z > 1 || Math.abs(tmp.x) > 1.3 || Math.abs(tmp.y) > 1.3 }; };
+    const c = W ? proj(W.target) : { x: Wd / 2, y: Hd / 2 };
+    const Mg = 10, GAP = 5, cols = { L: [], R: [] }, res = reserve();
+    labelEls.forEach(l => {
+      const a = proj(l.pos);
+      const show = v => { l.el.style.visibility = v ? 'visible' : 'hidden'; if (l.line) l.line.style.display = l.dot.style.display = v ? '' : 'none'; };
+      if (a.hidden || l.k <= 0) { show(false); return; }
+      if (l.pin) { show(true); l.el.style.transform = `translate(-50%,-50%) translate(${a.x.toFixed(1)}px,${a.y.toFixed(1)}px)`; return; }
+      cols[a.x < c.x ? 'L' : 'R'].push({ l, ax: a.x, ay: a.y, y: a.y, hw: l.w / 2, hh: l.h / 2, show });
+    });
+    Object.entries(cols).forEach(([side, items]) => {
+      const top = Mg + (res[side] || 0);
+      items.sort((p, q) => p.ay - q.ay);
+      for (let i = 0; i < items.length; i++) { const it = items[i], up = items[i - 1]; it.y = Math.max(it.y, it.hh + top, up ? up.y + up.hh + it.hh + GAP : -1e9); }
+      for (let i = items.length - 1; i >= 0; i--) { const it = items[i], dn = items[i + 1]; it.y = Math.min(it.y, Hd - it.hh - Mg, dn ? dn.y - dn.hh - it.hh - GAP : 1e9); }
+      items.forEach(it => {
+        const { l } = it, x = side === 'L' ? Mg + it.hw : Wd - Mg - it.hw; it.show(true);
+        l.el.style.transform = `translate(-50%,-50%) translate(${x.toFixed(1)}px,${it.y.toFixed(1)}px)`;
+        const vx = it.ax - x, vy = it.ay - it.y;
+        const s = Math.min(Math.abs(vx) > 1e-3 ? it.hw / Math.abs(vx) : 1e9, Math.abs(vy) > 1e-3 ? it.hh / Math.abs(vy) : 1e9);
+        if (s >= 1) { l.line.style.display = l.dot.style.display = 'none'; return; }
+        l.line.setAttribute('x1', (x + vx * s).toFixed(1)); l.line.setAttribute('y1', (it.y + vy * s).toFixed(1));
+        l.line.setAttribute('x2', it.ax.toFixed(1)); l.line.setAttribute('y2', it.ay.toFixed(1));
+        l.dot.setAttribute('cx', it.ax.toFixed(1)); l.dot.setAttribute('cy', it.ay.toFixed(1));
+      });
+    });
+  };
+  const draw = () => {
+    renderer.render(scene, cam);
+    tickEls.forEach(t => place(t.el, t.at()));
+    layoutLabels(renderer.domElement.clientWidth, renderer.domElement.clientHeight);
+    if (picked) place(tip, picked.p, '12px', '-100%');
+  };
+  const showPick = info => {
+    picked = info;
+    if (W) { W.spike.visible = W.marker.visible = !!info; }
+    tip.style.display = info ? 'block' : 'none';
+    if (!info || !W) return;
+    W.marker.position.copy(info.p);
+    tip.innerHTML = `<div style="color:${info.color}">${info.name}</div><div>x ${fmt(info.p.x)} · 높이 ${fmt(info.p.y)} · z ${fmt(info.p.z)} cm</div>` + (info.extra ? `<div>${info.extra}</div>` : '');
+    W.layoutSpike();
+  };
+  const ray = new THREE.Raycaster();
+  const pickAt = (x, y, touch) => {
+    if (!S) return null;
+    const r = renderer.domElement.getBoundingClientRect();
+    ray.params.Points.threshold = (W ? W.step : 10) * (touch ? 0.6 : 0.3);
+    ray.setFromCamera(new THREE.Vector2((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1), cam);
+    const hit = ray.intersectObjects(S.pickables.filter(o => o.visible && (!o.parent || o.parent.visible)), false)[0];
+    if (!hit) return null;
+    const o = hit.object, u = o.userData;
+    return { p: u.center ? u.center.clone() : o.position.clone(), name: u.name, extra: u.extra || null, color: u.color || css('--fg') };
+  };
+
+  const el = renderer.domElement, pts = new Map();
+  let drag = null, pinch = null, tap = null;
+  const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+  const setRadius = r => { const span = W ? Math.max(W.R.x[1] - W.R.x[0], W.R.y[1] - W.R.y[0], W.R.z[1] - W.R.z[0]) : 300; radius = Math.min(span * 6, Math.max(span * 0.45, r)); userZoomed = true; };
+  el.addEventListener('pointerdown', e => {
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    try { el.setPointerCapture(e.pointerId); } catch (_) { /* 합성 이벤트 */ }
+    if (pts.size === 1) { drag = [e.clientX, e.clientY]; pinch = null; tap = [e.clientX, e.clientY]; }
+    else if (pts.size === 2) { drag = null; tap = null; pinch = { d0: dist(), r0: radius }; }
+  });
+  el.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) {
+      if (e.buttons === 0 && pts.size === 0) { const hit = pickAt(e.clientX, e.clientY, e.pointerType !== 'mouse'); if (hit) { showPick(hit); draw(); } else if (picked && !picked.sticky) { showPick(null); draw(); } }
+      return;
+    }
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && pts.size >= 2) { const d = dist(); if (d > 0) { setRadius(pinch.r0 * pinch.d0 / d); W && W.apply(); draw(); } return; }
+    if (!drag) return;
+    if (tap && Math.hypot(e.clientX - tap[0], e.clientY - tap[1]) > 8) tap = null;
+    tween = null;
+    theta -= (e.clientX - drag[0]) * 0.006;
+    phi = Math.min(1.52, Math.max(0.05, phi - (e.clientY - drag[1]) * 0.006));
+    drag = [e.clientX, e.clientY]; W && W.apply(); draw();
+  });
+  const lift = e => {
+    const wasTap = tap && pts.size === 1 && pts.has(e.pointerId);
+    pts.delete(e.pointerId); pinch = null;
+    drag = pts.size === 1 ? [...pts.values()][0].slice() : null;
+    if (wasTap) { const hit = pickAt(e.clientX, e.clientY, e.pointerType !== 'mouse'); if (hit) hit.sticky = true; showPick(hit); draw(); }
+    tap = null;
+  };
+  ['pointerup', 'pointercancel'].forEach(ev => el.addEventListener(ev, lift));
+  el.addEventListener('pointerleave', e => { if (e.buttons === 0 && pts.size === 0 && picked && !picked.sticky) { showPick(null); draw(); } });
+  el.addEventListener('wheel', e => { e.preventDefault(); setRadius(radius * (1 + e.deltaY * 0.001)); W && W.apply(); draw(); }, { passive: false });
+
+  const fit = () => {
+    const r = host.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) return;
+    renderer.setSize(r.width, r.height, false);
+    cam.aspect = r.width / r.height; cam.updateProjectionMatrix();
+    if (!W) return;
+    if (!userZoomed && needFit) { radius = W.fitRadius(cam.aspect); needFit = false; }
+    W.apply(); draw();
+  };
+  new ResizeObserver(() => { needFit = true; fit(); }).observe(host);
+
+  return {
+    setView(name) { const v = VIEWS[name] || VIEWS.free; tween = null; theta = v[0]; phi = v[1]; userZoomed = false; needFit = true; fit(); },
+    tweenView(th, ph, dur, startAt = performance.now()) {
+      if (dur <= 0) { tween = null; theta = th; phi = ph; W && W.apply(); return; }
+      let d = th - theta; d = Math.atan2(Math.sin(d), Math.cos(d));
+      tween = { th0: theta, dth: d, ph0: phi, dph: ph - phi, start: startAt, dur: dur * 1000 };
+    },
+    busy() { return !!tween; },
+    frame(t, now) {
+      if (tween) {
+        const k = clamp01((now - tween.start) / tween.dur), e = easeInOut(k);
+        theta = tween.th0 + tween.dth * e; phi = tween.ph0 + tween.dph * e;
+        if (k >= 1) tween = null;
+        W && W.apply();
+      }
+      if (S) S.anims.forEach(a => a(t));
+      labelEls.forEach(it => {
+        if (!it.reveal) return;
+        const k = prog(t, it.reveal);
+        if (k !== it.k) { it.k = k; it.el.style.opacity = k; if (it.line) { it.line.style.opacity = k * 0.8; it.dot.style.opacity = k * 0.9; } }
+      });
+      draw();
+    },
+    setScene(Sn) {
+      const keep = picked ? { name: picked.name, sticky: picked.sticky } : null;
+      if (S) { scene.remove(S.group); disposeTree(S.group); }
+      labelEls.splice(0).forEach(l => { l.el.remove(); if (l.line) { l.line.remove(); l.dot.remove(); } });
+      S = Sn; scene.add(S.group);
+      S.labels.forEach(l => {
+        const d = document.createElement('div'); d.className = 'lbl' + (l.cls ? ' ' + l.cls : ''); d.innerHTML = l.text; if (l.color) d.style.color = l.color; overlay.appendChild(d);
+        if (l.id) d.dataset.id = l.id; const it = { el: d, pos: l.pos, pin: !!l.pin, w: d.offsetWidth, h: d.offsetHeight, line: null, dot: null, reveal: l.reveal || null, k: l.reveal ? 0 : 1 };
+        if (it.reveal) d.style.opacity = '0';
+        if (!it.pin) {
+          const stroke = l.color || css('--muted');
+          it.line = document.createElementNS(SVG_NS, 'line'); it.line.setAttribute('stroke', stroke); lead.appendChild(it.line);
+          it.dot = document.createElementNS(SVG_NS, 'circle'); it.dot.setAttribute('r', '2'); it.dot.setAttribute('fill', stroke); lead.appendChild(it.dot);
+          if (it.reveal) { it.line.style.opacity = 0; it.dot.style.opacity = 0; }
+        }
+        labelEls.push(it);
+      });
+      /* 격벽 범위: 장면이 주면 그대로(이 페이지는 고정 — 비트가 바뀌어도 눈금이 안 튄다), 없으면 bbox 에서 */
+      let R, step;
+      if (Sn.range) { R = Sn.range; step = Sn.step || pickStep(Math.max(R.x[1] - R.x[0], R.y[1] - R.y[0], R.z[1] - R.z[0])); }
+      else {
+        const bb = S.bbox, span = Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z, 40);
+        step = pickStep(span * 1.16); const pad = span * 0.08;
+        const lo = v => Math.floor((v - pad) / step) * step, hi = v => Math.ceil((v + pad) / step) * step;
+        R = { x: [lo(bb.min.x), hi(bb.max.x)], y: [bb.min.y >= -pad ? 0 : lo(bb.min.y), hi(bb.max.y)], z: [lo(bb.min.z), hi(bb.max.z)] };
+      }
+      const key = ['x', 'y', 'z'].map(a => R[a].join(':')).join('|');
+      if (!W || W.key !== key) { buildWalls(R, step); needFit = true; }
+      picked = null; tip.style.display = 'none'; W.spike.visible = W.marker.visible = false;
+      if (keep) { const o = S.pickables.find(p => p.userData.name === keep.name); if (o) { const u = o.userData; showPick({ p: u.center ? u.center.clone() : o.position.clone(), name: u.name, extra: u.extra || null, color: u.color, sticky: keep.sticky }); } }
+      fit();
+    },
+  };
+}
+
+/* ═══════════════════ 장면 만들기 ═══════════════════
+   빌더. 모든 도형은 cur(기본 G)에 들어간다. grouped() 로 묶으면 묶음째 fade 할 수 있다.
+   reveal = [시작 초, 길이 초]. 화살표·광선은 자라고(draw-on), 나머지는 투명도로 나타난다. 없으면 처음부터 놓여 있다 */
+function sceneBuilder() {
+  const G = new THREE.Group(), labels = [], pickables = [], anims = [], bb = new THREE.Box3();
+  let cur = G;
+  const V = p => new THREE.Vector3(p[0], p[1], p[2]);
+  const grow = p => bb.expandByPoint(V(p));
+  const col = c => c instanceof THREE.Color ? c : new THREE.Color(c.startsWith('--') ? css(c) : c);
+  const colStr = c => typeof c === 'string' && !c.startsWith('--') ? c : css(c);
+  const UP = new THREE.Vector3(0, 1, 0);
+  const mats = obj => { const o = []; obj.traverse(x => { if (x.material) { const m = x.material; if (m.userData.base === undefined) m.userData.base = m.opacity; m.transparent = true; o.push(m); } }); return o; };
+  const b = {
+    G, labels, pickables, anims, bb, V,
+    anim(fn) { anims.push(fn); },
+    fade(obj, reveal, { out = false } = {}) {
+      const ms = mats(obj);
+      anims.push(t => { let k = prog(t, reveal); if (out) k = 1 - k; obj.visible = k > 0.001; ms.forEach(m => { m.opacity = m.userData.base * k; }); });
+    },
+    /* 나타났다가 사라진다: [시작, 나타나는 길이, 머무는 길이, 사라지는 길이] */
+    pulse(obj, [s, din, hold, dout]) {
+      const ms = mats(obj);
+      anims.push(t => { const k = prog(t, [s, din]) * (1 - prog(t, [s + din + hold, dout])); obj.visible = k > 0.001; ms.forEach(m => { m.opacity = m.userData.base * k; }); });
+    },
+    grouped(fn, reveal = null, out = false) {
+      const g = new THREE.Group(), prev = cur;
+      cur.add(g); cur = g; fn(g); cur = prev;
+      if (reveal) b.fade(g, reveal, { out });
+      return g;
+    },
+    label(text, pos, o = {}) { const l = { text, pos: V(pos), cls: o.cls, color: o.color, pin: !!o.pin, reveal: o.reveal || null, id: o.id || null }; labels.push(l); return l; },
+    lines(pairs, color, { dashed = false, opacity = 1, reveal = null, r = 0.4 } = {}) {
+      const P = pairs.map(([a, c]) => { grow(a); grow(c); return [V(a), V(c)]; });
+      const sg = new Segs(cur, col(color), { opacity, r, dashed }).update(P);
+      if (reveal) anims.push(t => { const k = easeOut(prog(t, reveal)); sg.update(P.map(([a, c]) => [a, a.clone().lerp(c, k)])); sg.g.visible = k > 0; });
+      return sg;
+    },
+    arrowDyn(a, c, color, { dashed = false, thick = false, head = null, opacity = 1 } = {}) {
+      const C = col(color), g = new THREE.Group(); cur.add(g);
+      const shaftR = thick ? 0.85 : 0.42;
+      let shaft = null, segs = null;
+      if (dashed) segs = new Segs(g, C, { opacity, r: shaftR, dashed: true, dash: 4, gap: 2.5 });
+      else { shaft = new THREE.Mesh(new THREE.CylinderGeometry(shaftR, shaftR, 1, 8), new THREE.MeshBasicMaterial({ color: C, transparent: true, opacity })); g.add(shaft); }
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 12), new THREE.MeshBasicMaterial({ color: C, transparent: true, opacity }));
+      g.add(cone);
+      const A = new THREE.Vector3(), Bv = new THREE.Vector3(), dir = new THREE.Vector3(), end = new THREE.Vector3();
+      let len = 0, h = 0, w = 0, frac = 1, opa = opacity;
+      const api = {
+        g,
+        aim(p, q) {
+          A.copy(V(p)); Bv.copy(V(q)); dir.copy(Bv).sub(A); len = dir.length(); if (len > 1e-6) dir.divideScalar(len);
+          h = head ?? Math.min(len * 0.28, thick ? 10 : 7); w = thick ? h * 0.5 : h * 0.42;
+          grow(p); grow(q); api.set(frac, opa); return api;
+        },
+        set(f, o = opa) {
+          frac = f; opa = o; const L = len * f;
+          g.visible = L > 0.3 && o > 0.005; if (!g.visible) return;
+          const hh = Math.min(h, L), sl = Math.max(0, L - hh);
+          end.copy(A).addScaledVector(dir, sl);
+          if (segs) { segs.update([[A, end]]); segs.mat.opacity = o; segs.mat.transparent = true; }
+          else { shaft.scale.set(1, Math.max(sl, 0.01), 1); shaft.position.copy(A).addScaledVector(dir, sl / 2); shaft.quaternion.setFromUnitVectors(UP, dir); shaft.material.opacity = o; }
+          cone.scale.set(w / 2, hh, w / 2); cone.position.copy(end).addScaledVector(dir, hh / 2); cone.quaternion.setFromUnitVectors(UP, dir);
+          cone.material.opacity = o;
+        },
+      };
+      return api.aim(a, c);
+    },
+    arrow(a, c, color, o = {}) {
+      const { reveal = null, ...rest } = o;
+      const ar = b.arrowDyn(a, c, color, rest);
+      if (reveal) anims.push(t => ar.set(easeOut(prog(t, reveal))));
+      return ar;
+    },
+    dot(p, color, r = 2.6, info = null, { reveal = null, opacity = 1 } = {}) {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 14), new THREE.MeshBasicMaterial({ color: col(color), transparent: opacity < 1, opacity }));
+      m.position.copy(V(p)); cur.add(m); grow(p);
+      if (info) { m.userData = { ...info, color: colStr(color) }; pickables.push(m); }
+      if (reveal) b.fade(m, reveal);
+      return m;
+    },
+    quad(q, color, { opacity = 0.3, dashed = false, info = null, reveal = null, edge = true } = {}) {
+      const P = q.map(V); q.forEach(grow);
+      const g = new THREE.Group(); cur.add(g);
+      const geo = new THREE.BufferGeometry().setFromPoints(P); geo.setIndex([0, 1, 2, 0, 2, 3]);
+      const C = col(color);
+      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: C, side: THREE.DoubleSide, transparent: true, opacity, depthWrite: false }));
+      g.add(mesh);
+      if (edge) new Segs(g, C, { r: 0.35, dashed }).update(P.map((p, i) => [p, P[(i + 1) % 4]]));
+      if (info) { const center = P.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(0.25); mesh.userData = { ...info, center, color: colStr(color) }; pickables.push(mesh); }
+      if (reveal) b.fade(g, reveal);
+      return g;
+    },
+    triad(o, axes, len, names, { cls = 'k', reveal = null } = {}) {
+      const cols = ['#c0392b', '#1e8449', '#1f5fb0'];
+      const lr = reveal ? [reveal[0] + reveal[1] * 0.7, reveal[1] * 0.4] : undefined;
+      axes.forEach((ax, i) => { const e = add(o, mul(unit(ax), len)); b.arrow(o, e, cols[i], { head: Math.min(5, len * 0.3), reveal }); b.label(names[i], add(o, mul(unit(ax), len * 1.18)), { cls, color: cols[i], pin: true, reveal: lr }); });
+    },
+    /* 카메라: 광학 중심 · 시야 피라미드 · 이미지 평면(광학 중심에서 28 cm) */
+    camera(c) {
+      const pairs = c.corners.map(k => [c.C, k]).concat(c.corners.map((k, i) => [k, c.corners[(i + 1) % 4]]));
+      b.lines(pairs, c.color, { opacity: 0.9, r: 0.3 });
+      b.quad(c.corners, c.color, { opacity: 0.07, edge: false, info: { name: `${c.unit} 이미지 평면`, extra: `${IMG_W}×${IMG_H} px · 광학 중심에서 ${PLANE_D} cm 앞에 그렸다` } });
+      b.dot(c.C, c.color, 2.4, { name: c.ref ? `기준 카메라 ${c.unit}` : c.unit, extra: `바닥 좌표 ${vec(c.C)} cm · 높이 ${fmt(c.C[1], 0)} cm` });
+      b.label(c.unit, c.C, { color: c.color, cls: 'k' });
+    },
+    /* 파워랙 모형 — 리그 배치 렌더와 같은 부재 배치. 랙 좌표로 만들어 그룹째 c·yaw 로 옮긴다 */
+    rack({ faint = true, origin = false } = {}) {
+      const S = RACK, U = S.u, CS = S.cs, H = S.H, Wi = S.Wi, Di = S.Di;
+      const g = new THREE.Group(); g.position.set(RACK_O[0], 0, RACK_O[2]); g.rotation.y = -yaw; cur.add(g);
+      const edges = [];
+      const bx = (w, h, d, [x, y, z]) => {
+        const eg = new THREE.EdgesGeometry(new THREE.BoxGeometry(w, h, d)), a = eg.attributes.position.array; eg.dispose();
+        for (let i = 0; i + 5 < a.length; i += 6) edges.push([new THREE.Vector3(a[i] + x, a[i + 1] + y, a[i + 2] + z), new THREE.Vector3(a[i + 3] + x, a[i + 4] + y, a[i + 5] + z)]);
+      };
+      const cw = Wi / 2 + U / 2, cd = Di / 2 + U / 2;
+      const corners = [[-cw, -cd], [cw, -cd], [cw, cd], [-cw, cd]];
+      corners.forEach(([x, z]) => bx(U, H, U, [x, H / 2, z]));
+      for (let k = 0; k < 4; k++) {
+        const [ax, az] = corners[k], [qx, qz] = corners[(k + 1) % 4];
+        const span = Math.hypot(qx - ax, qz - az) - U, horiz = Math.abs(qz - az) < 1e-6;
+        bx(horiz ? span : CS, CS, horiz ? CS : span, [(ax + qx) / 2, H - CS / 2, (az + qz) / 2]);
+      }
+      [-1, 1].forEach(sx => bx(CS, CS, 2 * cd - U, [sx * cw, CS / 2, 0]));
+      [-1, 1].forEach(sx => {
+        bx(S.jcupW, S.jcupH, S.jcupReach, [sx * (cw + U / 2 - S.jcupW / 2), S.jcupHeight, -(cd + U / 2 - S.jcupReach / 2 + S.jcupNose)]);
+        bx(S.safetyW, S.safetyT, 2 * cd - U, [sx * cw, S.safetyHeight, 0]);
+      });
+      const gap = S.storage, szc = -(cd + U / 2) - gap - U / 2;
+      [-1, 1].forEach(sx => { bx(U, H, U, [sx * cw, H / 2, szc]); bx(CS, CS, gap, [sx * cw, CS / 2, -(cd + U / 2) - gap / 2]); bx(CS, CS, gap, [sx * cw, H - CS / 2, -(cd + U / 2) - gap / 2]); });
+      bx(2 * cw - U, CS, CS, [0, H - CS / 2, szc]);
+      new Segs(g, col(faint ? '--grid' : '--rack'), { opacity: faint ? 0.55 : 0.8, r: 0.32 }).update(edges);
+      const inner = [[-Wi / 2, 0.4, Di / 2], [Wi / 2, 0.4, Di / 2], [Wi / 2, 0.4, -Di / 2], [-Wi / 2, 0.4, -Di / 2]].map(r2f);
+      b.lines(inner.map((p, i) => [p, inner[(i + 1) % 4]]), faint ? '--grid' : '--rack', { dashed: true, opacity: faint ? 0.6 : 0.9 });
+      if (origin) b.dot(RACK_O, '--rack', 2.2, { name: '랙 원점', extra: '케이지 안쪽 면 네 개가 만드는 사각형의 중심 · 바닥 · 랙 앵커 파일의 원점' });
+    },
+  };
+  return b;
+}
+
+/* 비트별 장면. 같은 단계의 앞 비트에서 산출된 것은 다 놓인 채로 두고, 이 비트에서 산출되는 것만 reveal 을 단다 */
+let FIG = null;
+function buildScene(bt) {
+  const b = sceneBuilder(), S = bt.stage, K = bt.key, V3 = b.V;
+  const Fg = mkFigure(); FIG = Fg;
+  if (K === 'rep') b.anim(t => Fg.set(kOf(t)));                                 // 반복 비트: 자세가 시간을 따라 움직이고, 아래 모든 갱신기가 따라간다
+  const midOf = (a, c) => mul(add(a, c), 0.5);
+  const setText = (id, txt) => { const el = document.querySelector(`.ov .lbl[data-id="${id}"]`); if (el && el.textContent !== txt) el.textContent = txt; };
+  const jointInfo = j => ({ name: JOINT[j], extra: `랙 좌표 ${vec(f2r(Fg.T[j]))} cm · 본 카메라 3대 · 재투영 오차 최대 ${fmt(Math.max(...Fg.E[j]), 1)} px` });
+  const pairsOf = (pts, bones) => bones.map(([i, j]) => [pts[i], pts[j]]);
+  const vpairs = (pts, bones) => bones.map(([i, j]) => [V3(pts[i]), V3(pts[j])]);
+  const setPos = (m, p) => m.position.set(p[0], p[1], p[2]);
+
+  /* 먼저 있던 것: 랙 · 카메라 세 대와 이미지 평면 · 사람(측정 전의 실제 몸 — 옅은 회색) */
+  b.rack({ faint: true, origin: S === 4 });
+  CAMS.forEach(c => b.camera(c));
+  const person = {};
+  {
+    const sg = b.lines(pairsOf(Fg.P, BONES_BODY), '--person', { opacity: 0.35, r: 1.5 });
+    const head = b.dot(headOf(Fg.P), '--person', 7.5, { name: '사람', extra: '측정 전의 실제 몸 · 자세는 예시(뼈 길이와 관절 각도로 만듦)' }, { opacity: 0.35 });
+    Fg.on(() => { sg.update(vpairs(Fg.P, BONES_BODY)); setPos(head, headOf(Fg.P)); });
+    person.sg = sg; person.head = head;
+  }
+
+  /* 이미지 평면 위 2D 관절(카메라마다) — 1 단계 '2D 관절'에서 카메라 순서로 나타나고, 그 뒤로는 놓여 있다 */
+  const planes2d = (reveal = null) => CAMS.forEach(c => b.grouped(() => {
+    const O = Fg.O[c.i];
+    const dots = O.map((o, j) => b.dot(o.pt, '--px', j === FEAT ? 0.9 : 0.55));
+    const sg = b.lines(pairsOf(O.map(o => o.pt), BONES), '--px', { r: 0.14, opacity: 0.8 });
+    Fg.on(() => { const O2 = Fg.O[c.i]; dots.forEach((d, j) => setPos(d, O2[j].pt)); sg.update(vpairs(O2.map(o => o.pt), BONES)); });
+  }, reveal ? [PLANE_S(c.i), reveal] : null));
+  const featInfo = c => { const o = Fg.O[c.i][FEAT]; return { name: `${JOINT[FEAT]} 픽셀 (${c.unit})`, extra: `(${fmt(o.u, 0)}, ${fmt(o.v, 0)}) px → 정규화 (${fmt(o.x, 3)}, ${fmt(o.y, 3)})` }; };
+  const featOnPlanes = (reveal = null) => CAMS.forEach(c => b.dot(Fg.O[c.i][FEAT].pt, '--pt', 1.2, featInfo(c), { reveal }));
+  const rayEnd = (c, j) => { const o = Fg.O[c.i][j]; return add(c.C, mul(unit(sub(o.pt, c.C)), nrm(sub(Fg.T[j], c.C)) + 30)); };
+  const rays = (j, { reveal = null, stagger = 0.5, opacity = 0.95, r = 0.45 } = {}) => CAMS.map(c => b.lines([[c.C, rayEnd(c, j)]], c.color, { r, opacity, reveal: reveal ? [reveal[0] + c.i * stagger, reveal[1]] : null }));
+  const normArrows = (reveal = null) => CAMS.forEach(c => {
+    b.dot(c.pp, c.color, 0.7, { name: `${c.unit} 주점`, extra: '광축이 이미지 평면과 만나는 자리 · 정규화 좌표의 원점' });
+    b.arrow(c.pp, Fg.O[c.i][FEAT].pt, c.color, { head: 2.2, reveal: reveal ? [reveal[0] + c.i * 0.4, reveal[1]] : null });
+  });
+
+  /* 삼각측량으로 낸 관절 33개와 뼈 */
+  const skel3d = () => {
+    const dots = Fg.T.map((T, j) => b.dot(T, '--joint', j === FEAT ? 1.9 : 1.3, jointInfo(j)));
+    const sg = b.lines(pairsOf(Fg.T, BONES), '--joint', { r: 0.4 });
+    Fg.on(() => { dots.forEach((d, j) => setPos(d, Fg.T[j])); sg.update(vpairs(Fg.T, BONES)); });
+  };
+  const worldTriad = (o = {}) => b.triad([0, 0.5, 0], [[1, 0, 0], [0, 1, 0], [0, 0, 1]], 34, ['x', 'y', 'z'], { cls: '', ...o });
+  const rackTriad = (o = {}) => b.triad(RACK_O, [EX, EY, EZ], 40, ['x<sub>r</sub>', 'y<sub>r</sub>', 'z<sub>r</sub>'], { cls: '', ...o });
+  const rv = (on, a, d) => on ? [a, d] : null;
+
+  /* 지표 그림: 골반 높이(연직 점선) · 무릎 각도(호) · 몸통 기울기(어깨-골반 선과 연직). 반복 비트에서는 자세를 따라 움직인다 */
+  const metricVisuals = on => {
+    const hipF = () => r2f(Fg.M.hipMid), shF = () => r2f(Fg.M.shMid), foot = p => [p[0], 0, p[2]], upOf = p => add(p, [0, LEN.trunk, 0]);
+    const arcPts = () => { const T = Fg.T, k = T[25], u1 = unit(sub(T[27], k)), u2 = unit(sub(T[23], k)), W = Math.acos(Math.max(-1, Math.min(1, dot3(u1, u2)))), n = 10, pts = []; for (let i = 0; i <= n; i++) { const s = i / n; pts.push(add(k, mul(add(mul(u1, Math.sin((1 - s) * W)), mul(u2, Math.sin(s * W))), 9 / Math.sin(W)))); } return pts; };
+    const arcPairs = pts => pts.slice(1).map((p, i) => [pts[i], p]);
+    const hipTxt = () => `골반 높이 ${fmt(Fg.M.hipH, 0)} cm`, kneeTxt = () => `무릎 각도 ${fmt(Fg.M.kneeL, 0)}°`, trunkTxt = () => `몸통 기울기 ${fmt(Fg.M.trunk, 0)}°`;
+    const h0 = hipF(), s0 = shF(), a0 = arcPts();
+    const plumb = b.lines([[h0, foot(h0)]], '--metric', { dashed: true, r: 0.32, opacity: 0.9, reveal: rv(on, 0.2, 0.8) });
+    const hipL = b.label(hipTxt(), midOf(h0, foot(h0)), { color: css('--metric'), reveal: rv(on, 1.0, 0.4), id: 'hipH' });
+    const arc = b.lines(arcPairs(a0), '--metric', { r: 0.35, reveal: rv(on, 1.4, 0.6) });
+    const kneeL = b.label(kneeTxt(), a0[5], { color: css('--metric'), reveal: rv(on, 2.0, 0.4), id: 'knee' });
+    const trunkLn = b.lines([[h0, s0]], '--metric', { r: 0.5, reveal: rv(on, 2.4, 0.5) });
+    const vert = b.lines([[h0, upOf(h0)]], '--metric', { dashed: true, r: 0.3, opacity: 0.8, reveal: rv(on, 2.6, 0.5) });
+    const trunkL = b.label(trunkTxt(), lerp3(h0, upOf(h0), 0.8), { color: css('--metric'), reveal: rv(on, 3.1, 0.4), id: 'trunk' });
+    Fg.on(() => {
+      const h = hipF(), s = shF(), pts = arcPts();
+      plumb.update([[V3(h), V3(foot(h))]]); hipL.pos.copy(V3(midOf(h, foot(h)))); setText('hipH', hipTxt());
+      arc.update(arcPairs(pts).map(([p, q]) => [V3(p), V3(q)])); kneeL.pos.copy(V3(pts[5])); setText('knee', kneeTxt());
+      trunkLn.update([[V3(h), V3(s)]]); vert.update([[V3(h), V3(upOf(h))]]); trunkL.pos.copy(V3(lerp3(h, upOf(h), 0.8))); setText('trunk', trunkTxt());
+    });
+  };
+  /* 하중 그림(#649 다리별): 바 · 무게중심(몸+바)과 연직선 · 두 발이 받는 몫과 바닥 힘 · 발 중점에서의 전후 쏠림 ·
+     다리마다 무릎과 골반에서 그 발이 받는 힘의 선까지의 모멘트 팔(앞뒤·안팎) */
+  const loadVisuals = on => {
+    const F = p => r2f(p), drop = p => [p[0], 0, p[2]], lift = p => add(p, [0, 0.6, 0]);
+    const barEnds = () => { const c = Fg.M.bar; return [F(add(c, [-BAR_HALF, 0, 0])), F(add(c, [BAR_HALF, 0, 0]))]; };
+    const grfTop = (cop, share) => add(cop, [0, 18 + 44 * share, 0]);                    // 바닥 힘 화살표 — 길이는 그 발의 몫
+    const armPairs = () => { const M = Fg.M, R = Fg.T.map(f2r), on = (j, cop) => [F(R[j]), F([cop[0], R[j][1], cop[2]])];
+      return [on(25, M.copL), on(26, M.copR), on(23, M.copL), on(24, M.copR)]; };
+    const lineUp = () => { const M = Fg.M, R = Fg.T.map(f2r), h = Math.max(R[23][1], R[24][1]) + 4; return [[F(M.copL), F([M.copL[0], h, M.copL[2]])], [F(M.copR), F([M.copR[0], h, M.copR[2]])]]; };
+    const pct = s => `${Math.round(s * 100)}%`;
+    const armTxt = a => `앞뒤 ${fmt(a.fb, 1)} cm · 안팎 ${fmt(a.ml, 1)} cm`;
+    const M = Fg.M, c0 = F(M.com), f0 = F(M.footC), a0 = armPairs(), b0 = barEnds();
+    const barLn = b.lines([b0], '--person', { r: 1.6, opacity: 0.9, reveal: rv(on, 0.0, 0.5) });
+    const barL = b.label(`바 ${BAR_KG} kg`, b0[1], { color: css('--person'), cls: 'k', reveal: rv(on, 0.4, 0.4) });
+    const com = b.dot(c0, '--load', 2.6, { name: '무게중심(몸+바)', extra: `분절표(de Leva, 머리·몸통·팔·다리의 질량비)로 낸 몸 무게중심 · 체중 ${BODY_KG} kg 에 바 ${BAR_KG} kg 를 더한 자리 · 랙 좌표 ${vec(M.com)} cm` }, { reveal: rv(on, 0.6, 0.5) });
+    const comL = b.label('무게중심(몸+바)', c0, { color: css('--load'), reveal: rv(on, 0.9, 0.4) });
+    const plumb = b.lines([[c0, drop(c0)]], '--load', { dashed: true, r: 0.32, opacity: 0.9, reveal: rv(on, 1.1, 0.7) });
+    const copInfo = (side, cop, share) => ({ name: `${side} 압력 중심`, extra: `그 발이 받는 몫 ${pct(share)} · 무게중심 연직선이 두 발 사이 어디에 떨어지는지로 나눈 값 · 랙 좌표 ${vec(cop)} cm` });
+    const copLd = b.dot(F(M.copL), '--metric', 1.8, copInfo('왼발', M.copL, M.shareL), { reveal: rv(on, 1.8, 0.4) });
+    const copRd = b.dot(F(M.copR), '--metric', 1.8, copInfo('오른발', M.copR, M.shareR), { reveal: rv(on, 1.8, 0.4) });
+    const grfL = b.arrow(F(M.copL), F(grfTop(M.copL, M.shareL)), '--metric', { head: 3, reveal: rv(on, 2.0, 0.6) });
+    const grfR = b.arrow(F(M.copR), F(grfTop(M.copR, M.shareR)), '--metric', { head: 3, reveal: rv(on, 2.0, 0.6) });
+    const shL = b.label(`왼발 ${pct(M.shareL)}`, lift(F(M.copL)), { color: css('--metric'), cls: 'k', reveal: rv(on, 2.5, 0.4), id: 'shareL' });
+    const shR = b.label(`오른발 ${pct(M.shareR)}`, lift(F(M.copR)), { color: css('--metric'), cls: 'k', reveal: rv(on, 2.5, 0.4), id: 'shareR' });
+    const grfName = b.label('바닥 힘', F(grfTop(M.copR, M.shareR)), { color: css('--metric'), reveal: rv(on, 2.7, 0.4) });
+    const foot = b.dot(f0, '--metric', 1.6, { name: '발 중점', extra: `양 발꿈치·발끝 네 점의 평균 · 발 길이 ${fmt(M.footLen, 0)} cm · 무게중심 연직선까지 앞으로 ${fmt(M.fwd, 1)} cm (발 길이의 ${fmt(M.ratio, 2)})` }, { reveal: rv(on, 3.1, 0.4) });
+    const shift = b.arrow(lift(f0), lift(drop(c0)), '--load', { head: 3, reveal: rv(on, 3.3, 0.6) });
+    const shiftL = b.label('전후 쏠림', lift(midOf(f0, drop(c0))), { color: css('--load'), reveal: rv(on, 3.8, 0.4) });
+    const lines = b.lines(lineUp(), '--metric', { dashed: true, r: 0.22, opacity: 0.75, reveal: rv(on, 4.1, 0.6) });
+    const arms = b.lines(a0, '--load', { dashed: true, r: 0.32, opacity: 0.95, reveal: rv(on, 4.6, 0.7) });
+    const armL = b.label('모멘트 팔(다리마다)', midOf(a0[0][0], a0[0][1]), { color: css('--load'), reveal: rv(on, 5.3, 0.4) });
+    const armDot = b.dot(F(Fg.T.map(f2r)[25]), '--load', 2.4, { name: '모멘트 팔(다리마다)', extra: `왼 무릎 → 왼발 힘의 선 ${armTxt(M.arms.kneeL)} · 오른 무릎 → 오른발 ${armTxt(M.arms.kneeR)} · 왼 골반 ${armTxt(M.arms.hipL)}` }, { opacity: 0.01 });
+    Fg.on(() => {
+      const M2 = Fg.M, c = F(M2.com), f = F(M2.footC), a = armPairs(), be = barEnds();
+      barLn.update([[V3(be[0]), V3(be[1])]]); barL.pos.copy(V3(be[1]));
+      setPos(com, c); comL.pos.copy(V3(c)); plumb.update([[V3(c), V3(drop(c))]]);
+      setPos(copLd, F(M2.copL)); setPos(copRd, F(M2.copR));
+      grfL.aim(F(M2.copL), F(grfTop(M2.copL, M2.shareL))); grfR.aim(F(M2.copR), F(grfTop(M2.copR, M2.shareR)));
+      shL.pos.copy(V3(lift(F(M2.copL)))); shR.pos.copy(V3(lift(F(M2.copR)))); setText('shareL', `왼발 ${pct(M2.shareL)}`); setText('shareR', `오른발 ${pct(M2.shareR)}`);
+      grfName.pos.copy(V3(F(grfTop(M2.copR, M2.shareR))));
+      setPos(foot, f); shift.aim(lift(f), lift(drop(c))); shiftL.pos.copy(V3(lift(midOf(f, drop(c)))));
+      lines.update(lineUp().map(([p, q]) => [V3(p), V3(q)]));
+      arms.update(a.map(([p, q]) => [V3(p), V3(q)])); armL.pos.copy(V3(midOf(a[0][0], a[0][1]))); setPos(armDot, a[0][0]);
+    });
+  };
+
+  /* 1 2D 관절: 셔터가 같이 열리고(이미지 평면 번쩍임), 사진마다 관절 33개의 픽셀이 찍힌다 */
+  if (S === 1) {
+    if (K === 'shot') CAMS.forEach(c => b.pulse(b.quad(c.corners, c.color, { opacity: 0.5, edge: false }), [SHOT_T, 0.12, 0.15, 0.7]));
+    else { planes2d(0.5); b.label('2D 관절 33개', Fg.O[0][FEAT].pt, { color: css('--px'), reveal: [PLANE_S(0) + 0.6, 0.4] }); }
+  }
+
+  /* 2 광선: 왼 무릎 하나를 따라간다. 주점에서 관절 픽셀까지의 화살표 = 정규화 좌표, 그 방향으로 나가는 선 = 광선 */
+  if (S === 2) {
+    planes2d();
+    featOnPlanes(K === 'undist' ? [0.2, 0.4] : null);
+    if (K === 'undist') { normArrows([0.8, 0.7]); b.label('정규화 좌표', Fg.O[0][FEAT].pt, { color: css('--pt'), reveal: [1.7, 0.4] }); }
+    else {
+      normArrows();
+      rays(FEAT, { reveal: [0.2, 1.2] });
+      b.label('광선', lerp3(CAMS[0].C, rayEnd(CAMS[0], FEAT), 0.6), { color: CAMS[0].color, reveal: [2.0, 0.4] });
+    }
+  }
+
+  /* 3 삼각측량: 세 광선에 가장 가까운 점이 3D 관절. 그다음 관절 33개 전부 */
+  /* 3 '연속 프레임': 프레임 시각마다 2D 관절(평면과 C1 이미지)이 바뀌고, 세 대의 광선이 관절 33개에 한꺼번에 닿은 뒤 골격이
+     그 프레임 자세로 바뀐다. 광선은 다음 프레임 전에 사라진다. 실제 몸(옅은 회색)은 프레임 사이에도 움직인다 */
+  if (S === 3 && K === 'burst') {
+    planes2d();
+    b.fade(b.grouped(() => featOnPlanes()), [0, 0.3], { out: true });
+    const n = BURST_AT.length, C3 = CAMS.map(c => V3(c.C));
+    const ends = BURST_FR.map(fr => CAMS.map(c => fr.T.map((T, j) => V3(add(c.C, mul(unit(sub(fr.O[c.i][j].pt, c.C)), nrm(sub(T, c.C)) + 30))))));
+    const rayS = CAMS.map(c => b.lines(Fg.T.map((_, j) => [c.C, rayEnd(c, j)]), c.color, { r: 0.3, opacity: 0.7 }));
+    const dots = Fg.T.map((T, j) => b.dot(T, '--joint', j === FEAT ? 1.9 : 1.3, jointInfo(j)));
+    const bones = b.lines(pairsOf(Fg.T, BONES), '--joint', { r: 0.4 });
+    b.anim(t => {
+      let f = -1; while (f + 1 < n && t >= BURST_AT[f + 1]) f++;
+      const fr = BURST_FR[Math.max(f, 0)];
+      if (Fg.k !== fr.k || Fg.f !== fr.f) Fg.set(fr.k, fr.f);
+      const P = poseAt(burstK(t)).map(r2f);
+      person.sg.update(vpairs(P, BONES_BODY)); setPos(person.head, headOf(P));
+      rayS.forEach(s => { s.g.visible = false; });
+      if (f < 0) return;
+      const at = BURST_AT[f], per = f + 1 < n ? BURST_AT[f + 1] - at : BURST.min, a = clamp01((t - at) / BURST.rayIn);
+      const sk = a < 1 ? BURST_FR[Math.max(0, f - 1)] : fr;
+      const op = 0.7 * (a < 1 ? 1 : 1 - easeOut(clamp01((t - at - BURST.rayIn) / Math.max(0.06, 0.75 * per - BURST.rayIn))));
+      rayS.forEach((s, ci) => { s.update(ends[f][ci].map(e => [C3[ci], C3[ci].clone().lerp(e, easeOut(a))])); s.mat.opacity = op; s.g.visible = op > 0.01; });
+      const pop = a < 1 ? 1 : 1 + 0.45 * (1 - clamp01((t - at - BURST.rayIn) / 0.14));
+      dots.forEach((m, j) => { setPos(m, sk.T[j]); m.scale.setScalar(pop); });
+      bones.update(vpairs(sk.T, BONES));
+    });
+  } else if (S === 3) {
+    planes2d(); featOnPlanes();
+    const T = Fg.T[FEAT];
+    if (K === 'meet') {
+      rays(FEAT);
+      b.dot(T, '--joint', 2.2, jointInfo(FEAT), { reveal: [0.4, 0.5] });
+      b.label('3D 관절', T, { color: css('--joint'), reveal: [0.9, 0.4] });
+      /* 광선에서 점까지의 수직 토막 — 검출 오차 ±2.5 px 가 만든 어긋남이라 작다 */
+      const stubs = CAMS.map(c => { const d = unit(sub(Fg.O[c.i][FEAT].pt, c.C)), q = sub(T, c.C); return [T, add(c.C, mul(d, dot3(q, d)))]; });
+      b.lines(stubs, '--tri', { r: 0.3, reveal: [1.6, 0.5] });
+      b.label(`재투영 오차 ${fmt(Math.max(...Fg.E[FEAT]), 1)} px`, T, { color: css('--tri'), cls: 'k', reveal: [2.2, 0.4] });
+      b.label(`바닥 좌표 ${vec(T, 0)} cm`, T, { color: css('--muted'), cls: 'k', reveal: [2.8, 0.4] });
+    } else {
+      b.dot(T, '--joint', 1.9, jointInfo(FEAT));
+      Fg.T.forEach((P, j) => {
+        if (j === FEAT) return;
+        const s = ALL_S(j);
+        b.dot(P, '--joint', 1.3, jointInfo(j), { reveal: [s, 0.3] });
+        CAMS.forEach(c => b.pulse(b.lines([[c.C, rayEnd(c, j)]], c.color, { r: 0.3, opacity: 0.7 }).g, [s - 0.1, 0.15, 0.1, 0.3]));
+      });
+      b.lines(pairsOf(Fg.T, BONES), '--joint', { r: 0.4, reveal: [3.1, 0.8] });
+      b.label('관절 33개 = 잠정값', Fg.T[0], { color: css('--joint'), reveal: [3.9, 0.4] });
+    }
+  }
+
+  /* 4 랙 좌표·지표: 바닥 좌표 → 랙 좌표, 그 위에서 지표와 하중, 마지막은 세트 동안의 반복 */
+  if (S === 4) {
+    planes2d(); skel3d();
+    if (K === 'frame') {
+      worldTriad({ reveal: [0, 0.6] });
+      b.label('바닥 원점', [0, 0.5, 0], { color: css('--anchor'), reveal: [0.4, 0.4] });
+      b.arrow([0, 0.6, 0], [RACK_O[0], 0.6, RACK_O[2]], '--rack', { thick: true, reveal: [0.9, 1.0] });
+      rackTriad({ reveal: [1.9, 0.6] });
+      b.label('랙 원점', RACK_O, { color: css('--rack'), reveal: [2.3, 0.4] });
+      b.label(`${JOINT[FEAT]} · 랙 좌표 ${vec(f2r(Fg.T[FEAT]), 0)} cm`, Fg.T[FEAT], { color: css('--joint'), cls: 'k', reveal: [2.9, 0.4] });
+    } else {
+      rackTriad(); b.label('랙 원점', RACK_O, { color: css('--rack'), cls: 'k' });
+      metricVisuals(K === 'metrics');
+      if (K !== 'metrics') loadVisuals(K === 'load');
+      if (K === 'rep') {
+        const top = () => add(headOf(Fg.T), [0, 16, 0]);
+        const rl = b.label('rep 1', top(), { cls: 'rep', pin: true, reveal: [REP_T[0][1], 0.3], id: 'rep' });
+        Fg.on(() => rl.pos.copy(V3(top())));
+        b.anim(t => setText('rep', t >= REP_T[2][1] ? 'rep 2' : 'rep 1'));
+      }
+    }
+  }
+  Fg.sync();
+  return { group: b.G, labels: b.labels, pickables: b.pickables, anims: b.anims, bbox: b.bb, range: RANGE, step: STEP };
+}
+
+/* ═══════════════════ C1 이 보는 이미지(2D) — 3D 와 같은 시각으로 그린다 ═══════════════════ */
+const RACK_2D = (() => {                                                         // C1 이미지 속 랙 선. 렌즈 왜곡 때문에 휜다
+  const c = CAMS[0], polys = [];
+  const line = (p, q) => { const pts = []; for (let i = 0; i <= 10; i++) { const pr = c.project(r2f(lerp3(p, q, i / 10))); if (pr) pts.push([pr.u, pr.v]); } if (pts.length > 1) polys.push(pts); };
+  const { Wi, Di, u: U, H, storage } = RACK, cw = Wi / 2 + U / 2, cd = Di / 2 + U / 2;
+  const corners = [[-cw, -cd], [cw, -cd], [cw, cd], [-cw, cd]];
+  corners.forEach(([x, z], k) => { const [qx, qz] = corners[(k + 1) % 4]; line([x, 0, z], [x, H, z]); line([x, H, z], [qx, H, qz]); line([x, 0, z], [qx, 0, qz]); });
+  const szc = -cd - U - storage;
+  [-cw, cw].forEach(x => { line([x, 0, szc], [x, H, szc]); line([x, H, -cd], [x, H, szc]); line([x, 0, -cd], [x, 0, szc]); });
+  line([-cw, H, szc], [cw, H, szc]);
+  return polys;
+})();
+function drawInset(bt, t) {
+  const cvs = $('#imgview'), w = cvs.clientWidth; if (!w || !FIG) return;
+  /* 세로 장착: 사진의 u 축이 바닥 쪽, v 축이 카메라의 왼쪽. 세워서 보이게 (u, v) → 화면 ((1200 − v)·k, u·k) */
+  const h = w * IMG_W / IMG_H, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (cvs.width !== Math.round(w * dpr) || cvs.height !== Math.round(h * dpr)) { cvs.width = Math.round(w * dpr); cvs.height = Math.round(h * dpr); }
+  const ctx = cvs.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  const S = bt.stage, K = bt.key, k = w / IMG_H, a = r => prog(t, r), c = CAMS[0], O = FIG.O[0];
+  const mp = (u, v) => [(IMG_H - v) * k, u * k];
+  ctx.fillStyle = css('--pane'); ctx.fillRect(0, 0, w, h);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const path = (pts, color, width, alpha, dashed = false) => { if (alpha <= 0) return; ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dashed ? [3, 3] : []); ctx.beginPath(); pts.forEach((p, i) => { const q = mp(p[0], p[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; };
+  const dotAt = (u, v, r, color, hollow = false, alpha = 1) => { if (alpha <= 0) return; const q = mp(u, v); ctx.globalAlpha = alpha; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, Math.PI * 2); if (hollow) { ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.stroke(); } else { ctx.fillStyle = color; ctx.fill(); } ctx.globalAlpha = 1; };
+  const bones = (list, color, width, alpha) => list.forEach(([i, j]) => path([[O[i].u, O[i].v], [O[j].u, O[j].v]], color, width, alpha));
+  /* 사진: 랙 선 · 사람 몸(옅은 회색) */
+  RACK_2D.forEach(p => path(p, css('--rack'), 1, 0.45));
+  bones(BONES_BODY, css('--person'), 3.4, 0.55);
+  { const hd = c.project(r2f(headOf(FIG.R))); if (hd) dotAt(hd.u, hd.v, c.K.fx * 7.5 / hd.Z * k, css('--person'), false, 0.55); }
+  /* 촬영 번쩍임 */
+  if (S === 1 && K === 'shot') { const f = a([SHOT_T, 0.12]) * (1 - a([SHOT_T + 0.27, 0.7])); if (f > 0) { ctx.globalAlpha = f * 0.85; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; } }
+  /* 검출 2D 관절 */
+  const detA = S === 1 ? (K === 'joints2d' ? a([PLANE_S(0), 0.5]) : 0) : 1;
+  if (detA > 0) {
+    bones(BONES, css('--px'), 1, detA * (S === 1 ? a([PLANE_S(0) + 0.4, 0.5]) : 1) * 0.9);
+    O.forEach(o => dotAt(o.u, o.v, 1.8, css('--px'), false, detA));
+  }
+  /* 따라가는 관절(2 단계와 3 단계 '만나기'): 고리 · 주점에서 관절까지의 선 = 정규화 좌표 · 숫자 */
+  if (S === 2 || (S === 3 && K === 'meet')) {
+    const o = O[FEAT], ringA = K === 'undist' ? a([0.2, 0.4]) : 1;
+    dotAt(o.u, o.v, 5, css('--pt'), true, ringA);
+    const lineK = K === 'undist' ? easeOut(a([0.8, 0.7])) : S === 2 ? 1 : 0;
+    if (lineK > 0) {
+      path([[c.K.cx, c.K.cy], [c.K.cx + (o.u - c.K.cx) * lineK, c.K.cy + (o.v - c.K.cy) * lineK]], c.color, 1.2, 0.9);
+      dotAt(c.K.cx, c.K.cy, 2.2, c.color);
+    }
+    if (K === 'undist') {
+      ctx.font = `600 10px ${css('--mono')}`; ctx.textBaseline = 'middle';
+      const q = mp(o.u, o.v), right = q[0] < w * 0.5; ctx.textAlign = right ? 'left' : 'right'; const tx = q[0] + (right ? 9 : -9);
+      const line = (txt, dy, color, alpha) => { if (alpha <= 0) return; ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.fillText(txt, tx, q[1] + dy); ctx.globalAlpha = 1; };
+      line(`(${fmt(o.u, 0)}, ${fmt(o.v, 0)}) px`, -7, css('--pt'), a([0.2, 0.4]));
+      line(`→ (${fmt(o.x, 3)}, ${fmt(o.y, 3)})`, 7, css('--fg'), a([1.7, 0.4]));
+    }
+  }
+  ctx.restore();
+}
+/* ═══════════════════ 조립 ═══════════════════ */
+const host = $('#v3d'), insetEl = $('#inset');
+let viewer;
+try { viewer = createViewer(host, { reserve: () => { const r = insetEl.getBoundingClientRect(), hr = host.getBoundingClientRect(); return { R: r.width > 0 ? Math.max(0, r.bottom - hr.top) : 0 }; } }); }
+catch (e) { host.innerHTML = `<div class="err">3D 를 열 수 없습니다 · ${e && e.message || e}</div>`; }
+
+const state = { i: 0, t: 0, playing: false, view: 'free' };
+let raf = 0, last = 0, hold = 0, lastStage = 0;
+const beat = () => BEATS[state.i];
+const render = (t, now) => { viewer.frame(t, now); drawInset(beat(), t); };
+
+/* 진행 막대: 단계별 묶음 안에 비트 조각, 폭은 길이에 비례 */
+const bar = $('#bar'), segs = [];
+{
+  const byStage = {};
+  BEATS.forEach((bt, i) => { (byStage[bt.stage] ||= []).push(i); });
+  Object.entries(byStage).forEach(([st, idx]) => {
+    const g = document.createElement('div'); g.className = 'st'; g.style.setProperty('--w', idx.reduce((s, i) => s + BEATS[i].dur, 0).toFixed(2));
+    idx.forEach(i => {
+      const sg = document.createElement('button'); sg.type = 'button'; sg.className = 'sg'; sg.dataset.i = i; sg.style.setProperty('--d', BEATS[i].dur.toFixed(2));
+      sg.setAttribute('aria-label', `${st} ${STAGE_NAME[st]} ${BEATS[i].name}`);
+      const f = document.createElement('i'); sg.appendChild(f); g.appendChild(sg); segs.push({ sg, f });
+    });
+    bar.appendChild(g);
+  });
+  bar.addEventListener('click', e => { const sg = e.target.closest('.sg'); if (sg) goto(+sg.dataset.i); });
+}
+
+function renderControls() {
+  const bt = beat(), atEnd = state.i === BEATS.length - 1 && state.t >= bt.dur && !state.playing;
+  $('#tabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-selected', String(+x.dataset.stage === bt.stage)));
+  $('#meta-stage').textContent = `${bt.stage} ${STAGE_NAME[bt.stage]} · ${bt.name}`;
+  const fc = $('#meta-file'); fc.hidden = !bt.file; fc.textContent = bt.file || '';
+  if (VIDEO) $('#cap').innerHTML = bt.cap.split(/(?<=다\.)\s+/).map(s => s.replace(/[<>&]/g, '')).join('<br>');
+  else $('#cap').textContent = bt.cap;
+  const pb = $('#play'); pb.textContent = state.playing ? '일시정지' : atEnd ? '처음부터' : '재생'; pb.setAttribute('aria-pressed', String(state.playing));
+  $('#prev').disabled = state.i === 0; $('#next').disabled = state.i === BEATS.length - 1;
+  segs.forEach((s, i) => s.sg.setAttribute('aria-current', String(i === state.i)));
+}
+function renderProgress() {
+  const bt = beat();
+  segs.forEach((s, i) => { s.f.style.width = i < state.i ? '100%' : i === state.i ? (clamp01(state.t / bt.dur) * 100).toFixed(1) + '%' : '0'; });
+}
+function goto(i, { play = true, fresh = false } = {}) {
+  if (!viewer) return;
+  state.i = Math.max(0, Math.min(BEATS.length - 1, i)); state.t = RM ? beat().dur : 0; hold = 0;
+  const bt = beat();
+  viewer.setScene(buildScene(bt));
+  if (state.view === 'free' && (bt.stage !== lastStage || bt.view)) {
+    const v = bt.view || STAGE_VIEW[bt.stage];
+    viewer.tweenView(v[0], v[1], lastStage === 0 || RM || fresh ? 0 : 1.1, RENDER ? 0 : performance.now());
+  }
+  lastStage = bt.stage;
+  state.playing = RENDER ? false : play;
+  render(state.t, RENDER ? 0 : performance.now());
+  renderControls(); renderProgress(); if (!RENDER) ensureLoop();
+}
+function ensureLoop() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); } }
+function loop(now) {
+  raf = 0;
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  const bt = beat();
+  if (state.playing) {
+    if (RM) { hold += dt; if (hold >= Math.min(bt.dur, 3)) { if (state.i < BEATS.length - 1) { goto(state.i + 1); return; } state.playing = false; renderControls(); } }
+    else { state.t += dt; if (state.t >= bt.dur) { if (state.i < BEATS.length - 1) { goto(state.i + 1); return; } state.t = bt.dur; state.playing = false; renderControls(); } }
+  }
+  render(state.t, now);
+  renderProgress();
+  if (state.playing || viewer.busy()) raf = requestAnimationFrame(loop);
+}
+function togglePlay() {
+  const bt = beat();
+  if (state.playing) { state.playing = false; renderControls(); return; }
+  if (state.i === BEATS.length - 1 && state.t >= bt.dur) { goto(0); return; }
+  if (state.t >= bt.dur) { goto(state.i + 1); return; }
+  state.playing = true; renderControls(); ensureLoop();
+}
+$('#play').addEventListener('click', togglePlay);
+$('#prev').addEventListener('click', () => goto(state.i - 1));
+$('#next').addEventListener('click', () => goto(state.i + 1));
+$('#tabs').addEventListener('click', e => {
+  const bt = e.target.closest('button[data-stage]'); if (!bt) return;
+  const st = +bt.dataset.stage;
+  goto(BEATS.findIndex(x => x.stage === st));
+  try { history.replaceState(null, '', '#s' + st); } catch (_) { /* 주소 바꾸기 막힘 */ }
+});
+$('#views').addEventListener('click', e => {
+  const bt = e.target.closest('button[data-view]'); if (!bt) return;
+  state.view = bt.dataset.view;
+  $('#views').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === bt)));
+  if (!viewer) return;
+  if (state.view === 'free') { const v = beat().view || STAGE_VIEW[beat().stage]; viewer.setView('free'); viewer.tweenView(v[0], v[1], 0); }
+  else viewer.setView(state.view);
+  render(state.t, performance.now());
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest('button')) return;
+  if (e.key === ' ' || e.key === 'k') { e.preventDefault(); togglePlay(); }
+  else if (e.key === 'ArrowRight') goto(state.i + 1);
+  else if (e.key === 'ArrowLeft') goto(state.i - 1);
+});
+new ResizeObserver(() => { if (viewer) render(state.t, performance.now()); }).observe(insetEl);
+const stageFromHash = () => (/^#s[1-4]$/.test(location.hash) ? +location.hash[2] : 0);
+addEventListener('hashchange', () => { const st = stageFromHash(); if (st) goto(BEATS.findIndex(x => x.stage === st)); });
+if (RENDER) {
+  window.__beats = BEATS.map(x => ({ stage: x.stage, dur: x.dur, name: x.name }));
+  window.__seek = (i, t, fresh = false) => { if (i !== state.i || fresh) goto(i, { fresh }); state.t = t; render(t, t * 1000); renderProgress(); };
+  goto(0, { fresh: true });
+  document.fonts.ready.then(() => { window.__ready = true; });
+} else {
+  const st = stageFromHash();
+  goto(st ? BEATS.findIndex(x => x.stage === st) : 0, { play: !RM });
+}
+</script>
+
+</body></html>

@@ -1,0 +1,784 @@
+<!doctype html><html lang="ko"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>롤링 셔터와 글로벌 셔터</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 흰 바탕 한 장. 두 셔터를 위아래로 놓고 센서, 타이밍, 사진의 행을 한 줄에 맞춘다. 색은 회색과 빛을 뜻하는 호박색 하나 */
+:root {
+  --bg: #FFFFFF;
+  --fg: #16181C;
+  --muted: #6B717B;
+  --faint: #A3A9B1;
+  --line: #E6E8EC;
+  --primary: #2F333A;
+  --on-primary: #FFFFFF;
+  --accent: #F2A12A;
+  --accent-ink: #B76B00;
+  --ink: #2B2F36;
+  --cell: #EEF0F3;
+  --photo: #F4F5F7;
+  --zebra: #F6F7F9;
+  --held: #9AA0A8;
+  --scene: #F3F4F6;
+  --hub: #7A808A;
+  --font-ui: "Noto Sans KR", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 56px;
+}
+.page { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 64px; }
+
+.page-head h1 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.lead { margin: 8px 0 0; color: var(--muted); max-width: 62ch; }
+
+section { display: flex; flex-direction: column; gap: 28px; }
+.sec-head h2 { margin: 0; font-size: 18px; line-height: 1.4; font-weight: 700; }
+.sec-head p { margin: 4px 0 0; color: var(--muted); max-width: 64ch; }
+
+.benches { display: flex; flex-direction: column; gap: 32px; }
+.bench { display: flex; flex-direction: column; gap: 10px; }
+.bench-head { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
+.bench-head h3, .prop-head h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.bench-head p, .prop-head p { margin: 0; color: var(--muted); font-size: 14px; }
+.bench-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.pane { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pane figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.cv { position: relative; }
+.cv.sq { aspect-ratio: 1 / 1; max-width: 100%; }
+.cv.fill { flex: 1; min-height: 80px; }
+.cv canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cv.scene { background: var(--scene); border-radius: 6px; overflow: hidden; }
+
+.verdict { color: var(--muted); font-weight: 500; }
+.verdict.warn { color: var(--accent-ink); }
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.legend li { display: flex; align-items: center; gap: 7px; }
+.sw { width: 12px; height: 12px; flex: none; border-radius: 2px; background: var(--cell); }
+.sw-expo { border: 2px solid var(--accent-ink); background: color-mix(in srgb, var(--accent) 45%, var(--cell)); }
+.sw-held { border: 2px dashed var(--held); background: color-mix(in srgb, var(--accent) 45%, var(--cell)); }
+.sw-read { border: 2px solid var(--ink); background: color-mix(in srgb, var(--accent) 45%, var(--cell)); }
+.sw-ghost { border: 1px dashed var(--muted); background: transparent; }
+.sw-dim { background: color-mix(in srgb, var(--ink) 16%, var(--scene)); }
+.sw-hatch {
+  background:
+    repeating-linear-gradient(135deg, var(--held) 0 1px, transparent 1px 4px),
+    var(--scene);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.ln {
+  width: 20px;
+  height: 12px;
+  flex: none;
+  background: linear-gradient(var(--line-c), var(--line-c)) center / 100% 2px no-repeat;
+}
+.ln-expo { --line-c: var(--accent); }
+.ln-read { --line-c: var(--ink); }
+
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.ctrl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.ctrl-play { display: flex; gap: 8px; }
+.btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 120ms;
+}
+.btn:hover { border-color: var(--faint); }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); min-width: 84px; }
+.btn-primary:hover { border-color: var(--primary); opacity: 0.9; }
+.btn-text { border-color: transparent; color: var(--muted); padding: 0 6px; display: inline-flex; align-items: center; gap: 4px; }
+.btn-text:hover { border-color: transparent; color: var(--fg); }
+.btn-text .chev { display: block; width: 10px; height: 10px; transition: transform 200ms; }
+.btn-text[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.ctrl { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); min-width: 0; }
+.ctrl > span { white-space: nowrap; }
+.ctrl input[type="range"] { width: 120px; accent-color: var(--primary); }
+.ctrl-scrub { flex: 1 1 200px; }
+.ctrl-scrub input[type="range"] { flex: 1; width: auto; min-width: 0; }
+.settings { padding-top: 14px; border-top: 1px solid var(--line); }
+select {
+  font: inherit;
+  font-size: 13px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+}
+output {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg);
+  min-width: 4.5em;
+  font-variant-numeric: tabular-nums;
+}
+.btn:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.prop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.prop { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.prop-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.prop-head > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.prop-title { display: flex; align-items: baseline; gap: 10px; font-size: 13px; }
+.live { margin: 0; flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.live canvas { width: 44px; height: 44px; border-radius: 50%; display: block; background: var(--scene); }
+.live figcaption { font-size: 11px; line-height: 1.3; color: var(--faint); white-space: nowrap; }
+
+.foot { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+.foot p { margin: 0; max-width: 70ch; }
+
+@media (max-width: 640px) {
+  body { padding-block: 28px 44px; }
+  .page { gap: 48px; }
+  .bench-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .pane-time { grid-column: 1 / -1; order: 3; }
+  .pane-time .cv.fill { flex: none; aspect-ratio: 2 / 1; }
+  .prop-grid { gap: 12px; }
+  .prop-head { flex-direction: column; align-items: flex-start; }
+  .live { flex-direction: row; }
+  .live canvas { width: 32px; height: 32px; }
+  .ctrl input[type="range"] { width: 96px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn-text .chev { transition: none; }
+}
+</style>
+
+<main class="page">
+  <header class="page-head">
+    <h1>롤링 셔터와 글로벌 셔터</h1>
+    <p class="lead">같은 물체를 두 방식으로 찍습니다. 다른 것은 행마다 빛을 받는 시각뿐입니다.</p>
+  </header>
+
+  <section aria-labelledby="grid-title">
+    <div class="sec-head">
+      <h2 id="grid-title">센서 격자</h2>
+      <p>칸 하나가 화소 하나입니다. 노출 중인 칸은 빛을 받는 만큼 밝아지고, 받은 값은 한 행씩 읽어 사진으로 옮깁니다.</p>
+    </div>
+
+    <div class="benches">
+      <div class="bench">
+        <div class="bench-head">
+          <h3>롤링 셔터</h3>
+          <p>위 행부터 차례로 빛을 받습니다</p>
+        </div>
+        <div class="bench-row">
+          <figure class="pane">
+            <figcaption><span>센서</span></figcaption>
+            <div class="cv sq"><canvas id="g-rs-sensor" role="img" aria-label="롤링 셔터 센서가 행마다 차례로 빛을 받는 애니메이션"></canvas></div>
+          </figure>
+          <figure class="pane pane-time">
+            <figcaption><span>행별 타이밍</span><span>시간 →</span></figcaption>
+            <div class="cv fill"><canvas id="g-rs-time" role="img" aria-label="롤링 셔터 행별 노출과 읽기 시각"></canvas></div>
+          </figure>
+          <figure class="pane">
+            <figcaption><span>찍힌 사진</span><span class="verdict" id="g-rs-verdict" hidden></span></figcaption>
+            <div class="cv sq"><canvas id="g-rs-photo" role="img" aria-label="롤링 셔터로 찍힌 사진"></canvas></div>
+          </figure>
+        </div>
+      </div>
+
+      <div class="bench">
+        <div class="bench-head">
+          <h3>글로벌 셔터</h3>
+          <p>모든 행이 같은 순간에 빛을 받고, 읽기만 차례로 합니다</p>
+        </div>
+        <div class="bench-row">
+          <figure class="pane">
+            <figcaption><span>센서</span></figcaption>
+            <div class="cv sq"><canvas id="g-gs-sensor" role="img" aria-label="글로벌 셔터 센서가 모든 행에서 동시에 빛을 받는 애니메이션"></canvas></div>
+          </figure>
+          <figure class="pane pane-time">
+            <figcaption><span>행별 타이밍</span><span>시간 →</span></figcaption>
+            <div class="cv fill"><canvas id="g-gs-time" role="img" aria-label="글로벌 셔터 행별 노출, 저장, 읽기 시각"></canvas></div>
+          </figure>
+          <figure class="pane">
+            <figcaption><span>찍힌 사진</span><span class="verdict" id="g-gs-verdict" hidden></span></figcaption>
+            <div class="cv sq"><canvas id="g-gs-photo" role="img" aria-label="글로벌 셔터로 찍힌 사진"></canvas></div>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <ul class="legend" aria-label="범례">
+      <li><i class="sw sw-expo"></i>노출 중</li>
+      <li><i class="sw sw-held"></i>저장</li>
+      <li><i class="sw sw-read"></i>읽기</li>
+      <li><i class="sw sw-ghost"></i>물체 위치</li>
+    </ul>
+
+    <div class="controls">
+      <div class="ctrl-row">
+        <div class="ctrl-play">
+          <button id="g-play" class="btn btn-primary" type="button">일시정지</button>
+          <button id="g-restart" class="btn" type="button">처음부터</button>
+        </div>
+        <label class="ctrl ctrl-scrub" for="g-scrub"><span>시간</span><input id="g-scrub" type="range" min="0" max="1000" value="0"></label>
+        <button id="g-more" class="btn btn-text" type="button" aria-expanded="false" aria-controls="g-settings">설정 <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div class="ctrl-row settings" id="g-settings" hidden>
+        <label class="ctrl" for="g-n"><span>격자 크기</span>
+          <select id="g-n">
+            <option value="8">8×8</option>
+            <option value="12" selected>12×12</option>
+            <option value="16">16×16</option>
+          </select>
+        </label>
+        <label class="ctrl" for="g-rel"><span>물체 속도</span><input id="g-rel" type="range" min="0" max="20" step="1" value="10"><output id="g-rel-out" for="g-rel">1.0×</output></label>
+        <label class="ctrl" for="g-e"><span>노출 시간</span><input id="g-e" type="range" min="2" max="8" step="1" value="4"><output id="g-e-out" for="g-e">2행</output></label>
+        <label class="ctrl" for="g-speed"><span>재생 속도</span>
+          <select id="g-speed">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="prop-title">
+    <div class="sec-head">
+      <h2 id="prop-title">프로펠러</h2>
+      <p>선 위쪽이 이미 찍힌 부분입니다. 롤링 셔터는 선이 내려가는 동안에도 날개가 계속 돌아서 휘어 보입니다.</p>
+    </div>
+
+    <div class="prop-grid">
+      <div class="prop">
+        <div class="prop-head">
+          <div>
+            <div class="prop-title"><h3>롤링 셔터</h3><span class="verdict" id="p-rs-verdict" hidden></span></div>
+            <p>노출 선이 위에서 아래로 내려갑니다</p>
+          </div>
+          <figure class="live">
+            <canvas id="p-rs-live" role="img" aria-label="지금 실제 프로펠러 모습"></canvas>
+            <figcaption>지금 실제 모습</figcaption>
+          </figure>
+        </div>
+        <div class="cv sq scene"><canvas id="p-rs" role="img" aria-label="롤링 셔터로 프로펠러를 찍는 과정"></canvas></div>
+      </div>
+      <div class="prop">
+        <div class="prop-head">
+          <div>
+            <div class="prop-title"><h3>글로벌 셔터</h3><span class="verdict" id="p-gs-verdict" hidden></span></div>
+            <p>한순간에 모두 노출하고, 읽기만 한 행씩 합니다</p>
+          </div>
+          <figure class="live">
+            <canvas id="p-gs-live" role="img" aria-label="지금 실제 프로펠러 모습"></canvas>
+            <figcaption>지금 실제 모습</figcaption>
+          </figure>
+        </div>
+        <div class="cv sq scene"><canvas id="p-gs" role="img" aria-label="글로벌 셔터로 프로펠러를 찍는 과정"></canvas></div>
+      </div>
+    </div>
+
+    <ul class="legend" aria-label="범례">
+      <li><i class="ln ln-expo"></i>노출 선</li>
+      <li><i class="ln ln-read"></i>읽기 선</li>
+      <li><i class="sw sw-dim"></i>아직 안 찍힌 곳</li>
+      <li><i class="sw sw-hatch"></i>저장된 곳</li>
+    </ul>
+
+    <div class="controls">
+      <div class="ctrl-row">
+        <div class="ctrl-play">
+          <button id="p-play" class="btn btn-primary" type="button">일시정지</button>
+          <button id="p-restart" class="btn" type="button">처음부터</button>
+        </div>
+        <button id="p-more" class="btn btn-text" type="button" aria-expanded="false" aria-controls="p-settings">설정 <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div class="ctrl-row settings" id="p-settings" hidden>
+        <label class="ctrl" for="p-rev"><span>한 장 찍는 동안 회전</span><input id="p-rev" type="range" min="0" max="300" step="5" value="75"><output id="p-rev-out" for="p-rev">0.75바퀴</output></label>
+        <label class="ctrl" for="p-k"><span>날개 수</span>
+          <select id="p-k">
+            <option value="2">2개</option>
+            <option value="3" selected>3개</option>
+            <option value="4">4개</option>
+            <option value="5">5개</option>
+          </select>
+        </label>
+        <label class="ctrl" for="p-speed"><span>재생 속도</span>
+          <select id="p-speed">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>실제 센서는 이보다 훨씬 빠르게 동작합니다. RackTracker 카메라 3대는 글로벌 셔터 센서 AR0234를 쓰고, 하드웨어 트리거로 같은 순간에 찍습니다.</p>
+  </footer>
+</main>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- tokens -------------------------------------------------------------
+  const KEYS = ['ink', 'accent', 'accent-ink', 'cell', 'photo', 'zebra', 'held', 'line', 'scene', 'hub'];
+  const C = {}, RGB = {};
+  function hexRgb(s) {
+    let h = s.replace('#', '').trim();
+    if (h.length === 3) h = [...h].map((x) => x + x).join('');
+    const n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const cs = getComputedStyle(root);
+  for (const k of KEYS) { C[k] = cs.getPropertyValue('--' + k).trim(); RGB[k] = hexRgb(C[k]); }
+  const rgba = (k, a) => { const c = RGB[k]; return `rgba(${c[0]},${c[1]},${c[2]},${a})`; };
+  const mix = (k1, k2, f) => {
+    const a = RGB[k1], b = RGB[k2];
+    return `rgb(${Math.round(a[0] + (b[0] - a[0]) * f)},${Math.round(a[1] + (b[1] - a[1]) * f)},${Math.round(a[2] + (b[2] - a[2]) * f)})`;
+  };
+
+  // ---- canvas helpers -----------------------------------------------------
+  function prep(cv) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const w = Math.max(1, Math.round(cv.clientWidth * dpr));
+    const h = Math.max(1, Math.round(cv.clientHeight * dpr));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
+    ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h, dpr };
+  }
+  function hatch(ctx, dpr) {
+    if (ctx._hatchDpr === dpr) return ctx._hatch;
+    const s = Math.max(4, Math.round(5 * dpr));
+    const pc = document.createElement('canvas');
+    pc.width = pc.height = s;
+    const p = pc.getContext('2d');
+    p.strokeStyle = rgba('held', 0.85);
+    p.lineWidth = Math.max(1, dpr);
+    p.beginPath();
+    p.moveTo(0, s); p.lineTo(s, 0);
+    p.moveTo(-s / 2, s / 2); p.lineTo(s / 2, -s / 2);
+    p.moveTo(s / 2, s * 1.5); p.lineTo(s * 1.5, s / 2);
+    p.stroke();
+    ctx._hatch = ctx.createPattern(pc, 'repeat');
+    ctx._hatchDpr = dpr;
+    return ctx._hatch;
+  }
+  const fmtNum = (x) => String(Number(x.toFixed(2)));
+  function setVerdict(el, show, text, warn) {
+    if (el.hidden !== !show) el.hidden = !show;
+    if (show && el.textContent !== text) el.textContent = text;
+    el.classList.toggle('warn', show && warn);
+  }
+
+  // ---- section 1: sensor grid --------------------------------------------
+  // Time unit = one row readout. Rolling row r exposes [r, r+E], global rows all expose [0, E].
+  // Both read row r out in one unit, rolling at r+E, global at E+r.
+  const g = {
+    N: 12, E: 2, rel: 1, speed: 1, playing: !reduce, t: 0,
+    P: 1.5, H: 3.5, W: 1.5, X0: 1.2, V: 0.45, UPS: 2.4,
+  };
+  const gF = () => g.N + g.E;
+  const gMin = () => -g.P;
+  const gMax = () => gF() + g.H;
+  const barX = (t) => g.X0 + g.V * g.rel * t;
+  const cov = (c, x) => Math.max(0, Math.min(c + 1, x + g.W) - Math.max(c, x));
+  function accum(c, a, b) {
+    if (b <= a) return 0;
+    const n = 20, d = (b - a) / n;
+    let s = 0;
+    for (let i = 0; i < n; i++) s += cov(c, barX(a + (i + 0.5) * d));
+    return (s * d) / g.E;
+  }
+  function frameCells(mode, t) {
+    const N = g.N, E = g.E, out = new Array(N * N);
+    for (let r = 0; r < N; r++) {
+      const a = mode === 'rs' ? r : 0, b = a + E, rd = mode === 'rs' ? r + E : E + r;
+      let st, end = b;
+      if (t < a) st = 'idle';
+      else if (t < b) { st = 'expo'; end = t; }
+      else if (t < rd) st = 'held';
+      else if (t < rd + 1) st = 'read';
+      else st = 'done';
+      const p = st === 'read' ? t - rd : 0;
+      for (let c = 0; c < N; c++) out[r * N + c] = { st, v: st === 'idle' ? 0 : accum(c, a, end), p };
+    }
+    return out;
+  }
+  const lightFill = (base, v) => mix(base, 'accent', Math.pow(Math.min(v, 1), 0.7));
+
+  function drawSensor(cv, cells, t) {
+    const { ctx, w, h, dpr } = prep(cv);
+    const N = g.N, pad = Math.round(h * 0.045);
+    const sx = (w - 2 * pad) / N, sy = (h - 2 * pad) / N;
+    const gap = Math.max(dpr, Math.min(sx, sy) * 0.14);
+    const lw = Math.max(1.5 * dpr, Math.min(sx, sy) * 0.09);
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const k = cells[r * N + c];
+        const x = pad + c * sx + gap / 2, y = pad + r * sy + gap / 2;
+        const cw = sx - gap, ch = sy - gap;
+        let v = k.v;
+        if (k.st === 'read') v *= 1 - k.p;
+        if (k.st === 'idle' || k.st === 'done') v = 0;
+        ctx.fillStyle = v > 0.003 ? lightFill('cell', v) : C.cell;
+        ctx.fillRect(x, y, cw, ch);
+        if (k.st === 'expo' || k.st === 'held' || k.st === 'read') {
+          ctx.lineWidth = lw;
+          ctx.strokeStyle = k.st === 'expo' ? C['accent-ink'] : k.st === 'held' ? C.held : C.ink;
+          ctx.setLineDash(k.st === 'held' ? [lw * 1.6, lw * 1.2] : []);
+          ctx.strokeRect(x + lw / 2, y + lw / 2, cw - lw, ch - lw);
+        }
+      }
+    }
+    ctx.setLineDash([]);
+    // the object's image as the lens throws it on the sensor
+    const gx = pad + barX(t) * sx, gw = g.W * sx;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pad, pad, w - 2 * pad, h - 2 * pad);
+    ctx.clip();
+    ctx.fillStyle = rgba('ink', 0.04);
+    ctx.fillRect(gx, pad, gw, h - 2 * pad);
+    ctx.lineWidth = Math.max(1, 1.2 * dpr);
+    ctx.strokeStyle = rgba('ink', 0.5);
+    ctx.setLineDash([4 * dpr, 3 * dpr]);
+    ctx.strokeRect(gx, pad + ctx.lineWidth / 2, gw, h - 2 * pad - ctx.lineWidth);
+    ctx.restore();
+  }
+
+  function drawResult(cv, cells) {
+    const { ctx, w, h } = prep(cv);
+    const N = g.N, pad = Math.round(h * 0.045);
+    const sx = (w - 2 * pad) / N, sy = (h - 2 * pad) / N;
+    ctx.fillStyle = C.photo;
+    ctx.fillRect(pad, pad, w - 2 * pad, h - 2 * pad);
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const k = cells[r * N + c];
+        if (k.st !== 'read' && k.st !== 'done') continue;
+        ctx.globalAlpha = k.st === 'read' ? k.p : 1;
+        ctx.fillStyle = lightFill('photo', k.v);
+        ctx.fillRect(pad + c * sx, pad + r * sy, sx + 0.6, sy + 0.6);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawTiming(cv, mode, t) {
+    const { ctx, w, h, dpr } = prep(cv);
+    const N = g.N, E = g.E, pad = Math.round(h * 0.045);
+    const rh = (h - 2 * pad) / N, L = Math.round(4 * dpr), R = Math.round(4 * dpr);
+    const t0 = gMin(), t1 = gMax();
+    const X = (tt) => L + ((tt - t0) / (t1 - t0)) * (w - L - R);
+    ctx.fillStyle = C.zebra;
+    for (let r = 0; r < N; r += 2) ctx.fillRect(L, pad + r * rh, w - L - R, rh);
+    // one frame starts at 0 and ends when the last row is read
+    ctx.strokeStyle = C.line;
+    ctx.lineWidth = dpr;
+    ctx.setLineDash([3 * dpr, 3 * dpr]);
+    for (const tt of [0, gF()]) {
+      const x = Math.round(X(tt)) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    const hp = hatch(ctx, dpr);
+    const paint = () => {
+      for (let r = 0; r < N; r++) {
+        const band = Math.max(2 * dpr, rh * 0.56), y = pad + r * rh + (rh - band) / 2;
+        const a = mode === 'rs' ? r : 0, b = a + E, rd = mode === 'rs' ? r + E : E + r;
+        if (rd > b) { ctx.fillStyle = hp; ctx.fillRect(X(b), y, X(rd) - X(b), band); }
+        ctx.fillStyle = C.accent;
+        ctx.fillRect(X(a), y, X(b) - X(a), band);
+        ctx.fillStyle = C.ink;
+        ctx.fillRect(X(rd), y, X(rd + 1) - X(rd), band);
+      }
+    };
+    ctx.globalAlpha = 0.18;
+    paint();
+    ctx.globalAlpha = 1;
+    const xc = X(clamp(t, t0, t1));
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, xc, h);
+    ctx.clip();
+    paint();
+    ctx.restore();
+    ctx.strokeStyle = C.ink;
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(xc, 0);
+    ctx.lineTo(xc, h);
+    ctx.stroke();
+  }
+
+  const gEls = {
+    rs: { s: $('g-rs-sensor'), t: $('g-rs-time'), r: $('g-rs-photo'), v: $('g-rs-verdict') },
+    gs: { s: $('g-gs-sensor'), t: $('g-gs-time'), r: $('g-gs-photo'), v: $('g-gs-verdict') },
+  };
+  const scrub = $('g-scrub');
+  function renderGrid() {
+    for (const mode of ['rs', 'gs']) {
+      const e = gEls[mode], cells = frameCells(mode, g.t);
+      drawSensor(e.s, cells, g.t);
+      drawTiming(e.t, mode, g.t);
+      drawResult(e.r, cells);
+      const slant = mode === 'rs' && g.rel > 0;
+      setVerdict(e.v, g.t >= gF(), slant ? '기울어짐' : '곧음', slant);
+    }
+    const sv = String(Math.round(((g.t - gMin()) / (gMax() - gMin())) * 1000));
+    if (scrub.value !== sv) scrub.value = sv;
+  }
+
+  // ---- section 2: propeller ----------------------------------------------
+  // Rolling row y is captured at y/H*T; global captures every row at 0 and reads them out over T.
+  const pr = { T: 3.2, pre: 0.9, hold: 1.9, R: 0.75, K: 3, speed: 1, playing: !reduce, t: 0, phi0: -Math.PI / 2 + 0.4 };
+  const phi = (t) => pr.phi0 + (2 * Math.PI * pr.R * t) / pr.T;
+  function drawProp(ctx, cx, cy, rad, a, K) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = C.ink;
+    for (let i = 0; i < K; i++) {
+      ctx.save();
+      ctx.rotate(a + (i * 2 * Math.PI) / K);
+      const r0 = rad * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(r0, -rad * 0.06);
+      ctx.bezierCurveTo(rad * 0.35, -rad * 0.13, rad * 0.75, -rad * 0.12, rad * 0.97, -rad * 0.045);
+      ctx.quadraticCurveTo(rad * 1.02, 0, rad * 0.96, rad * 0.05);
+      ctx.bezierCurveTo(rad * 0.72, rad * 0.17, rad * 0.38, rad * 0.2, r0, rad * 0.075);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = C.hub;
+    ctx.beginPath();
+    ctx.arc(0, 0, rad * 0.13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = C.scene;
+    ctx.beginPath();
+    ctx.arc(0, 0, rad * 0.04, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  const propGeom = (w, h) => ({ cx: w / 2, cy: h / 2, rad: Math.min(w, h) * 0.43 });
+
+  const panels = [
+    { mode: 'rs', cv: $('p-rs'), live: $('p-rs-live'), v: $('p-rs-verdict'), cap: null, cctx: null, done: 0, snap: false },
+    { mode: 'gs', cv: $('p-gs'), live: $('p-gs-live'), v: $('p-gs-verdict'), cap: null, cctx: null, done: 0, snap: false },
+  ];
+  const resetCaps = () => panels.forEach((p) => { p.done = 0; p.snap = false; });
+
+  function updateCap(p, w, h) {
+    if (!p.cap || p.cap.width !== w || p.cap.height !== h) {
+      p.cap = document.createElement('canvas');
+      p.cap.width = w;
+      p.cap.height = h;
+      p.cctx = p.cap.getContext('2d');
+      p.done = 0;
+      p.snap = false;
+    }
+    const t = pr.t;
+    if (t < 0) { p.done = 0; p.snap = false; return; }
+    const { cx, cy, rad } = propGeom(w, h), c = p.cctx;
+    if (p.mode === 'rs') {
+      const target = Math.floor(clamp(t / pr.T, 0, 1) * h);
+      for (let y = p.done; y < target; y++) {
+        c.save();
+        c.beginPath();
+        c.rect(0, y, w, 1);
+        c.clip();
+        c.fillStyle = C.scene;
+        c.fillRect(0, y, w, 1);
+        drawProp(c, cx, cy, rad, phi(((y + 0.5) / h) * pr.T), pr.K);
+        c.restore();
+      }
+      if (target > p.done) p.done = target;
+    } else if (!p.snap) {
+      c.fillStyle = C.scene;
+      c.fillRect(0, 0, w, h);
+      drawProp(c, cx, cy, rad, phi(0), pr.K);
+      p.snap = true;
+    }
+  }
+  function hLine(ctx, w, y, color, lw, glow) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    if (glow) { ctx.shadowColor = color; ctx.shadowBlur = glow; }
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawPanel(p) {
+    const { ctx, w, h, dpr } = prep(p.cv);
+    updateCap(p, w, h);
+    const t = pr.t, { cx, cy, rad } = propGeom(w, h);
+    const s = clamp(t / pr.T, 0, 1), yl = Math.floor(s * h);
+    if (t < 0) {
+      ctx.fillStyle = C.scene;
+      ctx.fillRect(0, 0, w, h);
+      drawProp(ctx, cx, cy, rad, phi(t), pr.K);
+    } else if (p.mode === 'rs') {
+      ctx.fillStyle = C.scene;
+      ctx.fillRect(0, 0, w, h);
+      drawProp(ctx, cx, cy, rad, phi(t), pr.K);
+      if (yl < h) { ctx.fillStyle = rgba('scene', 0.8); ctx.fillRect(0, yl, w, h - yl); }
+      if (yl > 0) ctx.drawImage(p.cap, 0, 0, w, yl, 0, 0, w, yl);
+      if (s < 1) hLine(ctx, w, yl, C.accent, 2.5 * dpr, 8 * dpr);
+    } else {
+      ctx.drawImage(p.cap, 0, 0);
+      if (s < 1) {
+        ctx.fillStyle = rgba('scene', 0.8);
+        ctx.fillRect(0, yl, w, h - yl);
+        ctx.fillStyle = hatch(ctx, dpr);
+        ctx.fillRect(0, yl, w, h - yl);
+        hLine(ctx, w, yl, C.ink, 1.5 * dpr, 0);
+      }
+      if (t < 0.4) {
+        ctx.fillStyle = rgba('accent', 0.4 * (1 - t / 0.4));
+        ctx.fillRect(0, 0, w, h);
+      }
+    }
+    const L = prep(p.live), lg = propGeom(L.w, L.h);
+    L.ctx.fillStyle = C.scene;
+    L.ctx.fillRect(0, 0, L.w, L.h);
+    drawProp(L.ctx, lg.cx, lg.cy, lg.rad * 1.08, phi(t), pr.K);
+    const bent = p.mode === 'rs' && pr.R > 0;
+    setVerdict(p.v, t >= pr.T, bent ? '휘어짐' : '곧음', bent);
+  }
+
+  // ---- controls -----------------------------------------------------------
+  function bindPlay(btn, state) {
+    const sync = () => { btn.textContent = state.playing ? '일시정지' : '재생'; };
+    btn.addEventListener('click', () => { state.playing = !state.playing; sync(); });
+    sync();
+    return sync;
+  }
+  function bindMore(btn, panel) {
+    btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', String(open));
+      panel.hidden = !open;
+    });
+  }
+  bindMore($('g-more'), $('g-settings'));
+  bindMore($('p-more'), $('p-settings'));
+
+  const gSync = bindPlay($('g-play'), g);
+  $('g-restart').addEventListener('click', () => { g.t = gMin(); g.playing = true; gSync(); });
+  scrub.addEventListener('input', () => {
+    g.playing = false;
+    gSync();
+    g.t = gMin() + (scrub.value / 1000) * (gMax() - gMin());
+  });
+  const gN = $('g-n'), gRel = $('g-rel'), gE = $('g-e'), gSpeed = $('g-speed');
+  const applyN = () => { g.N = +gN.value; g.t = clamp(g.t, gMin(), gMax()); };
+  const applyRel = () => { g.rel = gRel.value / 10; $('g-rel-out').textContent = g.rel === 0 ? '멈춤' : g.rel.toFixed(1) + '×'; };
+  const applyE = () => { g.E = gE.value / 2; $('g-e-out').textContent = fmtNum(g.E) + '행'; g.t = clamp(g.t, gMin(), gMax()); };
+  const applyGSpeed = () => { g.speed = +gSpeed.value; };
+  gN.addEventListener('change', applyN);
+  gRel.addEventListener('input', applyRel);
+  gE.addEventListener('input', applyE);
+  gSpeed.addEventListener('change', applyGSpeed);
+
+  const pSync = bindPlay($('p-play'), pr);
+  $('p-restart').addEventListener('click', () => { pr.t = -pr.pre; resetCaps(); pr.playing = true; pSync(); });
+  const pRev = $('p-rev'), pK = $('p-k'), pSpeed = $('p-speed');
+  const applyRev = () => { pr.R = pRev.value / 100; $('p-rev-out').textContent = fmtNum(pr.R) + '바퀴'; resetCaps(); };
+  const applyK = () => { pr.K = +pK.value; resetCaps(); };
+  const applyPSpeed = () => { pr.speed = +pSpeed.value; };
+  pRev.addEventListener('input', applyRev);
+  pK.addEventListener('change', applyK);
+  pSpeed.addEventListener('change', applyPSpeed);
+
+  // controls may keep their values across a reload, so read them once
+  applyN(); applyRel(); applyE(); applyGSpeed(); applyRev(); applyK(); applyPSpeed();
+
+  // open mid-capture so the first frame already shows the difference
+  g.t = reduce ? gF() + 0.8 : 5.5;
+  pr.t = reduce ? pr.T + 0.2 : 1.3;
+
+  // ---- loop ---------------------------------------------------------------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+    last = now;
+    if (g.playing) {
+      g.t += dt * g.UPS * g.speed;
+      if (g.t > gMax()) g.t = gMin();
+    }
+    if (pr.playing) {
+      pr.t += dt * pr.speed;
+      if (pr.t > pr.T + pr.hold) { pr.t = -pr.pre; resetCaps(); }
+    }
+    renderGrid();
+    panels.forEach(drawPanel);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
