@@ -1,0 +1,29 @@
+---
+// Top bar. On the home page the links jump within the page and the bar turns
+// solid on scroll (script in index.astro); on other pages it starts solid and
+// the section links go back to the home page.
+interface Props {
+  home?: boolean;
+  current?: string;
+}
+
+const { home = false, current } = Astro.props;
+const at = home ? '' : '/';
+const links = [
+  { href: `${at}#racktracker`, label: 'RackTracker' },
+  { href: `${at}#prototype`, label: 'Prototype' },
+  { href: '/business-plan/', label: 'Business plan' },
+  { href: `${at}#open-source`, label: 'Open source' },
+  { href: `${at}#contact`, label: 'Contact' },
+];
+---
+<header class:list={['bar', { solid: !home }]} id="bar">
+  <a class="brand" href={home ? '#top' : '/'}>
+    <!-- favicon.svg mark without its dark tile, filled with the text colour -->
+    <svg viewBox="0 0 144 144" aria-hidden="true"><rect width="89" height="89"/><path d="M110 0H144V127L110 93Z"/><path d="M0 110H97L131 144H0Z"/></svg>
+    Rack Labs
+  </a>
+  <nav aria-label="Sections">
+    {links.map((l) => <a href={l.href} aria-current={l.href === current ? 'page' : undefined}>{l.label}</a>)}
+  </nav>
+</header>

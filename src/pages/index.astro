@@ -1,0 +1,334 @@
+---
+import Base from '../layouts/Base.astro';
+import SiteBar from '../components/SiteBar.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+---
+<Base
+  lang="en"
+  title="RackTracker by Rack Labs"
+  description="RackTracker turns the power rack into a motion-capture studio: three synchronized cameras and an edge computer mounted on the rack show, for every rep, which joints took the load and which muscles carried it. Made by Rack Labs, an AI-native startup in Seoul that also publishes the open-source tools pipeplot and agent-workflow-kit."
+  ogType="website"
+  ogTitle="RackTracker by Rack Labs"
+  ogDescription="Turn the power rack into a motion-capture studio. For every rep, see which joints took the load and which muscles carried it."
+  path="/"
+>
+  <SiteBar home />
+
+  <main id="top">
+    <section class="hero" id="hero" aria-labelledby="hero-title" data-show="still">
+      <div class="live" id="hero-live" aria-hidden="true"></div>
+      <div class="poster" aria-hidden="true">
+        <div class="stage" id="hero-stage">
+          <img class="still" src="assets/hero-scene.webp" alt="" width="1440" height="1200">
+          <video id="hero-video" muted playsinline disablepictureinpicture preload="none" poster="assets/hero-mhr.webp" width="1440" height="1200"></video>
+        </div>
+      </div>
+      <script>
+        // The hero runs in sequences. First, rendered live (three.js) as one
+        // scene: the rig as built (rack, three cameras, tablet, compute
+        // enclosure, cable runs), then how one frame becomes rack coordinates,
+        // rays from the three cameras through the detected joint, the point
+        // where they meet, all 33 joints, then the move from the floor frame
+        // to the rack frame. Visitors can drag it around. On wide screens its canvas fills the whole section, framed
+        // so the view through the stage box is what the box alone would show;
+        // on narrow ones it sits in the box. Second, the recorded loop of the
+        // post-processed MHR body
+        // of a real set on the prototype rig (5 October 2026), 2160 px wide
+        // for wide screens and 1080 for narrow ones. Then the first again.
+        // Without WebGL the recorded loop plays alone; reduced motion shows
+        // the finished live frame without playing it.
+        // The recorded loop was rendered on the old dark page colour, so on the
+        // light page it is off until it is rendered again on --bg: the live
+        // sequence repeats alone, and without WebGL the still stands in.
+        const mhr = false;
+        const hero = document.getElementById('hero') as HTMLElement;
+        const stage = document.getElementById('hero-stage') as HTMLElement;
+        const liveBox = document.getElementById('hero-live') as HTMLElement;
+        const v = document.getElementById('hero-video') as HTMLVideoElement;
+        const narrow = matchMedia('(max-width: 900px)');
+        const place = () => { const home = narrow.matches ? stage : hero; if (liveBox.parentElement !== home) home.append(liveBox); };   // in the box: above the still and the video
+        place(); narrow.addEventListener('change', place);
+        const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const check = /hero=check/.test(location.hash);
+        let visible = true;
+        let live: { play(): void; setActive(on: boolean): void; seek(t: number): string } | null = null;
+        let sourced = false;
+        const source = () => {
+          if (sourced) return;
+          sourced = true;
+          const rung = narrow.matches ? 'hero-mhr-1080' : 'hero-mhr-2160';
+          for (const [ext, type] of [['webm', 'video/webm'], ['mp4', 'video/mp4']]) {
+            const s = document.createElement('source');
+            s.src = `assets/${rung}.${ext}`; s.type = type; v.appendChild(s);
+          }
+          v.preload = 'auto'; v.load();
+        };
+        const playVideo = (loop: boolean) => {
+          source();
+          v.loop = loop; v.currentTime = 0; hero.dataset.show = 'video';
+          if (visible) v.play().catch(() => {});
+        };
+        let webgl = false;
+        try { const c = document.createElement('canvas'); webgl = !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (_) { /* no WebGL */ }
+        if (!webgl) { if (!still && mhr) playVideo(true); }
+        else {
+          import('../lib/hero-scene.js')
+            .then(m => {
+              live = m.mountHeroScene(liveBox, {
+                still: still || check,
+                // framed for a 6:5 box with the target right of centre, clear of the
+                // copy; on narrow screens that box is the square stage cropped the way
+                // the still is (object-position 100%), so the two line up
+                frame: () => {
+                  const L = liveBox.getBoundingClientRect(), B = stage.getBoundingClientRect();
+                  const w = narrow.matches ? B.height * 1.2 : B.width;
+                  return { x: B.right - L.left - w, y: B.top - L.top, w, h: B.height, fx: 0.63, fy: 0.44 };
+                },
+                onEnd: () => { if (!mhr) { live!.play(); return; } live!.setActive(false); playVideo(false); },
+                onFail: () => { live = null; if (mhr) playVideo(true); else hero.dataset.show = 'still'; },
+              });
+              hero.dataset.show = 'live';
+              live.setActive(visible);
+              if (check) (window as any).__heroScene = live;
+              else if (!still && mhr) setTimeout(source, 6000);        // fetch the loop while the first sequence plays
+            })
+            .catch(e => { console.warn('[hero] live path failed:', e); if (!still && mhr) playVideo(true); });
+          v.addEventListener('ended', () => {
+            if (!live) return;
+            hero.dataset.show = 'live'; live.setActive(visible); live.play();
+          });
+        }
+        if ('IntersectionObserver' in window) {
+          new IntersectionObserver(es => es.forEach(e => {
+            visible = e.isIntersecting;
+            if (hero.dataset.show === 'live') live?.setActive(visible);
+            else if (hero.dataset.show === 'video') { if (visible) v.play().catch(() => {}); else v.pause(); }
+          }), { threshold: 0.05 }).observe(stage);
+        }
+      </script>
+      <div class="veil" aria-hidden="true"></div>
+      <div class="copy">
+        <p class="kicker">RackTracker by Rack Labs</p>
+        <h1 id="hero-title">Turn the power rack into a <span class="nb">motion-capture</span> studio.</h1>
+        <p class="lede">Three synchronized cameras and an edge computer, mounted on the rack, show the trainer where the weight went on every rep: which joints took the load, and which muscles carried it.</p>
+        <div class="cta">
+          <a class="btn" href="#racktracker">RackTracker</a>
+          <a class="btn ghost" href="#open-source">Open source</a>
+        </div>
+      </div>
+      <div class="cue" aria-hidden="true"><i></i>scroll</div>
+    </section>
+
+    <section class="wing" id="racktracker" aria-labelledby="rt-title">
+      <div class="head">
+        <h2 id="rt-title">RackTracker</h2>
+        <p>Our main business, from the camera trigger to the trainer's report</p>
+      </div>
+      <div class="cols">
+        <div class="text">
+          <p class="lede">RackTracker is our main business, and it is a physical product: a hardware edge device and the software that runs on it, supplied and installed as one unit per power rack. The device is three global-shutter cameras and an NVIDIA Jetson fixed to the rack.</p>
+          <p>The cameras fire on one electrical trigger. The joints found in each view are intersected from three directions, and when one view is occluded the other two carry it, which gives cm-level 3D coordinates.</p>
+          <p>Every set is logged as center-of-mass shift, left-right asymmetry, trunk lean and squat depth, and handed back to the member and the trainer. Thresholds are set per person from body proportions.</p>
+          <p>Because the setup never changes, a new session compares with the last one on the same footing. Processing finishes on the computer beside the rack, on a closed network, so member video never leaves the gym.</p>
+          <dl class="facts">
+            <div><dt>What we supply</dt><dd>Edge device + software<small>one unit per rack, installed by us</small></dd></div>
+            <div><dt>Shutter skew across three cameras</dt><dd>0.12 ms<small>measured with a logic analyzer</small></dd></div>
+            <div><dt>Joints recovered with three cameras</dt><dd>70%<small>CMU Panoptic. Standard triangulation: 40%</small></dd></div>
+            <div><dt>Joint position error</dt><dd>~3 cm<small>the same as with two cameras</small></dd></div>
+            <div><dt>Where processing runs</dt><dd>NVIDIA Jetson beside the rack<small>closed network, no video leaves the gym</small></dd></div>
+          </dl>
+          <div class="cta">
+            <a class="btn" href="/business-plan/">Read the business plan</a>
+          </div>
+        </div>
+        <div class="figs">
+          <figure class="sheet tall">
+            <img src="assets/demo-hd.webp" width="371" height="597" alt="Analysis view of a squat at the bottom position: joint angles, per-joint load and the center-of-mass line drawn over the lifter" />
+            <figcaption>Figure 1. Joint load and center-of-mass analysis.</figcaption>
+          </figure>
+          <figure class="sheet">
+            <img src="assets/photo/jetson-rig.webp" width="960" height="720" alt="NVIDIA Jetson compute unit on the bench with the trigger board and camera modules wired to it" />
+            <figcaption>Figure 2. Jetson edge rig with the trigger board.</figcaption>
+          </figure>
+        </div>
+      </div>
+      <ol class="timeline" aria-label="Roadmap">
+        <li><span class="when">Now</span><span class="what">Working prototype: three-camera capture, calibration, 3D joint reconstruction and automatic set logging</span></li>
+        <li><span class="when">Q4 2026</span><span class="what">Validation against marker-based motion capture</span></li>
+        <li><span class="when">H1 2027</span><span class="what">Gym pilot</span></li>
+        <li><span class="when">H2 2027</span><span class="what">Production unit</span></li>
+      </ol>
+    </section>
+
+    <section class="wing" id="prototype" aria-labelledby="pt-title">
+      <div class="head">
+        <h2 id="pt-title">Prototype</h2>
+        <p>Photographed 17 September 2026 on the PVC rack mock-up</p>
+      </div>
+      <div class="photos">
+        <figure>
+          <img src="assets/photo/rig.webp" width="720" height="960" alt="PVC power-rack mock-up in a lab room with three cameras clamped to the uprights and a tablet on the bench" loading="lazy" decoding="async" />
+          <figcaption>PVC rack mock-up, three cameras mounted</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/photo/rig-board.webp" width="720" height="960" alt="ChArUco calibration board leaning on the rig beside a laptop running the kiosk" loading="lazy" decoding="async" />
+          <figcaption>Calibration board on the rig</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/photo/kiosk-camera.webp" width="633" height="960" alt="Live camera view in the kiosk with a green grid while a person holds the calibration board" loading="lazy" decoding="async" />
+          <figcaption>Kiosk camera view during calibration</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/photo/trigger-board.webp" width="720" height="960" alt="Hand-built trigger board on a breadboard, held over the Jetson with its jumper wires" loading="lazy" decoding="async" />
+          <figcaption>Trigger board, one pulse to three cameras</figcaption>
+        </figure>
+        <figure class="wide">
+          <img src="assets/photo/jetson-rig.webp" width="960" height="720" alt="NVIDIA Jetson compute unit on the bench with the trigger board and camera modules wired to it" loading="lazy" decoding="async" />
+          <figcaption>Jetson edge unit, cameras and trigger wiring</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/photo/carrier-board.webp" width="720" height="960" alt="Jetson module with its heatsink on the carrier board, case opened on the bench" loading="lazy" decoding="async" />
+          <figcaption>Jetson module on the carrier board</figcaption>
+        </figure>
+        <dl class="parts" aria-label="Prototype parts">
+          <div><dt>Cameras</dt><dd>3 AR0234 global-shutter sensors, 120-degree low-distortion lens</dd></div>
+          <div><dt>Compute</dt><dd>NVIDIA Jetson, TensorRT inference</dd></div>
+          <div><dt>Trigger</dt><dd>Hand-built board, one pulse to all three cameras</dd></div>
+          <div><dt>Mock-up</dt><dd>PVC power rack, cameras on magic arms</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="wing" id="open-source" aria-labelledby="os-title">
+      <div class="head">
+        <h2 id="os-title">Open source</h2>
+        <p>Tools we build along the way, published for other teams</p>
+      </div>
+      <p class="lede">Two projects come out of building RackTracker with Claude Code. pipeplot is live now, and its code will be released as open source. agent-workflow-kit is already on GitHub under the MIT license.</p>
+      <dl class="facts" aria-label="Open-source projects">
+        <div><dt><a href="#pipeplot">pipeplot</a></dt><dd>Open-source release planned<small>live at pipeplot.pages.dev</small></dd></div>
+        <div><dt><a href="#agent-workflow-kit">agent-workflow-kit</a></dt><dd>MIT, v0.2.13<small>github.com/lhk0721/agent-workflow-kit</small></dd></div>
+      </dl>
+    </section>
+
+    <section class="pp" id="pipeplot" aria-labelledby="pp-title">
+      <div class="poster" aria-hidden="true">
+        <video id="pp-video" muted loop playsinline disablepictureinpicture preload="none" poster="assets/pipeplot-hero.webp"></video>
+        <script is:inline>
+          // The scenes render live (assets/pipeplot-live.js, pipeplot's own
+          // three.js hero) when WebGL is there and motion is allowed; the
+          // recorded loop is the fallback. Two rungs for the video, as on
+          // pipeplot: 1080p for wide screens, 720p for narrow ones.
+          (function () {
+            var v = document.getElementById('pp-video');
+            var rung = matchMedia('(max-width: 900px)').matches ? 'pipeplot-hero' : 'pipeplot-hero-1080';
+            [['webm', 'video/webm'], ['mp4', 'video/mp4']].forEach(function (t) {
+              var s = document.createElement('source');
+              s.src = 'assets/' + rung + '.' + t[0]; s.type = t[1]; v.appendChild(s);
+            });
+            var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var webgl = false;
+            try { var c = document.createElement('canvas'); webgl = !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) {}
+            var playVideo = function () { v.hidden = false; v.preload = 'auto'; v.play().catch(function () {}); };
+            if (still) return;                 // the poster still stands alone
+            if (!webgl) { playVideo(); return; }
+            import('./assets/pipeplot-live.js')
+              .then(function (m) {
+                return m.mountHeroLive(v.parentNode, {
+                  force: /hero=live/.test(location.hash),   // skip the frame-time gate, for checks
+                  onLive: function () { v.pause(); v.hidden = true; },
+                  onFallback: playVideo
+                });
+              })
+              .catch(function (e) { console.warn('[pipeplot hero] live path failed:', e); playVideo(); });
+          })();
+        </script>
+      </div>
+      <div class="veil" aria-hidden="true"></div>
+      <div class="copy">
+        <p class="kicker">pipeplot, open-source release planned</p>
+        <h2 id="pp-title">Neural networks,<br>built layer by layer<br>in walkable space.</h2>
+        <p class="lede">One page per model. Model pages stand real trained weights and activations up in 3D space, and concept pages stack scenes in the order one person came to understand the idea.</p>
+        <p class="lede">Four models so far, AlexNet, VGG-16, GoogLeNet and ResNet-34, plus concept pages. It is growing into a place to learn ML and DL, and a community around it. The code will be released as open source.</p>
+        <div class="cta">
+          <a class="btn" href="https://pipeplot.pages.dev" rel="noopener">Open pipeplot</a>
+          <a class="btn ghost" href="https://pipeplot.pages.dev/#models" rel="noopener">See the models</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wing" id="agent-workflow-kit" aria-labelledby="awk-title">
+      <div class="head">
+        <h2 id="awk-title">agent-workflow-kit</h2>
+        <p>Open source under MIT. A workflow, a Markdown document store and backstops for repositories where Claude Code does the work</p>
+      </div>
+      <div class="cols">
+        <div class="text">
+          <p class="lede">Agent Workflow Kit gives a repository three things: a workflow that turns a request into an issue, a branch and a document, and runs many of them at once on git; a document store kept in Markdown and engineered so the agent's context stays small and true; and backstops that fire when a step was skipped.</p>
+          <p>This repo is the single source: each target repo gets git-tracked copies through install.mjs, so a fix made here reaches every repo on its next update instead of drifting per copy.</p>
+          <dl class="facts">
+            <div><dt>Version</dt><dd>0.2.13<small>updated with the release notes</small></dd></div>
+            <div><dt>Skills</dt><dd>9<small>issue-start, post-pr-cleanup, ui-evidence, ko-writing and more</small></dd></div>
+            <div><dt>License</dt><dd>MIT<small>Node 20 or newer</small></dd></div>
+          </dl>
+          <div class="cta">
+            <a class="btn" href="https://github.com/lhk0721/agent-workflow-kit" rel="noopener">View on GitHub</a>
+          </div>
+        </div>
+        <div class="figs">
+          <figure class="sheet">
+            <img src="assets/awk-work-unit.png" width="1323" height="520" alt="Flow of one work unit: issue, branch and worktree, management document and pointer, then edits, review gate, commit, and PR with cleanup" />
+            <figcaption>Figure 3. One work unit, from issue to cleanup.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <SiteFooter home />
+
+  <script is:inline>
+    // Top bar turns solid as soon as the page scrolls
+    (function () {
+      var bar = document.getElementById('bar');
+      function update() { bar.classList.toggle('solid', window.scrollY > 24); }
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    })();
+    // Copy the address: a path for machines without a mail client
+    (function () {
+      var btn = document.querySelector('.foot .copybtn');
+      if (!btn) return;
+      var label = btn.textContent;
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-copy');
+        var done = function () {
+          btn.textContent = 'Copied';
+          btn.classList.add('done');
+          setTimeout(function () { btn.textContent = label; btn.classList.remove('done'); }, 2000);
+        };
+        var fallback = function () {
+          // Clipboard blocked: select the address so Ctrl+C works
+          var link = btn.parentNode.querySelector('a');
+          var range = document.createRange(); range.selectNodeContents(link);
+          var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+          btn.textContent = 'Address selected';
+          setTimeout(function () { btn.textContent = label; }, 2000);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, fallback);
+        } else {
+          fallback();
+        }
+      });
+    })();
+    // Reduced motion: show the still instead of the video
+    (function () {
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var v = document.getElementById('pp-video');
+      var img = document.createElement('img');
+      img.src = v.getAttribute('poster'); img.alt = ''; img.decoding = 'async';
+      v.replaceWith(img);
+    })();
+  </script>
+</Base>

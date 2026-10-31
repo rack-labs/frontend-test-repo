@@ -1,0 +1,324 @@
+/* Rack Labs landing. Light page (Archivo display, Noto Sans KR body, IBM
+   Plex Mono for figures), so the report, slide and business-plan pages it
+   leads to read as the same paper. The pipeplot section keeps the dark
+   tokens of pipeplot's own landing as one dark band. The one device of this
+   page is the sheet: every figure sits on an off-white drawing sheet with a
+   hairline, which marks it as a technical figure. The page is a step below
+   white and the sheet is not pure white either, so the page does not glare.
+   --bg-rgb is --bg as channels, for the translucent bar and veils. */
+:root {
+  color-scheme: light;
+  --bg: #eceef1;
+  --bg-rgb: 236 238 241;
+  --bg2: #e3e6ea;
+  --line: #d2d7de;
+  --ink: #1a1f26;
+  --body: #2f3742;
+  --dim: #535d6c;
+  --muted: #5f6878;
+  --faint: #b9c0ca;
+  --tint: #2c7272;
+  --sheet: #fafafa;
+  --sheet-ink: #1b1f24;
+  --sheet-dim: #5b6470;
+  --sheet-line: #e6e8eb;
+  --display: 'Archivo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Malgun Gothic', monospace;
+  --gutter: clamp(16px, 4vw, 56px);
+  --wing: clamp(64px, 10vh, 140px);
+  --radius: 6px;
+  --pill: 999px;
+}
+
+html { scroll-behavior: smooth; }
+/* anchor targets stop below the sticky bar */
+[id] { scroll-margin-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--body);
+  font: 16px/1.65 var(--display);
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+h1, h2, h3 { margin: 0; color: var(--ink); font-weight: 500; }
+img, video { display: block; max-width: 100%; height: auto; }
+:focus-visible { outline: 1px solid var(--tint); outline-offset: 3px; border-radius: var(--radius); }
+
+/* top bar: transparent over the hero, solid once scrolled past it (JS) */
+.bar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  height: 60px; padding: 0 var(--gutter); margin-bottom: -60px;
+  font: 14px/1 var(--mono); letter-spacing: .04em;
+  border-bottom: 1px solid transparent;
+  transition: background 240ms ease, border-color 240ms ease;
+}
+.bar.solid { background: rgb(var(--bg-rgb) / .85); backdrop-filter: blur(10px); border-color: var(--line); }
+.bar .brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  color: var(--ink); font: 600 17px/1 var(--display); letter-spacing: .18em; white-space: nowrap;
+}
+.bar .brand svg { width: 18px; height: 18px; flex: none; fill: currentColor; }
+.bar nav { display: flex; gap: clamp(16px, 3vw, 32px); overflow-x: auto; white-space: nowrap; }
+.bar nav a { color: var(--dim); padding: 6px 0; }
+.bar nav a:hover { color: var(--ink); }
+
+/* shared copy pieces */
+.kicker {
+  margin: 0 0 18px;
+  font: 13px/1.4 var(--mono); letter-spacing: .06em; color: var(--tint);
+}
+.lede { margin: 0; color: var(--body); font-size: clamp(16px, 1.3vw, 18px); line-height: 1.6; max-width: 46ch; }
+.cta { display: flex; gap: 14px; margin-top: 32px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; padding: 12px 20px;
+  font: 500 14px/1 var(--display); letter-spacing: .02em;
+  border: 1px solid var(--ink); color: var(--ink); border-radius: var(--pill);
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.btn:hover { background: var(--ink); color: var(--bg); }
+.btn.ghost { border-color: var(--line); color: var(--dim); }
+.btn.ghost:hover { background: transparent; color: var(--ink); border-color: var(--dim); }
+
+/* the sheet: a white plate for figures, set off from the page by a hairline */
+.sheet {
+  margin: 0; padding: clamp(14px, 2vw, 24px);
+  background: var(--sheet); color: var(--sheet-ink);
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--line), 0 18px 40px -30px rgba(0, 0, 0, .35);
+}
+.sheet img { width: 100%; height: auto; }
+.sheet figcaption {
+  margin: 12px 0 0; padding-top: 10px;
+  border-top: 1px solid var(--sheet-line);
+  font-size: 13px; line-height: 1.5; color: var(--sheet-dim);
+}
+
+/* hero: the background runs in sequences, rendered on the page colour with
+   a floor grid: first the live scene, the rig and then the measurement
+   (src/lib/hero-scene.js), whose canvas (.live) fills the section on wide
+   screens and the stage box on narrow ones; then the loop of the
+   post-processed MHR body from a real set on the prototype rig
+   (assets/hero-mhr-*.webm/mp4) in the stage box. Until the scene mounts the
+   box shows its first frame (hero-scene.webp).
+   The layers cross-fade by the section's data-show. A radial mask fades the
+   box edges into the page so no rectangle shows, and the veil keeps the copy
+   legible over both */
+.hero {
+  position: relative; min-height: 100svh; box-sizing: border-box;
+  display: grid; grid-template-columns: 1fr; align-items: end;
+  padding: 100px var(--gutter) clamp(40px, 8vh, 96px);
+  overflow: hidden; isolation: isolate;
+}
+.hero .poster {
+  position: absolute; inset: 0; z-index: -3; pointer-events: none;
+  display: flex; justify-content: flex-end; align-items: center;
+  padding: 72px calc(var(--gutter) * .5) 0 0;
+}
+.hero .stage {
+  position: relative; width: min(64vw, 118vh); max-width: 1180px; aspect-ratio: 6 / 5;
+  background: var(--bg); opacity: .92;
+  -webkit-mask-image: radial-gradient(ellipse 62% 66% at 50% 50%, #000 62%, transparent 100%);
+  mask-image: radial-gradient(ellipse 62% 66% at 50% 50%, #000 62%, transparent 100%);
+}
+.hero .stage > * {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  object-fit: cover; transition: opacity .9s ease;
+}
+.hero > .live { position: absolute; inset: 0; z-index: -2; pointer-events: none; opacity: .92; }
+.hero .live canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  opacity: 0; transition: opacity .9s ease;
+}
+.hero .stage video { opacity: 0; }
+.hero[data-show="video"] .stage video, .hero[data-show="live"] .live canvas { opacity: 1; }
+/* the still only stands in until a layer is up. The live layer is not fully
+   opaque, so a still left under it would ghost through once the camera moves;
+   it goes once the layer above has faded in */
+.hero[data-show="live"] .stage .still, .hero[data-show="video"] .stage .still { opacity: 0; transition-delay: .9s; }
+/* the live scene can be dragged around; horizontal drags only on touch, so
+   the page still scrolls vertically over it */
+.hero .live canvas { cursor: grab; touch-action: pan-y; }
+.hero[data-show="live"] .live canvas { pointer-events: auto; }
+.hero .live canvas.grabbing { cursor: grabbing; }
+.hero .veil {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(var(--bg-rgb) / .5) 0%, rgb(var(--bg-rgb) / 0) 28%, rgb(var(--bg-rgb) / 0) 58%, rgb(var(--bg-rgb) / .9) 100%),
+    linear-gradient(90deg, rgb(var(--bg-rgb) / .75) 0%, rgb(var(--bg-rgb) / .25) 45%, rgb(var(--bg-rgb) / 0) 70%);
+}
+.hero .copy { max-width: 880px; }
+.hero h1 {
+  font-size: clamp(44px, 6.6vw, 92px); line-height: .94; letter-spacing: -.01em;
+  font-variation-settings: 'wdth' 82; text-wrap: balance;
+}
+.hero h1 .nb { white-space: nowrap; }
+.hero .lede { margin-top: 22px; }
+.hero .cue {
+  position: absolute; right: var(--gutter); bottom: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  font: 11px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+}
+.hero .cue i {
+  display: block; width: 1px; height: 48px;
+  background: linear-gradient(var(--muted), transparent); animation: cue 2.2s ease-in-out infinite;
+}
+@keyframes cue {
+  0% { transform: scaleY(0); transform-origin: top; }
+  50% { transform: scaleY(1); transform-origin: top; }
+  51% { transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+@media (prefers-reduced-motion: reduce) { .hero .cue i { animation: none; } }
+
+/* wings: the two product sections */
+.wing { padding: var(--wing) var(--gutter); border-top: 1px solid var(--line); }
+.head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px 32px; flex-wrap: wrap;
+  margin-bottom: clamp(28px, 4vh, 48px);
+}
+.head h2 { font-size: clamp(32px, 4.2vw, 60px); line-height: 1; letter-spacing: -.01em; font-variation-settings: 'wdth' 86; }
+.head p { margin: 0; color: var(--dim); font-size: 15px; }
+.cols { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 80px); align-items: start; }
+.text p + p { margin-top: 16px; }
+.text > p:not(.lede) { max-width: 54ch; color: var(--dim); }
+.figs { display: grid; gap: 20px; }
+.figs .sheet.tall { max-width: 360px; }
+
+/* prototype photos: real photographs sit straight on the page, no
+   sheet, since the sheet marks a drawing. One row of four portraits, then
+   the bench photo across two columns, a close-up and the parts list. */
+.photos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 16px; }
+.photos figure { margin: 0; }
+.photos img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg2); }
+.photos .wide { grid-column: span 2; }
+.photos .wide img { aspect-ratio: 3 / 2; }
+.photos figcaption { margin-top: 8px; font: 12px/1.5 var(--mono); color: var(--muted); }
+.photos .parts { margin: 0; padding: 0; border-top: 1px solid var(--line); align-self: start; }
+.photos .parts > div { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.photos .parts dt { font: 12px/1.4 var(--mono); color: var(--muted); }
+.photos .parts dd { margin: 2px 0 0; font-size: 14px; line-height: 1.5; color: var(--dim); }
+
+/* facts: a definition list with hairlines, value large */
+.facts { margin: 36px 0 0; padding: 0; border-top: 1px solid var(--line); max-width: 560px; }
+.facts > div {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; align-items: baseline;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+}
+.facts dt { margin: 0; color: var(--dim); font-size: 14px; }
+.facts dt a { color: var(--ink); }
+.facts dt a:hover { color: var(--tint); }
+.facts dd { margin: 0; text-align: right; color: var(--ink); font-size: 22px; line-height: 1.2; font-variation-settings: 'wdth' 90; }
+.facts dd small { display: block; margin-top: 4px; font: 12px/1.4 var(--mono); color: var(--muted); }
+
+/* timeline: the one true sequence on the page */
+.timeline {
+  list-style: none; margin: clamp(40px, 6vh, 72px) 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px;
+}
+.timeline li { padding-top: 14px; border-top: 1px solid var(--line); position: relative; }
+.timeline li::before {
+  content: ''; position: absolute; top: -4px; left: 0; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--faint);
+}
+.timeline li:first-child::before { background: var(--tint); }
+.timeline .when { display: block; font: 13px/1.4 var(--mono); color: var(--ink); margin-bottom: 6px; }
+.timeline .what { display: block; font-size: 14px; color: var(--dim); max-width: 30ch; }
+
+/* pipeplot: its own hero, carried over as is, so it keeps pipeplot's dark
+   tokens; its live scene and fallback video are drawn for a dark page */
+.pp {
+  color-scheme: dark;
+  --bg: #0b0d10; --bg-rgb: 11 13 16; --bg2: #11151b; --line: #2a3340;
+  --ink: #e6eaf0; --body: #cfd6e0; --dim: #9aa4b2; --muted: #64748b; --faint: #3d4654; --tint: #8fbcbc;
+  background: var(--bg); color: var(--body);
+  position: relative; min-height: 100svh; box-sizing: border-box; display: grid; align-items: end;
+  padding: 100px var(--gutter) clamp(40px, 8vh, 96px); overflow: hidden; isolation: isolate;
+  border-top: 1px solid var(--line);
+}
+.pp .poster {
+  position: absolute; inset: 0; z-index: -2;
+  background: radial-gradient(70% 55% at 68% 42%, rgba(143, 188, 188, .10), transparent 70%);
+}
+.pp .poster video, .pp .poster img, .pp .poster canvas.live { width: 100%; height: 100%; object-fit: cover; opacity: .9; }
+.pp .poster canvas.live { position: absolute; inset: 0; pointer-events: none; display: block; }
+.pp .poster .dip { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: var(--bg); }
+.pp .poster video[hidden] { display: none; }
+.pp .veil {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(180deg, rgb(var(--bg-rgb) / .55) 0%, rgb(var(--bg-rgb) / 0) 30%, rgb(var(--bg-rgb) / 0) 55%, rgb(var(--bg-rgb) / .92) 100%),
+    linear-gradient(90deg, rgb(var(--bg-rgb) / .55) 0%, rgb(var(--bg-rgb) / 0) 50%);
+}
+.pp .copy { max-width: 880px; }
+.pp h2 {
+  font-size: clamp(40px, 6vw, 96px); line-height: .94; letter-spacing: -.01em;
+  font-variation-settings: 'wdth' 82; text-wrap: balance;
+}
+.pp .lede { margin-top: 22px; }
+.pp .lede + .lede { margin-top: 14px; color: var(--dim); }
+
+/* footer */
+.foot {
+  display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 32px clamp(32px, 5vw, 80px);
+  padding: var(--wing) var(--gutter) 48px; border-top: 1px solid var(--line);
+}
+.foot .brand { margin: 0 0 12px; color: var(--ink); font: 600 17px/1 var(--display); letter-spacing: .18em; }
+.foot .who p:not(.brand) { margin: 0; max-width: 44ch; color: var(--dim); }
+.foot .contact { margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.foot .contact > div {
+  display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.foot .contact dt { margin: 0; color: var(--muted); font-size: 14px; }
+.foot .contact dd { margin: 0; color: var(--ink); font-size: 15px; overflow-wrap: anywhere; }
+.foot .contact a:hover { color: var(--tint); }
+.foot .contact .alt { color: var(--muted); font-size: 13px; }
+.foot .copybtn {
+  margin-left: 10px; padding: 4px 10px; cursor: pointer;
+  font: 500 12px/1 var(--display); color: var(--dim);
+  background: none; border: 1px solid var(--line); border-radius: var(--pill);
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.foot .copybtn:hover { color: var(--ink); border-color: var(--dim); }
+.foot .copybtn.done { color: var(--tint); border-color: var(--tint); }
+.foot .reg {
+  grid-column: 1 / -1; margin: 32px 0 0; padding: 18px 0 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 32px;
+  border-top: 1px solid var(--line);
+}
+.foot .reg > div { display: grid; gap: 3px; }
+.foot .reg dt { font: 12px/1.4 var(--mono); color: var(--muted); }
+.foot .reg dd { margin: 0; font-size: 13px; line-height: 1.5; color: var(--dim); overflow-wrap: anywhere; }
+.foot .fine { grid-column: 1 / -1; margin: 24px 0 0; font: 12px/1.5 var(--mono); color: var(--muted); }
+
+/* narrow screens */
+@media (max-width: 900px) {
+  /* narrow screens: the loop sits above the copy in flow instead of behind
+     it, cropped square so the body reads at phone width; no veil needed */
+  .hero { min-height: 0; display: block; padding-top: 88px; }
+  .hero .poster { position: static; display: block; width: min(92vw, 56vh); margin: 0 auto 8px; padding: 0; }
+  .hero .stage { width: 100%; max-width: none; aspect-ratio: 1 / 1; opacity: .95; }
+  .hero .stage video { object-position: 50% 45%; }
+  .hero .stage .still { object-position: 100% 50%; }
+  .hero .veil, .hero .cue { display: none; }
+  .cols, .foot { grid-template-columns: 1fr; }
+  .timeline { grid-template-columns: 1fr; gap: 0; }
+  .timeline li { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding: 12px 0 12px 16px; border-top: 0; border-left: 1px solid var(--line); }
+  .timeline li::before { top: 18px; left: -4px; }
+  .timeline .when { margin: 0; }
+  .photos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  /* the bar wraps to two lines and stops overlaying the hero */
+  .bar { flex-wrap: wrap; height: auto; margin-bottom: 0; padding: 14px var(--gutter) 12px; row-gap: 10px; }
+  [id] { scroll-margin-top: 120px; }
+  .bar nav { width: 100%; flex-wrap: wrap; white-space: normal; overflow: visible; gap: 6px 18px; font-size: 12px; }
+  .hero { padding-top: 24px; }
+  .facts > div { grid-template-columns: 1fr; }
+  .facts dd { text-align: left; }
+}
