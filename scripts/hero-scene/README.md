@@ -5,8 +5,9 @@ live with three.js as one scene. It opens on the rig as built (the rig layout
 render: rack, three cameras on the storage posts, tablet, compute enclosure,
 cable runs). The gear then fades and the measurement-principle animation takes
 over in the same space: rays from the three cameras through the detected left
-knee, the point where they meet, all 33 joints, then the move from the floor
-frame to the rack frame. The rig is built in rack coordinates and moved onto
+knee, the point where they meet, all 33 joints, the same for every frame of a
+squat (rays to all 33 joints at once, frames closing up from 0.36 s to 0.15 s),
+then the move from the floor frame to the rack frame. The rig is built in rack coordinates and moved onto
 the calibration floor frame by the shift the layout render used (x 17 cm,
 z 46.05 cm), so its cameras are the measurement's cameras.
 
