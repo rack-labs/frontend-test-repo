@@ -1,0 +1,55 @@
+---
+import Base from '../../layouts/Base.astro';
+import SiteBar from '../../components/SiteBar.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import { Content, getHeadings } from '../../report/project-report.md';
+import 'katex/dist/katex.min.css';
+// The Project Report of the graduation review, as one page. The manuscript is brought in by
+// scripts/report/import.mjs (figures under /report/figures/, tables set in HTML); the PDF beside
+// it is the print of the same manuscript. The contents list comes from the headings.
+const headings = getHeadings().filter((h) => h.depth === 2 || h.depth === 3);
+const PDF = { href: '/report/RackTracker_Project_Report.pdf', size: '8 MB', pages: 40 };
+---
+<Base
+  lang="ko"
+  title="RackTracker Project Report"
+  description="RackTracker 졸업작품 심사 Project Report. 다시점 삼각측량과 소형 연산 장비를 이용한 파워랙의 모션캡처 스튜디오화. 문제와 목표, 리그 하드웨어, 리그 OS, 3D 측정 파이프라인, 분석과 화면, 검증과 성능. 그림 29장, 표 7장."
+  ogType="article"
+  ogTitle="RackTracker Project Report"
+  ogDescription="다시점 삼각측량과 소형 연산 장비를 이용한 파워랙의 모션캡처 스튜디오화. 졸업작품 심사 Project Report, 2026년 10월."
+  path="/report/"
+  styles={['/style.css', '/doc.css']}
+>
+  <SiteBar current="/report/" />
+
+  <main class="doc-page">
+    <p class="doc-top">
+      <span>Rack Labs / Project Report</span>
+      <a href={PDF.href} download>PDF 내려받기 ({PDF.size}, {PDF.pages}쪽)</a>
+    </p>
+
+    <article class="doc ko report">
+      <p class="eyebrow">졸업작품 심사 Project Report, 2026년 10월</p>
+      <h1>RackTracker</h1>
+      <p class="sub">다시점 삼각측량과 소형 연산 장비를 이용한 파워랙의 모션캡처 스튜디오화</p>
+      <dl class="meta">
+        <dt>작성</dt><dd>이현규 (테크 리드), Rack Labs (랙랩스)</dd>
+        <dt>기준일</dt><dd>2026-10-25</dd>
+        <dt>분량</dt><dd>9장, 그림 29장, 표 7장</dd>
+        <dt>연락</dt><dd><a href="mailto:dlgusrb6546@racktracker.dev">dlgusrb6546@racktracker.dev</a>, <a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd>
+      </dl>
+      <p class="note">심사에 낸 Project Report 원고를 그대로 옮긴 페이지입니다. 그림과 표 번호는 PDF 와 같습니다. 본문의 수치는 기준일의 값입니다.</p>
+
+      <nav class="toc" aria-labelledby="toc-title">
+        <h2 id="toc-title">차례</h2>
+        <ol>
+          {headings.map((h) => <li class={`d${h.depth}`}><a href={`#${h.slug}`}>{h.text}</a></li>)}
+        </ol>
+      </nav>
+
+      <Content />
+    </article>
+  </main>
+
+  <SiteFooter />
+</Base>
