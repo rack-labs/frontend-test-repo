@@ -200,17 +200,10 @@ const parts = [
       </div>
 
       <div class="hw">
-        <div class="sheet hw-sheet">
+        <div class="hw-stage">
           <div class="hw-frame" id="hw-frame">
             <img class="hw-still" id="hw-still" src="/hardware/still/rig.webp" width="1200" height="900" alt="Rig layout drawing: the rack, three cameras, the tablet and the compute enclosure">
-            <iframe id="hw-view" title="Rig layout, 3D" loading="lazy" allow="fullscreen"></iframe>
-          </div>
-          <div class="hw-bar">
-            <span class="hint">Drag to turn. Pinch to zoom, or grab it first and then scroll.</span>
-            <span class="hw-actions">
-              <button type="button" class="mini" id="hw-full">Full screen</button>
-              <a class="mini" id="hw-open" href="/hardware/rig.html" target="_blank" rel="noopener">Open in a new tab</a>
-            </span>
+            <iframe id="hw-view" title="Rig layout, 3D" loading="lazy"></iframe>
           </div>
         </div>
         <div class="hw-side">
@@ -232,20 +225,19 @@ const parts = [
       <script>
         // One viewer frame, three pages behind it (public/hardware/*.html). The page loads only once the
         // section is near the screen; until its first frame is drawn (it posts {hw:'ready'}) the still
-        // of that part stands in, and it stays if WebGL is missing. Full screen takes the frame; where
-        // the API is missing (iOS) the page opens in its own tab instead.
+        // of that part stands in, and it stays if WebGL is missing. The pages draw on the page colour
+        // (?bg=), with no chrome of their own, so the drawing sits on the section like the hero does.
         const frame = document.getElementById('hw-frame') as HTMLElement;
         const view = document.getElementById('hw-view') as HTMLIFrameElement;
         const stillImg = document.getElementById('hw-still') as HTMLImageElement;
-        const open = document.getElementById('hw-open') as HTMLAnchorElement;
         const tabs = [...document.querySelectorAll<HTMLButtonElement>('.hw-tabs [role=tab]')];
         let near = false;
         const pageOf = (id: string) => `/hardware/${id}.html`;
-        const load = (id: string) => { frame.classList.remove('ready'); view.src = pageOf(id) + '?bg=fafafa'; };
+        const load = (id: string) => { frame.classList.remove('ready'); view.src = pageOf(id) + '?bg=eceef1'; };
         const show = (btn: HTMLButtonElement) => {
           const id = btn.dataset.page!;
           tabs.forEach(b => { const on = b === btn; b.setAttribute('aria-selected', String(on)); (document.getElementById(b.getAttribute('aria-controls')!) as HTMLElement).hidden = !on; });
-          stillImg.src = `/hardware/still/${id}.webp`; view.title = btn.dataset.title!; open.href = pageOf(id);
+          stillImg.src = `/hardware/still/${id}.webp`; view.title = btn.dataset.title!;
           if (near) load(id); else frame.classList.remove('ready');
         };
         tabs.forEach(b => b.addEventListener('click', () => show(b)));
@@ -255,10 +247,6 @@ const parts = [
           const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); start(); } }, { rootMargin: '300px 0px' });
           io.observe(frame);
         } else start();
-        document.getElementById('hw-full')!.addEventListener('click', () => {
-          if (frame.requestFullscreen) frame.requestFullscreen().catch(() => window.open(open.href, '_blank'));
-          else window.open(open.href, '_blank');
-        });
       </script>
     </section>
 
