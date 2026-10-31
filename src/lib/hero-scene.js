@@ -4,8 +4,8 @@
 // and the cable runs. The gear then fades and the measurement-principle
 // animation takes over in the same space: three rays leave the cameras through
 // the detected left knee, the point nearest the three rays is the 3D joint,
-// the same is done for all 33 joints, and the floor frame is moved to the rack
-// frame. Data are those of rack-tracker (cameras K/R/t from the 28 August 2026
+// the same is done for all 33 joints, then for every frame of a squat, and the
+// floor frame is moved to the rack frame. Data are those of rack-tracker (cameras K/R/t from the 28 August 2026
 // PVC rig calibration, example pose); every label, caption, dimension and the
 // image inset are left out.
 //
@@ -167,20 +167,30 @@ function poseAt(k) {
 const headOf = P => mul(add(add(P[7], P[8]), add(P[2], P[5])), 0.25);
 
 /* ── one frame: 2D detections (with error) → normalised coordinates → points on the image
-   planes → rays → triangulation (the point nearest all rays) ── */
-const noise = (ci, j, a) => (hash(ci * 1000 + j * 10 + a) - 0.5) * 2 * NOISE_PX;
-const obs = (c, P, j) => { const pr = c.project(P); const u = pr.u + noise(c.i, j, 0), v = pr.v + noise(c.i, j, 1), [x, y] = c.pxToNorm(u, v); return { pt: c.planePt(x, y) }; };
+   planes → rays → triangulation (the point nearest all rays). f numbers the frame, so the
+   error differs from frame to frame ── */
+const noise = (ci, j, a, f) => (hash(ci * 1000 + j * 10 + a + f * 7919) - 0.5) * 2 * NOISE_PX;
+const obs = (c, P, j, f) => { const pr = c.project(P); const u = pr.u + noise(c.i, j, 0, f), v = pr.v + noise(c.i, j, 1, f), [x, y] = c.pxToNorm(u, v); return { pt: c.planePt(x, y) }; };
 const triangulate = lines => {
   const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], bb = [0, 0, 0];
   for (const { C, d } of lines) for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { const m = (i === j ? 1 : 0) - d[i] * d[j]; A[i][j] += m; bb[i] += m * C[j]; }
   return solve3(A, bb);
 };
-const FIG = (() => {
-  const P = poseAt(1).map(r2f);
-  const O = CAMS.map(c => P.map((p, j) => obs(c, p, j)));
+const frameOf = (P, f = 0) => {
+  const O = CAMS.map(c => P.map((p, j) => obs(c, p, j, f)));
   const T = P.map((_, j) => triangulate(CAMS.map(c => ({ C: c.C, d: unit(sub(O[c.i][j].pt, c.C)) }))));
   return { P, O, T };
-})();
+};
+const FIG = frameOf(poseAt(1).map(r2f));
+
+/* ── frame after frame (the 'burst' beat): the same for every frame of the set. Frames come
+   0.36 s apart at first and close up to 0.15 s, while the body squats twice from the bottom
+   at an even pace, so the first and the last frame are FIG ── */
+const BURST = { dur: 6.0, t0: 0.35, first: 0.36, min: 0.15, decay: 0.85, hold: 0.5, reps: 2, rayIn: 0.06 };
+const BURST_AT = [];
+for (let t = BURST.t0, i = 0; t < BURST.dur - BURST.hold; i++) { BURST_AT.push(t); t += Math.max(BURST.min, BURST.first * BURST.decay ** i); }
+const burstK = t => (1 - Math.cos(Math.PI * (1 + 2 * BURST.reps * clamp01((t - BURST.t0) / (BURST_AT[BURST_AT.length - 1] - BURST.t0))))) / 2;
+const BURST_FR = BURST_AT.map((t, i) => i === 0 || i === BURST_AT.length - 1 ? FIG : frameOf(poseAt(burstK(t)).map(r2f), i));
 
 /* ── the rig as built (the rig layout render): rack members, the cameras in their housings on the
    storage posts, C3 on a magic arm, the tablet, the compute enclosure (Jetson Orin NX and the
@@ -348,14 +358,15 @@ function rigGroup(fat) {
   return root;
 }
 
-/* ── timeline: the rig, then the rays .. rack-coordinates beats of the measurement animation,
-   then a short hold ── */
+/* ── timeline: the rig, then the rays .. rack-coordinates beats of the measurement animation
+   (with frame after frame after all 33), then a short hold ── */
 const RIG = 12.0;
 const BEATS = [
   { stage: 1, key: 'rig', dur: RIG },
   { stage: 2, key: 'rays', dur: 3.8 },
   { stage: 3, key: 'meet', dur: 3.8 },
   { stage: 3, key: 'all', dur: 5.2 },
+  { stage: 3, key: 'burst', dur: BURST.dur },
   { stage: 4, key: 'frame', dur: 3.8 },
 ];
 const ALL_S = j => 0.2 + j * 0.08;                                              // 'all': when joint j appears
@@ -379,9 +390,10 @@ const MEASURE_KEYS = [
   { at: 7.4,  target: [2, 45, 18],  theta: 1.74, phi: 1.0,  radius: 165 },
   { at: 9.4,  target: [14, 88, 10], theta: 2.05, phi: 1.18, radius: 350 },     // all 33: back out
   { at: 12.6, target: [14, 84, 12], theta: 2.3,  phi: 1.16, radius: 340 },
-  { at: 14.4, target: [10, 36, 22], theta: 1.35, phi: 0.9,  radius: 290 },     // rack frame: down to the floor axes
-  { at: 16.6, target: [10, 38, 22], theta: 1.25, phi: 0.92, radius: 295 },
-  { at: 18.8, target: [12, 46, 22], theta: 1.15, phi: 0.98, radius: 320 },
+  { at: 18.6, target: [14, 84, 12], theta: 1.85, phi: 1.12, radius: 335 },     // frame after frame: round to the side
+  { at: 20.4, target: [10, 36, 22], theta: 1.35, phi: 0.9,  radius: 290 },     // rack frame: down to the floor axes
+  { at: 22.6, target: [10, 38, 22], theta: 1.25, phi: 0.92, radius: 295 },
+  { at: 24.8, target: [12, 46, 22], theta: 1.15, phi: 0.98, radius: 320 },
 ];
 const KEYS = RIG_KEYS.concat(MEASURE_KEYS.map(k => ({ ...k, at: k.at + RIG })));
 function autoCam(T) {
@@ -510,8 +522,7 @@ function buildScene(bt) {
   /* the measurement's opening state: rack, the person before measuring (faint) */
   const base = () => {
     b.rack({ origin: S === 4 });
-    b.lines(pairsOf(Fg.P, BONES_BODY), 'person', { opacity: 0.22, r: 1.3 });
-    b.dot(headOf(Fg.P), 'person', 7.5, { opacity: 0.22 });
+    return { body: b.lines(pairsOf(Fg.P, BONES_BODY), 'person', { opacity: 0.22, r: 1.3 }), head: b.dot(headOf(Fg.P), 'person', 7.5, { opacity: 0.22 }) };
   };
   CAMS.forEach(c => b.camera(c));
 
@@ -521,17 +532,19 @@ function buildScene(bt) {
     b.lines(pairsOf(O.map(o => o.pt), BONES), 'px', { r: 0.14, opacity: 0.8 });
   }));
   const featOnPlanes = () => CAMS.forEach(c => b.dot(Fg.O[c.i][FEAT].pt, 'px', 1.2));
-  const rayEnd = (c, j) => add(c.C, mul(unit(sub(Fg.O[c.i][j].pt, c.C)), nrm(sub(Fg.T[j], c.C)) + 30));
+  const rayEndOf = (fr, c, j) => add(c.C, mul(unit(sub(fr.O[c.i][j].pt, c.C)), nrm(sub(fr.T[j], c.C)) + 30));
+  const rayEnd = (c, j) => rayEndOf(Fg, c, j);
   const rays = (j, { reveal = null, stagger = 0.5 } = {}) => CAMS.forEach(c => b.lines([[c.C, rayEnd(c, j)]], c.color, { r: 0.45, opacity: 0.95, reveal: reveal ? [reveal[0] + c.i * stagger, reveal[1]] : null }));
   const normArrows = () => CAMS.forEach(c => { b.dot(c.pp, c.color, 0.7); b.arrow(c.pp, Fg.O[c.i][FEAT].pt, c.color, { head: 2.2 }); });
 
   /* 1 the rig: the gear fades out and the measurement's opening state fades in, so the rays
      beat starts on exactly what this one ends on */
+  let person = null;
   if (S === 1) {
     const rig = rigGroup(fat); b.G.add(rig);
     b.fade(rig, [RIG - 2.6, 1.8], { out: true });
     b.grouped(() => { base(); planes2d(); featOnPlanes(); normArrows(); }, [RIG - 2.2, 1.8]);
-  } else base();
+  } else person = base();
 
   /* 2 rays: follow the left knee; principal point → knee pixel is the normalised coordinate,
      the line through it from the camera centre is the ray */
@@ -541,7 +554,7 @@ function buildScene(bt) {
   }
 
   /* 3 triangulation: the point nearest the three rays is the 3D joint, then all 33 */
-  if (S === 3) {
+  if (S === 3 && K !== 'burst') {
     planes2d(); featOnPlanes();
     const T = Fg.T[FEAT];
     if (K === 'meet') {
@@ -560,6 +573,41 @@ function buildScene(bt) {
       });
       b.lines(pairsOf(Fg.T, BONES), 'joint', { r: 0.4, reveal: [3.1, 0.8] });
     }
+  }
+
+  /* 3 frame after frame: at each frame the detections on the image planes change, the three
+     rays reach all 33 joints at once and the skeleton takes that frame's pose; the rays fade
+     before the next frame. The faint body keeps moving between frames */
+  if (K === 'burst') {
+    b.fade(b.grouped(featOnPlanes), [0, 0.3], { out: true });
+    const V = b.V, n = BURST_AT.length, C3 = CAMS.map(c => V(c.C));
+    const F3 = BURST_FR.map(fr => ({ T: fr.T.map(V), O: fr.O.map(o => o.map(q => V(q.pt))), ends: CAMS.map(c => fr.T.map((_, j) => V(rayEndOf(fr, c, j)))) }));
+    const flat = CAMS.map(c => ({
+      dots: Fg.O[c.i].map((o, j) => b.dot(o.pt, 'px', j === FEAT ? 0.9 : 0.55)),
+      bones: b.lines(pairsOf(Fg.O[c.i].map(o => o.pt), BONES), 'px', { r: 0.14, opacity: 0.8 }),
+      rays: b.lines([], c.color, { r: 0.3, opacity: 0.7 }),
+    }));
+    const dots = Fg.T.map((p, j) => b.dot(p, 'joint', j === FEAT ? 1.9 : 1.3));
+    const bones = b.lines(pairsOf(Fg.T, BONES), 'joint', { r: 0.4 });
+    b.anims.push(t => {
+      const P = poseAt(burstK(t)).map(r2f);
+      person.body.update(pairsOf(P.map(V), BONES_BODY)); person.head.position.copy(V(headOf(P)));
+      let f = -1; while (f + 1 < n && t >= BURST_AT[f + 1]) f++;
+      flat.forEach(fl => { fl.rays.g.visible = false; });
+      if (f < 0) return;
+      const at = BURST_AT[f], per = f + 1 < n ? BURST_AT[f + 1] - at : BURST.min, a = clamp01((t - at) / BURST.rayIn);
+      const cur = F3[f], sk = a < 1 ? F3[Math.max(0, f - 1)] : cur;
+      const op = 0.7 * (a < 1 ? 1 : 1 - easeOut(clamp01((t - at - BURST.rayIn) / Math.max(0.06, 0.75 * per - BURST.rayIn))));
+      flat.forEach((fl, ci) => {
+        fl.dots.forEach((m, j) => m.position.copy(cur.O[ci][j]));
+        fl.bones.update(pairsOf(cur.O[ci], BONES));
+        fl.rays.update(cur.ends[ci].map(e => [C3[ci], C3[ci].clone().lerp(e, easeOut(a))]));
+        fl.rays.mat.opacity = op; fl.rays.g.visible = op > 0.01;
+      });
+      const pop = a < 1 ? 1 : 1 + 0.45 * (1 - clamp01((t - at - BURST.rayIn) / 0.14));
+      dots.forEach((m, j) => { m.position.copy(sk.T[j]); m.scale.setScalar(pop); });
+      bones.update(pairsOf(sk.T, BONES));
+    });
   }
 
   /* 4 rack coordinates: floor origin → rack origin, the rack axes */
