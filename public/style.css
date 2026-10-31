@@ -58,7 +58,11 @@ img, video { display: block; max-width: 100%; height: auto; }
   transition: background 240ms ease, border-color 240ms ease;
 }
 .bar.solid { background: rgb(var(--bg-rgb) / .85); backdrop-filter: blur(10px); border-color: var(--line); }
-.bar .brand { color: var(--ink); font: 600 17px/1 var(--display); letter-spacing: .18em; white-space: nowrap; }
+.bar .brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  color: var(--ink); font: 600 17px/1 var(--display); letter-spacing: .18em; white-space: nowrap;
+}
+.bar .brand svg { width: 18px; height: 18px; flex: none; fill: currentColor; }
 .bar nav { display: flex; gap: clamp(16px, 3vw, 32px); overflow-x: auto; white-space: nowrap; }
 .bar nav a { color: var(--dim); padding: 6px 0; }
 .bar nav a:hover { color: var(--ink); }

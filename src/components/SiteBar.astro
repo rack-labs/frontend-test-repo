@@ -18,7 +18,11 @@ const links = [
 ];
 ---
 <header class:list={['bar', { solid: !home }]} id="bar">
-  <a class="brand" href={home ? '#top' : '/'}>Rack Labs</a>
+  <a class="brand" href={home ? '#top' : '/'}>
+    <!-- favicon.svg mark without its dark tile, filled with the text colour -->
+    <svg viewBox="0 0 144 144" aria-hidden="true"><rect width="89" height="89"/><path d="M110 0H144V127L110 93Z"/><path d="M0 110H97L131 144H0Z"/></svg>
+    Rack Labs
+  </a>
   <nav aria-label="Sections">
     {links.map((l) => <a href={l.href} aria-current={l.href === current ? 'page' : undefined}>{l.label}</a>)}
   </nav>
