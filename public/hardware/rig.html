@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rig layout</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  /* 레이아웃: 위 한 줄(제목·시점 버튼) + 아래 전체가 3D 무대. 색·글꼴은 키오스크 rtds 토큰과 tracker3d 팔레트를 그대로 쓴다 */
+  :root {
+    --bg: #fafafa; --surface: #fafafa; --fg: #0B0C0F; --fg-2: #3F444D; --fg-3: #666D79;
+    --line: #E3E6EB; --line-strong: #C9CED6; --accent: #3F444D; --accent-fg: #FFFFFF;
+    --font: 'Archivo', 'Noto Sans KR', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  }
+  /* 배경은 늘 흰색. 호스트가 data-theme="dark" 를 줘도 따르지 않는다(설계도처럼 흰 종이 위에) */
+  :root, :root[data-theme="dark"] { color-scheme: light; --bg: #fafafa; --surface: #fafafa; --fg: #0B0C0F; --fg-2: #3F444D; --fg-3: #666D79;
+    --line: #E3E6EB; --line-strong: #C9CED6; --accent: #3F444D; --accent-fg: #FFFFFF; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--font); display: flex; flex-direction: column; }
+  #bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+    padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    border-bottom: 1px solid var(--line); background: var(--surface); }
+  #bar h1 { font-size: 15px; font-weight: 700; margin: 0; }
+  #bar .sub { color: var(--fg-3); font: 500 11.5px/1.3 var(--font-mono); min-width: 0; }
+  #bar .grp { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+  #bar button { font: 500 12px/1 var(--font); color: var(--fg-2); background: transparent; border: 1px solid var(--line-strong);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  #bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #bar button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  #stage { position: relative; flex: 1; min-height: 360px; background: var(--surface); touch-action: none; overflow: hidden; }
+  #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  /* 겹침 순서: 이름 카드·카메라 이름(3) > 치수 칩(2) > 바닥 눈금(1). 치수 칩이 이름 카드를 가리지 않게 */
+  .lab { position: absolute; left: 0; top: 0; z-index: 3; transform: translate(-50%, -50%); white-space: nowrap; font: 600 10.5px/1 var(--font-mono); }
+  .lab.ko { font: 500 11px/1 var(--font); color: var(--fg-2); background: var(--surface); padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line); }
+  .lab.dim { z-index: 2; font: 600 10.5px/1 var(--font-mono); color: #1f2937; background: var(--surface); padding: 1px 3px; }
+  .tick { position: absolute; left: 0; top: 0; z-index: 1; transform: translate(-50%, -50%); font: 600 10px/1 var(--font-mono); }
+  .note { position: absolute; left: 10px; bottom: 8px; font: 600 10.5px/1 var(--font-mono); }
+  .legend { position: absolute; right: 10px; bottom: 8px; font: 500 10.5px/1.5 var(--font); color: var(--fg-3); text-align: right; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <h1>Rig layout</h1>
+  <div class="sub">Power-rack mock-up 118 × 106 × 241 cm · 3 cameras · tablet · Jetson Orin NX compute unit · camera poses from the calibration of 28 Aug 2026</div>
+  <div class="grp" role="group" aria-label="View">
+    <button type="button" id="v-report" data-view="report" aria-pressed="true">Report view</button>
+    <button type="button" id="v-gear" data-view="gear" aria-pressed="false">Close up</button>
+    <button type="button" id="v-front" data-view="front" aria-pressed="false">Front</button>
+    <button type="button" id="v-top" data-view="top" aria-pressed="false">Top</button>
+  </div>
+  <div class="grp" role="group" aria-label="Show">
+    <button type="button" id="t-fov" data-toggle="fov" aria-pressed="true">Camera FOV</button>
+    <button type="button" id="t-cable" data-toggle="cable" aria-pressed="true">Cables</button>
+    <button type="button" id="t-label" data-toggle="label" aria-pressed="true">Labels</button>
+    <button type="button" id="t-dim" data-toggle="dim" aria-pressed="true">Dimensions</button>
+  </div>
+</div>
+<div id="stage"><div id="overlay"></div></div>
+
+<script type="module">
+import * as THREE from '/vendor/three/three.module.min.js';
+
+/* ── 좌표: 리그 바닥 world(rig_world_cm — x 오른쪽 · y 위 · z 정면 · cm, #364). tracker3d 와 같은 세계. ─────────────
+   파워랙은 케이지 바닥 중심이 원점. 사람은 −z(보관 기둥 쪽)를 보고 운동하고, 카메라 3대는 그 뒤 기둥(후면)에 있다. */
+const stage = document.getElementById('stage'), overlay = document.getElementById('overlay');
+/* 히어로 모드(?hero=1): 랜딩 사이트 배경(#0b0d10) 위에 글자 없이. 막대·이름표·눈금·치수를 숨기고 팔레트만 바꾼다. 기본(설계도) 모습은 그대로 */
+const HERO = new URLSearchParams(location.search).get('hero') === '1';
+if (HERO) { document.getElementById('bar').style.display = 'none'; overlay.style.display = 'none'; document.body.style.background = '#0b0d10'; stage.style.background = '#0b0d10'; }
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(42, 1, 1, 5000);
+
+/* ── 팔레트: tracker3d.js 의 light/dark 값에 장비 색을 더한 것 ── */
+const PAL = {
+  light: { grid: 0xd5dce3, edge: 0xaeb9c4, text: '#5b6270', steel: 0xcdd3da, steelEdge: 0x6b7280, dark: 0x23272e, box: 0x2f343c,
+           box2: 0x5b6473, cable: 0x23272e, clip: 0x4b5563, hole: 0x5b6675, led: 0x2fa36b, arm: 0x7a8290, glass: 0x0b0d10, dim: 0x1f2937, screen: 0xeef1f5 },
+  hero:  { grid: 0x222a35, edge: 0x36424f, text: '#9aa4b2', steel: 0xaab3bf, steelEdge: 0xe6eaf0, dark: 0x2b3039, box: 0x3a4149,
+           box2: 0x6b7482, cable: 0x9aa4b2, clip: 0x7c8694, hole: 0x7c8694, led: 0x2fa36b, arm: 0x8a929f, glass: 0x8fbcbc, dim: 0x1f2937, screen: 0x1c2330 },
+};
+const isDark = () => false;   // 늘 흰 배경(설계도)
+const mats = {
+  steel: new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.38, depthWrite: false }),   // 파워랙은 반투명, 윤곽선이 모양을 잡는다
+  steelEdge: new THREE.LineBasicMaterial({ transparent: true, opacity: 0.85 }),
+  dark: new THREE.MeshLambertMaterial(), box: new THREE.MeshLambertMaterial(), box2: new THREE.MeshLambertMaterial(),
+  cable: new THREE.MeshLambertMaterial(), clip: new THREE.MeshLambertMaterial(), arm: new THREE.MeshLambertMaterial(),
+  led: new THREE.MeshBasicMaterial(), glass: new THREE.MeshBasicMaterial(), screen: new THREE.MeshBasicMaterial(),
+  hole: new THREE.PointsMaterial({ size: 1.4, sizeAttenuation: true }),
+  grid: new THREE.LineBasicMaterial(), edge: new THREE.LineBasicMaterial(), dim: new THREE.LineBasicMaterial(),
+};
+let C = PAL.light;
+const applyTheme = () => {
+  C = HERO ? PAL.hero : PAL.light;
+  if (HERO) { mats.steel.opacity = 0.22; mats.steelEdge.opacity = 0.6; }
+  for (const k of Object.keys(mats)) if (C[k] !== undefined) mats[k].color.setHex(C[k]);
+  overlay.querySelectorAll('.tick, .note').forEach(el => { el.style.color = C.text; });
+  draw();
+};
+
+/* ── 조명: tracker3d 와 같은 값 ── */
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6b7280, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(120, 300, 200); scene.add(sun);
+
+/* ── 바닥 격자(cm): 눈금 50, 가장자리는 진하게. 눈금 숫자는 DOM 라벨 ── */
+const labels = [];
+const STEP = HERO ? 20 : 50, RX = HERO ? [-600, 600] : [-150, 150], RZ = HERO ? [-600, 600] : [-150, 100];   // 히어로는 MHR 재생 영상과 같은 20cm 격자(1m 마다 굵게)
+const major = (v, R) => HERO ? v % 100 === 0 : (v === R[0] || v === R[1]);
+{
+  const seg = [], edge = [];
+  for (let x = RX[0]; x <= RX[1]; x += STEP) (major(x, RX) ? edge : seg).push(new THREE.Vector3(x, 0, RZ[0]), new THREE.Vector3(x, 0, RZ[1]));
+  for (let z = RZ[0]; z <= RZ[1]; z += STEP) (major(z, RZ) ? edge : seg).push(new THREE.Vector3(RX[0], 0, z), new THREE.Vector3(RX[1], 0, z));
+  scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(seg), mats.grid));
+  scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(edge), mats.edge));
+  const tick = (t, p) => { const el = document.createElement('div'); el.className = 'tick'; el.textContent = t; overlay.appendChild(el); labels.push({ el, at: p, kind: 'tick' }); };
+  for (let x = RX[0]; x <= RX[1]; x += STEP) tick(String(x), new THREE.Vector3(x, 0, RZ[1] + STEP * 0.35));
+  for (let z = RZ[0]; z <= RZ[1]; z += STEP) tick(String(-z), new THREE.Vector3(RX[0] - STEP * 0.35, 0, z));
+  const note = document.createElement('div'); note.className = 'note'; note.textContent = 'Floor grid and dimensions in cm, heights from the floor'; overlay.appendChild(note);
+  const legend = document.createElement('div'); legend.className = 'legend';
+  legend.innerHTML = 'One line per camera: its USB cable and exposure-signal wire run together. The tablet has one USB cable<br>One enclosure holds the Jetson Orin NX, the trigger board and the USB hub';
+  overlay.appendChild(legend);
+}
+
+/* ── 파워랙: rack-presets.json 의 pvc_prototype(제작 실측) 치수. 부재 배치는 scratch-rack-geom.js createPowerRack 과 같다 ── */
+const SPEC = { W: 118, D: 106, H: 241, U: 7.6, CS: 7.6, holePitch: 5, holeDia: 1.4, holeFirst: 6.8, holeLast: 240,
+  jcupW: 11, jcupH: 12, jcupReach: 15, jcupNose: 3.5, jcupHeight: 130, safetyW: 7.6, safetyT: 10.2, safetyHeight: 60,
+  storageOffset: 38.4, storageHeight: 241, storageU: 7.6 };
+const rack = new THREE.Group(); scene.add(rack);
+const gear = new THREE.Group(); scene.add(gear);
+const cables = new THREE.Group(); scene.add(cables);
+function box(parent, w, h, d, [x, y, z], mat = mats.steel, edges = true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); parent.add(m);
+  if (edges) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), mats.steelEdge); e.position.copy(m.position); parent.add(e); }
+  return m;
+}
+{
+  const { W, D, H, U, CS } = SPEC;
+  const cw = (W - U) / 2, cd = (D - U) / 2;
+  const corners = [[-cw, -cd], [cw, -cd], [cw, cd], [-cw, cd]];                 // 후면 좌 · 후면 우 · 전면 우 · 전면 좌
+  for (const [x, z] of corners) box(rack, U, H, U, [x, H / 2, z]);               // 훈련 기둥 4
+  for (let k = 0; k < 4; k++) {                                                  // 상부 크로스멤버 4 — 기둥 사이 안쪽 길이
+    const [ax, az] = corners[k], [bx, bz] = corners[(k + 1) % 4];
+    const span = Math.hypot(bx - ax, bz - az) - U, horiz = Math.abs(bz - az) < 1e-6;
+    box(rack, horiz ? span : CS, CS, horiz ? CS : span, [(ax + bx) / 2, H - CS / 2, (az + bz) / 2]);
+  }
+  for (const sx of [-1, 1]) box(rack, CS, CS, 2 * cd - U, [sx * cw, CS / 2, 0]);   // 바닥빔(좌우)
+  const holes = [];                                                              // 홀 사다리 — 기둥의 케이지 안쪽 면
+  for (let y = SPEC.holeFirst; y <= Math.min(SPEC.holeLast, H); y += SPEC.holePitch)
+    for (const [x, z] of corners) holes.push(x - Math.sign(x) * U / 2, y, z);
+  const hg = new THREE.BufferGeometry(); hg.setAttribute('position', new THREE.Float32BufferAttribute(holes, 3));
+  rack.add(new THREE.Points(hg, mats.hole));
+  for (const sx of [-1, 1]) {                                                    // J컵 — 사람이 마주 보는 후면 기둥에
+    box(rack, SPEC.jcupW, SPEC.jcupH, SPEC.jcupReach, [sx * (W / 2 - SPEC.jcupW / 2), SPEC.jcupHeight, -(D / 2 - SPEC.jcupReach / 2 + SPEC.jcupNose)]);
+    box(rack, SPEC.safetyW, SPEC.safetyT, D - U, [sx * cw, SPEC.safetyHeight, 0]);  // 세이프티 암
+  }
+  const SU = SPEC.storageU, SH = SPEC.storageHeight, gap = SPEC.storageOffset, szc = -D / 2 - gap - SU / 2;   // 보관부
+  for (const sx of [-1, 1]) {
+    box(rack, SU, SH, SU, [sx * cw, SH / 2, szc]);
+    box(rack, CS, CS, gap, [sx * cw, CS / 2, -D / 2 - gap / 2]);
+    box(rack, CS, CS, gap, [sx * cw, SH - CS / 2, -D / 2 - gap / 2]);
+  }
+  box(rack, 2 * cw - SU, CS, CS, [0, SH - CS / 2, szc]);
+}
+
+/* ── 카메라 3대: 2026-08-28 바닥 보정(calibration_floor.json, 저장은 y 아래) 의 K·R·t 그대로. 피라미드는 report3d.cam_traces 와 같은 식.
+   파일 world 는 보드 자리라 랙 중심과 어긋난다 — x 는 17cm 옮기면 C1·C2 가 기둥 안쪽 면 x=±51.4 에 정확히 앉고,
+   z 는 실제 리그(fig03_rig.jpg)대로 세 대가 맨 뒤 보관 기둥 앞면에 앉도록 46cm 옮긴다. ── */
+const CAMS = [
+  { name: 'C1-00D6', color: '#D9483B', K: [[754.39, 0, 958.39], [0, 754.07, 589.31], [0, 0, 1]],
+    R: [[-0.15571, 0.90976, -0.38484], [0.86486, -0.06266, -0.49808], [-0.47725, -0.41039, -0.77706]], t: [51.591, -39.457, 54.954] },
+  { name: 'C2-6291', color: '#2E7DD1', K: [[753.03, 0, 913.9], [0, 753.13, 606.12], [0, 0, 1]],
+    R: [[-0.22532, -0.92974, 0.29123], [-0.89138, 0.07606, -0.44683], [0.39328, -0.36028, -0.84589]], t: [-39.827, -9.87, 42.399] },
+  { name: 'C3-F601', color: '#2FA36B', K: [[751.42, 0, 979.47], [0, 751.34, 602.45], [0, 0, 1]],
+    R: [[0.20999, -0.78469, -0.58323], [-0.89159, 0.09111, -0.44359], [0.40122, 0.61315, -0.68049]], t: [-133.785, 2.273, 145.386] },
+];
+const SU = SPEC.storageU, SZC = -SPEC.D / 2 - SPEC.storageOffset - SU / 2;      // 보관 기둥 중심 z (−95.2)
+const FACE_FS = SZC + SU / 2, FACE_RS = SZC - SU / 2;                             // 보관 기둥 앞면(케이지 쪽) z −91.4 · 뒷면 z −99.0
+const RES = [1920, 1200], FRUSTUM = 28, SHIFT_X = 17, SHIFT_Z = (FACE_FS + 2.35) - (-43.0);   // 보정 world 의 C1·C2 z≈−43 → 보관 기둥 앞면 앞 2.35
+const RtV = (R, v) => new THREE.Vector3(R[0][0] * v[0] + R[1][0] * v[1] + R[2][0] * v[2], R[0][1] * v[0] + R[1][1] * v[1] + R[2][1] * v[2], R[0][2] * v[0] + R[1][2] * v[1] + R[2][2] * v[2]);
+const toUp = (v) => new THREE.Vector3(v.x - SHIFT_X, -v.y, -v.z + SHIFT_Z);    // 점: y 아래 → y 위(y·z 뒤집기) + 랙 좌표로 옮김
+const toUpDir = (v) => new THREE.Vector3(v.x, -v.y, -v.z).normalize();          // 방향: 뒤집기만
+const fovGroup = new THREE.Group(); scene.add(fovGroup);
+const camInfo = CAMS.map((c, i) => {
+  const t = c.t;
+  const centre = toUp(RtV(c.R, [-t[0], -t[1], -t[2]]));
+  const axis = toUpDir(RtV(c.R, [0, 0, 1]));
+  const up = toUpDir(RtV(c.R, [0, -1, 0]));
+  const corners = [[0, 0], [RES[0], 0], [RES[0], RES[1]], [0, RES[1]]].map(([u, v]) => {
+    const xc = [(u - c.K[0][2]) / c.K[0][0] * FRUSTUM, (v - c.K[1][2]) / c.K[1][1] * FRUSTUM, FRUSTUM];
+    return toUp(RtV(c.R, [xc[0] - t[0], xc[1] - t[1], xc[2] - t[2]]));
+  });
+  const pts = [];
+  corners.forEach(p => pts.push(centre, p));
+  for (let k = 0; k < 4; k++) pts.push(corners[k], corners[(k + 1) % 4]);
+  const col = new THREE.Color(c.color);
+  fovGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: col })));
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(3, 10, 10), new THREE.MeshBasicMaterial({ color: col })); dot.position.copy(centre); fovGroup.add(dot);
+  const lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = c.name; lab.style.color = c.color; overlay.appendChild(lab);
+  labels.push({ el: lab, at: centre.clone().add(new THREE.Vector3(0, 10, 0)), kind: 'label' });
+  return { centre, axis, up, name: c.name };
+});
+
+/* ── 카메라 몸체: 38mm 각 하우징 + 렌즈. C1·C2 는 보관 기둥 앞면 안쪽 모서리에 밀착 클램프, C3 는 좌 보관 기둥의 매직암 ── */
+function housing(info) {
+  const g = new THREE.Group(); g.position.copy(info.centre); g.up.copy(info.up); g.lookAt(info.centre.clone().add(info.axis));
+  const body = new THREE.Mesh(new THREE.BoxGeometry(3.8, 3.8, 3.8), mats.dark); g.add(body);
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry), mats.steelEdge));
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.05, 1.4, 24), mats.dark); lens.rotation.x = Math.PI / 2; lens.position.z = 2.6; g.add(lens);
+  const glass = new THREE.Mesh(new THREE.CircleGeometry(0.7, 24), mats.glass); glass.position.z = 3.31; g.add(glass);
+  const port = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 0.7), mats.box2); port.position.set(0, -0.6, -2.2); g.add(port);
+  gear.add(g);
+  return g;
+}
+camInfo.forEach(housing);
+const CW = (SPEC.W - SPEC.U) / 2, CD = (SPEC.D - SPEC.U) / 2, FACE_F = -CD + SPEC.U / 2, FACE_R = -CD - SPEC.U / 2;   // 후면 기둥의 앞면·뒷면 z
+for (const i of [0, 1]) { const p = camInfo[i].centre; box(gear, 3, 3, 0.9, [p.x, p.y, FACE_FS + 0.45], mats.box2); }   // 밀착 클램프(보관 기둥 앞면)
+function rod(a, b, r, mat) {
+  const d = b.clone().sub(a), len = d.length();
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 12), mat);
+  m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); gear.add(m); return m;
+}
+const ball = (p, r, mat) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 14), mat); m.position.copy(p); gear.add(m); return m; };
+{ // C3 매직암: 좌 보관 기둥 앞면 클램프 → 팔 1 → 팔꿈치 → 팔 2 → 하우징 뒤 볼
+  const c3 = camInfo[2], back = c3.centre.clone().sub(c3.axis.clone().multiplyScalar(2.4));
+  const clamp = new THREE.Vector3(-CW, 190, FACE_FS + 1.2), a0 = new THREE.Vector3(-CW, 190, FACE_FS + 2.6), elbow = new THREE.Vector3(-50, 198, -33 + SHIFT_Z);
+  box(gear, 6, 5, 2.4, [clamp.x, clamp.y, clamp.z], mats.box2);
+  rod(a0, elbow, 1.0, mats.arm); ball(elbow, 1.5, mats.arm); rod(elbow, back, 1.0, mats.arm); ball(back, 1.2, mats.arm);
+}
+
+/* ── 태블릿(갤럭시 탭 S8 Ultra 32.6×20.8×0.55cm, 세로): 우 보관 기둥 앞면 150cm 클램프 → 짧은 팔 → 화면은 운동하는 사람 쪽(+z) ── */
+const TAB = { w: 20.8, h: 32.6, t: 0.55, x: 48.0, y: 150, z: FACE_FS + 9.0 };
+{
+  const clamp = new THREE.Vector3(CW, TAB.y, FACE_FS + 1.2), a0 = new THREE.Vector3(CW, TAB.y, FACE_FS + 2.6), back = new THREE.Vector3(TAB.x, TAB.y, TAB.z - TAB.t / 2 - 0.9);
+  box(gear, 6, 5, 2.4, [clamp.x, clamp.y, clamp.z], mats.box2);
+  rod(a0, back, 1.0, mats.arm); ball(back, 1.2, mats.arm);
+  box(gear, TAB.w, TAB.h, TAB.t, [TAB.x, TAB.y, TAB.z], mats.dark);                                             // 몸체
+  box(gear, TAB.w - 1.6, TAB.h - 1.6, 0.06, [TAB.x, TAB.y, TAB.z + TAB.t / 2 + 0.03], mats.screen, false);       // 화면
+  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = 'Tablet'; overlay.appendChild(lab);
+  labels.push({ el: lab, at: new THREE.Vector3(TAB.x, TAB.y + TAB.h / 2 + 4.5, TAB.z), kind: 'label' });
+}
+
+/* ── 연산 장비함 하나에 Jetson Orin NX(MIC-711D-OX 캐리어 125×125×51mm)와 트리거 보드를 함께 넣는다.
+   보관 기둥(좌) 바깥 옆면 x=−59 에 밀착, 161~179cm. 캐리어가 위 칸, 트리거 보드가 아래 칸. 뚜껑은 바깥(−x)을 본다 ── */
+const S_OUT = -CW - SU / 2;                                                       // 보관 기둥(좌) 바깥 옆면 x (−59.0)
+const ENC = { w: 13.5, h: 17.5, d: 5.6, y: 170, z: SZC, face: S_OUT };
+const ENC_TOP = ENC.y + ENC.h / 2, ENC_BOT = ENC.y - ENC.h / 2, ENC_X = ENC.face - 0.4 - ENC.d / 2;   // 장비함 중심 x (−62.2)
+{
+  const g = new THREE.Group(); g.position.set(ENC.face, ENC.y, ENC.z); g.rotation.y = -Math.PI / 2; gear.add(g);   // 로컬 +z = 월드 −x, 로컬 +x = 월드 +z
+  box(g, 10, 19, 0.4, [0, 0, 0.2], mats.box2);                                                   // 마운트 판
+  box(g, ENC.w, ENC.h, ENC.d, [0, 0, 0.4 + ENC.d / 2], mats.box);
+  const lidZ = 0.4 + ENC.d + 0.15, divY = -ENC.h / 2 + 4.2;                                      // 뚜껑 두 장: 위 칸(캐리어)·아래 칸(트리거 보드)
+  const upTop = ENC.h / 2 - 0.6, upBot = divY + 0.15, loTop = divY - 0.15, loBot = -ENC.h / 2 + 0.6;
+  box(g, ENC.w - 1.2, upTop - upBot, 0.3, [0, (upTop + upBot) / 2, lidZ], mats.box2, false);
+  box(g, ENC.w - 1.2, loTop - loBot, 0.3, [0, (loTop + loBot) / 2, lidZ], mats.box2, false);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 10), mats.led); led.position.set(5.0, ENC.h / 2 - 1.6, lidZ + 0.15); g.add(led);
+  for (let k = 0; k < 5; k++) box(g, 0.25, 0.6, 4.0, [-3 + k * 1.5, ENC.h / 2 + 0.3, 0.4 + ENC.d / 2], mats.box2, false);   // 방열 핀(윗면)
+  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = 'Compute unit: Jetson Orin NX, trigger board'; overlay.appendChild(lab);
+  labels.push({ el: lab, at: new THREE.Vector3(ENC_X, ENC_TOP + 4.5, ENC.z), kind: 'label' });
+}
+
+/* ── 선: 카메라 3대가 모두 보관 기둥에 있으니 선도 보관 기둥과 보관부 상단 크로스멤버 면만 탄다(한 면에 한 레인, 30cm 마다 클립).
+   C2 : 좌 보관 기둥 앞면 → 바깥 옆면 레인 A ↑ 장비함 아래
+   C3 : 매직암 → 좌 보관 기둥 앞면 → 바깥 옆면 레인 A ↓ 장비함 위
+   C1 : 우 보관 기둥 안쪽 옆면 → 뒷면 ↑ → 보관부 상단 크로스멤버 뒷면 ← → 좌 보관 기둥 뒷면 ↓ → 바깥 옆면 레인 B → 장비함 위
+   전원: 장비함 아래 → 레인 B ↓ 바닥 → 랙 밖 ── */
+const XO = S_OUT - 0.6;                           // 바깥 옆면(x=−59 평면) 위 선 중심 x
+const ZB = FACE_RS - 0.6;                         // 뒷면(z=−99 평면: 보관 기둥·보관부 크로스멤버) 위 선 중심 z
+const LANE_A = SZC + 1.6, LANE_B = SZC - 1.6;     // 보관 기둥 바깥 옆면의 두 레인 z (−93.6 / −96.8)
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+function tube(pts, r = 0.45, mat = mats.cable) {
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+  const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(48, pts.length * 24), r, 8, false), mat); cables.add(m); return m;
+}
+// 클립: 선이 붙는 면과 방향에 따라 모양이 다르다 — vz 세로선·z면, vx 세로선·x면, hz 가로선(x 방향)·z면, vx2 x면의 두 레인을 한 클립으로
+const CLIP = { vz: [1.6, 1.0, 1.1], vx: [1.1, 1.0, 1.6], hz: [1.0, 1.6, 1.1], hy: [1.0, 1.1, 1.6], vx2: [1.1, 1.0, 4.6] };
+const clip = (x, y, z, kind = 'vz') => { const [w, h, d] = CLIP[kind]; const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats.clip); m.position.set(x, y, z); cables.add(m); };
+const camBack = (i, d = 2.2) => camInfo[i].centre.clone().sub(camInfo[i].axis.clone().multiplyScalar(d));
+const intoTop = (lane) => [V(XO, ENC_TOP + 2.5, lane), V(XO - 0.8, ENC_TOP + 1.0, lane), V(ENC_X + 1.2, ENC_TOP, lane)];   // 레인에서 장비함 윗면으로
+const intoBot = (lane) => [V(XO, ENC_BOT - 6, lane), V(XO, ENC_BOT - 2.5, lane), V(XO - 0.8, ENC_BOT - 1.0, lane), V(ENC_X + 1.2, ENC_BOT, lane)];   // 레인에서 장비함 아랫면으로
+{ // C1 (우 보관 기둥 앞면 안쪽 모서리, 27cm)
+  const b = camBack(0), xr = CW + 1.8, yc = SPEC.H - SPEC.CS / 2 - 0.8;    // 뒷면 레인 x(±57) · 크로스멤버 뒷면 선 y(236.4)
+  tube([b, V(CW - 4.4, b.y + 0.3, FACE_FS - 2.0), V(CW - 4.4, b.y + 0.6, ZB), V(CW + 0.8, b.y + 1.2, ZB), V(xr, b.y + 3.5, ZB),
+    V(xr, 60, ZB), V(xr, 120, ZB), V(xr, 180, ZB), V(xr, 228, ZB), V(xr, yc - 1.8, ZB), V(xr - 2.0, yc, ZB),
+    V(30, yc, ZB), V(0, yc, ZB), V(-30, yc, ZB), V(-xr + 2.0, yc, ZB), V(-xr, yc - 1.8, ZB), V(-xr, 228, ZB), V(-xr, 205, ZB), V(-xr, 190, ZB),
+    V(-xr - 1.6, 187.2, ZB + 0.6), V(XO, 185.5, LANE_B), ...intoTop(LANE_B)]);
+  for (let y = 60; y < 225; y += 30) clip(xr, y, ZB + 0.1, 'vz');
+  for (const x of [30, 0, -30]) clip(x, yc, ZB + 0.1, 'hz');
+  for (const y of [225, 200]) clip(-xr, y, ZB + 0.1, 'vz');
+}
+{ // C2 (좌 보관 기둥 앞면 안쪽 모서리, 21cm)
+  const b = camBack(1);
+  tube([b, V(-CW - 1.0, b.y + 0.3, FACE_FS + 0.6), V(S_OUT - 0.3, b.y + 0.6, FACE_FS + 0.2), V(XO, b.y + 0.4, LANE_A + 1.2), V(XO, b.y + 4, LANE_A),
+    V(XO, 60, LANE_A), V(XO, 100, LANE_A), V(XO, 140, LANE_A), ...intoBot(LANE_A)]);
+}
+{ // C3 (좌 보관 기둥 매직암, 194cm)
+  const b = camBack(2, 2.8);
+  tube([b, V(-49.8, 200.2, -33.2 + SHIFT_Z), V(-54.6, 191.8, -43.0 + SHIFT_Z), V(-57.6, 191.0, FACE_FS + 0.8), V(XO, 191.2, LANE_A + 1.0),
+    V(XO, 188.5, LANE_A), V(XO, ENC_TOP + 5, LANE_A), ...intoTop(LANE_A)]);
+}
+{ // 태블릿 USB 선: 아래 단자 → 우 보관 기둥 앞면 → 바깥 옆면 ↑ → 보관부 크로스멤버 윗면 ← → 좌 보관 기둥 바깥 옆면 가운데 레인 ↓ 장비함 위
+  const XOR = CW + SU / 2 + 0.6, YT = SPEC.H + 0.6, port = V(TAB.x, TAB.y - TAB.h / 2, TAB.z);
+  tube([port, V(TAB.x + 0.5, port.y - 2.5, TAB.z - 1.2), V(TAB.x + 2.5, port.y - 3.2, FACE_FS + 2.5), V(CW + 1.5, port.y - 2.8, FACE_FS + 0.6),
+    V(XOR - 0.3, port.y - 2.4, FACE_FS + 0.2), V(XOR, port.y - 1.6, SZC + 1.0), V(XOR, port.y + 2, SZC), V(XOR, 160, SZC), V(XOR, 200, SZC), V(XOR, 230, SZC),
+    V(XOR, SPEC.H - 1.5, SZC), V(XOR - 0.8, SPEC.H + 0.3, SZC), V(CW + 2, YT, SZC), V(30, YT, SZC), V(0, YT, SZC), V(-30, YT, SZC), V(-CW - 2, YT, SZC),
+    V(XO + 0.8, SPEC.H + 0.3, SZC), V(XO, SPEC.H - 1.5, SZC), V(XO, 215, SZC), V(XO, 195, SZC), V(XO, ENC_TOP + 2.5, SZC), V(XO - 0.8, ENC_TOP + 1.0, SZC), V(ENC_X + 1.2, ENC_TOP, SZC)]);
+  for (const y of [160, 190, 220]) clip(CW + SU / 2 + 0.5, y, SZC, 'vx');
+  for (const x of [30, 0, -30]) clip(x, SPEC.H + 0.5, SZC, 'hy');
+  for (const y of [228, 205]) clip(S_OUT - 0.5, y, SZC, 'vx');
+}
+{ // 전원선: 장비함 아래 → 레인 B ↓ → 바닥 → 보관 기둥 바깥으로 플러그
+  const end = V(-84, 0.6, -112);
+  tube([...intoBot(LANE_B).reverse(), V(XO, 100, LANE_B), V(XO, 50, LANE_B), V(XO, 12, LANE_B), V(XO, 3, LANE_B - 0.5),
+    V(XO - 2, 0.6, -100.5), V(-68, 0.6, -105), V(-77, 0.6, -109), end]);
+  box(cables, 2.4, 1.2, 3.6, [end.x, end.y, end.z], mats.box2);
+  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = 'Power'; overlay.appendChild(lab);
+  labels.push({ el: lab, at: end.clone().add(V(0, 7, 0)), kind: 'label' });
+}
+// 보관 기둥 바깥 옆면: 두 레인을 한 클립으로(위 구간 C3·C1, 아래 구간 C2·전원)
+for (const y of [183, 40, 70, 100, 130]) clip(S_OUT - 0.5, y, SZC, 'vx2');
+
+/* ── 치수선(설계도식): 연장선 + 치수선 + 45° 눈금 + 숫자(cm). 랙 치수는 프리셋, 카메라 높이·돌출은 보정 실측, 장비함은 설계값.
+   뒤(z<−99)에 높이 묶음을 겹겹이 두고(짧은 것이 안쪽), 왼쪽 옆 바닥에 깊이 사슬 ── */
+const dims = new THREE.Group(); scene.add(dims);
+{
+  const segs = [];
+  function dim(a, b, p, q, text, ext = 2.5) {
+    const ea = p.clone().sub(a), eb = q.clone().sub(b);                                       // 연장선(기준점 → 치수선 끝, 조금 더 나간다)
+    segs.push(a, p.clone().add(ea.clone().normalize().multiplyScalar(ext)), b, q.clone().add(eb.clone().normalize().multiplyScalar(ext)), p, q);
+    const d = q.clone().sub(p).normalize();
+    const e = ea.clone().sub(d.clone().multiplyScalar(ea.dot(d))).normalize();               // 치수선에 수직인 연장 방향(비스듬한 연장선도 처리)
+    const t = d.clone().add(e).normalize().multiplyScalar(1.7);                               // 45° 눈금
+    segs.push(p.clone().sub(t), p.clone().add(t), q.clone().sub(t), q.clone().add(t));
+    const lab = document.createElement('div'); lab.className = 'lab dim'; lab.textContent = text; overlay.appendChild(lab);
+    labels.push({ el: lab, at: p.clone().add(q).multiplyScalar(0.5), kind: 'dim' });
+  }
+  const c1 = camInfo[0].centre, c2 = camInfo[1].centre, c3 = camInfo[2].centre;
+  const XL = -SPEC.W / 2, XR = SPEC.W / 2, ZF = SPEC.D / 2, ZR = -SPEC.D / 2, ZS = FACE_RS, H = SPEC.H;   // 외접 x · 케이지 앞/뒤 z · 보관 기둥 뒷면 z · 높이
+  // 뒤: 폭 118, 높이 묶음(왼쪽 C2 21 → 장비함 161 → C3 194 → 전체 241, 오른쪽 C1 27)
+  dim(V(XL, H, ZS), V(XR, H, ZS), V(XL, H, ZS - 15), V(XR, H, ZS - 15), String(SPEC.W));
+  dim(V(XL, 0, ZS), V(XL, H, ZS), V(XL, 0, ZS - 45), V(XL, H, ZS - 45), String(H));
+  dim(V(XL, 0, ZS), c3, V(XL, 0, ZS - 35), V(XL, c3.y, ZS - 35), c3.y.toFixed(0));
+  dim(V(XL, 0, ZS), V(ENC_X, ENC_BOT, ENC.z - ENC.w / 2), V(XL, 0, ZS - 25), V(XL, ENC_BOT, ZS - 25), ENC_BOT.toFixed(0));
+  dim(V(XL, 0, ZS), c2, V(XL, 0, ZS - 15), V(XL, c2.y, ZS - 15), c2.y.toFixed(0));
+  dim(V(XR, 0, ZS), c1, V(XR, 0, ZS - 15), V(XR, c1.y, ZS - 15), c1.y.toFixed(0));
+  dim(V(XR, 0, ZS), V(TAB.x + TAB.w / 2, TAB.y, TAB.z), V(XR, 0, ZS - 25), V(XR, TAB.y, ZS - 25), String(TAB.y));   // 태블릿 중심 높이
+  // 왼쪽 옆 바닥: 깊이 사슬(케이지 106 · 후면 클리어 38.4)과 전체 152
+  dim(V(XL, 0, ZF), V(XL, 0, ZR), V(XL - 13, 0, ZF), V(XL - 13, 0, ZR), String(SPEC.D));
+  dim(V(XL, 0, ZR), V(XL, 0, FACE_FS), V(XL - 13, 0, ZR), V(XL - 13, 0, FACE_FS), String(SPEC.storageOffset));
+  dim(V(XL, 0, ZF), V(XL, 0, ZS), V(XL - 25, 0, ZF), V(XL - 25, 0, ZS), (ZF - ZS).toFixed(0));
+  // 장비함 높이 17.5 · C3 매직암 돌출(보관 기둥 앞면에서 카메라 중심까지)
+  const xe = ENC_X - ENC.d / 2 - 0.3;
+  dim(V(xe, ENC_BOT, ENC.z), V(xe, ENC_TOP, ENC.z), V(xe - 9, ENC_BOT, ENC.z), V(xe - 9, ENC_TOP, ENC.z), String(ENC.h));
+  dim(V(c3.x, c3.y, FACE_FS), c3, V(c3.x, c3.y - 12, FACE_FS), V(c3.x, c3.y - 12, c3.z), (c3.z - FACE_FS).toFixed(1));
+  dims.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(segs), mats.dim));
+}
+
+/* ── 시점: tracker3d 의 궤도 조작(한 손가락 회전 · 두 손가락 핀치 · 휠). 리포트 시점 = 카메라 무리 뒤에서 ── */
+const VIEWS = {
+  report: { target: V(0, 100, -35), theta: -2.39, phi: 1.2, radius: 510 },
+  gear:   { target: V(-60, 150, -85), theta: -2.25, phi: 1.25, radius: 300 },
+  front:  { target: V(0, 110, -20), theta: 0.45, phi: 1.25, radius: 520 },
+  top:    { target: V(0, 60, -20), theta: -2.39, phi: 0.45, radius: 560 },
+  hero:   { target: V(0, 105, -30), theta: 0.62, phi: 1.22, radius: 560 },    // 히어로: 앞 오른쪽 위에서, 카메라 3대가 보는 쪽을 마주 본다
+  hero2:  { target: V(0, 105, -30), theta: -0.55, phi: 1.2, radius: 560 },
+};
+const target = new THREE.Vector3(); let theta = 0, phi = 1.2, radius = 470;
+const apply = () => {
+  cam.position.set(target.x + radius * Math.sin(phi) * Math.sin(theta), target.y + radius * Math.cos(phi), target.z + radius * Math.sin(phi) * Math.cos(theta));
+  cam.lookAt(target);
+};
+const tmp = new THREE.Vector3();
+const show = { fov: true, cable: true, label: !HERO, dim: !HERO };
+const draw = () => {
+  fovGroup.visible = show.fov; cables.visible = show.cable; dims.visible = show.dim;
+  renderer.render(scene, cam);
+  const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
+  labels.forEach(({ el, at, kind }) => {
+    tmp.copy(at).project(cam); const hidden = tmp.z > 1 || (kind === 'label' && !show.label) || (kind === 'dim' && !show.dim);
+    el.style.visibility = hidden ? 'hidden' : 'visible';
+    if (!hidden) el.style.transform = `translate(-50%,-50%) translate(${((tmp.x + 1) / 2 * w).toFixed(1)}px,${((1 - tmp.y) / 2 * h).toFixed(1)}px)`;
+  });
+};
+function setView(name) {
+  const v = VIEWS[name] || VIEWS.report;
+  target.copy(v.target); theta = v.theta; phi = v.phi; radius = v.radius; apply(); draw();
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === name)));
+}
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+document.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
+  show[b.dataset.toggle] = !show[b.dataset.toggle]; b.setAttribute('aria-pressed', String(show[b.dataset.toggle])); draw();
+}));
+const el = renderer.domElement, pts = new Map(); let drag = null, pinch = null;
+const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+el.addEventListener('pointerdown', e => { armed = true; pts.set(e.pointerId, [e.clientX, e.clientY]); try { el.setPointerCapture(e.pointerId); } catch (_) { /* no pointer */ }
+  if (pts.size === 1) { drag = [e.clientX, e.clientY]; pinch = null; } else if (pts.size === 2) { drag = null; pinch = { d0: dist(), r0: radius }; } });
+el.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && pts.size >= 2) { const d = dist(); if (d > 0) { radius = Math.min(1500, Math.max(120, pinch.r0 * pinch.d0 / d)); apply(); draw(); } return; }
+  if (!drag) return; theta -= (e.clientX - drag[0]) * 0.006; phi = Math.min(1.5, Math.max(0.1, phi - (e.clientY - drag[1]) * 0.006)); drag = [e.clientX, e.clientY]; apply(); draw(); });
+const lift = e => { pts.delete(e.pointerId); pinch = null; drag = pts.size === 1 ? [...pts.values()][0].slice() : null; };
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => el.addEventListener(ev, lift));
+let armed = false;   // the wheel zooms only once the scene has been grabbed, so the page above still scrolls
+el.addEventListener('wheel', e => { if (!armed) return; e.preventDefault(); radius = Math.min(1500, Math.max(120, radius * (1 + e.deltaY * 0.001))); apply(); draw(); }, { passive: false });
+const fit = () => { const r = stage.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return;
+  renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; cam.updateProjectionMatrix(); apply(); draw(); };
+new ResizeObserver(fit).observe(stage);
+
+const first = (location.hash || '').replace('#', '');
+applyTheme(); setView(VIEWS[first] ? first : 'report'); fit();
+window.__setView = setView; window.__show = (k, v) => { show[k] = v; draw(); };
+window.__cam = (v) => { if (v.theta !== undefined) theta = v.theta; if (v.phi !== undefined) phi = v.phi; if (v.radius !== undefined) radius = v.radius; apply(); draw(); return { theta, phi, radius }; };   // 캡처 스크립트용(궤도 프레임)
+window.__view = { get theta() { return theta; }, get phi() { return phi; }, get radius() { return radius; } };
+window.__render = () => new Promise(r => { draw(); requestAnimationFrame(() => r(true)); });
+window.__png = () => { draw(); return renderer.domElement.toDataURL('image/png'); };
+document.fonts.ready.then(() => { draw(); window.__rendered = true; document.documentElement.dataset.ready = '1'; if (parent !== window) { try { parent.postMessage({ hw: 'ready', page: location.pathname }, '*'); } catch (_) { /* no parent */ } } });
+</script>
+</body>
+</html>
