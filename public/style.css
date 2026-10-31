@@ -368,7 +368,6 @@ img, video { display: block; max-width: 100%; height: auto; }
 .links { display: flex; gap: 16px; flex-wrap: wrap; margin: 18px 0 0; font-size: 14px; }
 .links a { color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: 1px; }
 .links a:hover { color: var(--tint); border-color: var(--tint); }
-.hw-photos { margin-top: clamp(36px, 6vh, 64px); }
 
 /* demo: the player on a sheet */
 .demo { padding: 10px; }
