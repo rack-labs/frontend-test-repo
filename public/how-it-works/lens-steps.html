@@ -74,6 +74,17 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .inset canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .inset .cap{position:absolute;left:7px;top:5px;font:600 10.5px/1 var(--mono);color:var(--muted);pointer-events:none}
 @media (max-width:640px){ .inset{display:none} .hint{display:none} }   /* 좁은 화면에서는 탭과 겹치는 조작 안내도 숨긴다 */
+/* 사이트 끼워 넣기용(?embed=1&bg=eceef1): 탭을 숨기고 단계를 차례로 돌린다. 얇은 진행 막대 하나와 상자 없는 자막만. 바탕은 ?bg= 로 받는다 */
+body.embed{background:var(--bg)}
+body.embed .v3d{background:transparent;bottom:92px}
+body.embed .tabs{display:none}
+body.embed .inset{bottom:auto;top:12px;right:12px}
+.player{position:absolute;z-index:5;left:0;right:0;bottom:0;padding:0 max(12px,env(safe-area-inset-left,0px)) max(10px,env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none}
+.player .card{width:min(820px,100%);display:grid;gap:10px;justify-items:center;text-align:center}
+.player .cap{display:grid;align-content:end;margin:0;font-size:15px;line-height:1.5;min-height:3em;text-wrap:balance}
+.player .bar{width:100%;height:3px;border-radius:2px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden}
+.player .bar i{display:block;height:100%;width:0;background:var(--accent)}
+@media (max-width:560px){ body.embed .v3d{bottom:112px} .player .cap{min-height:4.5em} }
 .err{display:flex;align-items:center;justify-content:center;height:100%;font:600 12px/1.4 var(--mono);color:var(--muted);padding:16px;text-align:center}
 /* 숨김: 조작 안내 · 시점/층 줄. 단계 탭은 작게 남긴다(주소의 #s1~#s6 도 됨, hashchange 에 반응) */
 .hint,.toolbar .row{display:none!important}
@@ -109,6 +120,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     </div>
   </div>
   <div class="inset" id="inset" aria-label="카메라가 보는 이미지"><canvas id="imgview"></canvas><span class="cap">카메라 이미지 · 1920×1200 px</span></div>
+  <!-- 끼워 넣기 모드에서만 보인다: 단계 자막과 진행 막대 -->
+  <div class="player" id="player" hidden>
+    <div class="card"><p class="cap" id="cap"></p><div class="bar" aria-label="진행"><i id="fill"></i></div></div>
+  </div>
 </main>
 
 <script type="module">
@@ -177,6 +192,13 @@ const PICK0 = POSES.slice(0, N_VIEWS).reduce((best, p) => { const X = p.center[0
 /* ═══════════════════ 상태 — 조작은 단계 탭뿐. pick(3·4 단계 자세)·hold(5 단계 뺄 묶음)·solvedK(4 단계 산출 전/뒤)는 고정값 ═══════════════════ */
 const state = { stage: 1, view: 'free', layers: { axes: true, fov: true, grid: true, rays: true, inset: true }, views: N_VIEWS, pick: PICK0, solvedK: false, hold: 2 };
 const $ = (s, el = document) => el.querySelector(s);
+/* ?embed=1 — 사이트에 끼워 넣는 화면: 단계를 차례로 돌리고 자막과 진행 막대만 보인다. ?bg=eceef1 — 바탕색(섹션과 같게) */
+const Q = new URLSearchParams(location.search), EMBED = Q.get('embed') === '1';
+if (EMBED) {
+  document.body.classList.add('embed');
+  const bg = Q.get('bg') || '';
+  if (/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(bg)) document.documentElement.style.setProperty('--bg', '#' + bg);
+}
 
 /* ═══════════════════ 뷰어 (「위치 보정 3단계」의 격벽·눈금·점 짚기·궤도·지시선 칩을 그대로 옮김) ═══════════════════ */
 const VIEWS = { free: [2.45, 1.12], top: [Math.PI, 0.05], front: [Math.PI, 1.42], side: [Math.PI / 2, 1.42] };
@@ -697,6 +719,33 @@ applyHash();
 addEventListener('hashchange', () => { applyHash(); refresh(); });
 refresh();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => refresh());
+
+/* 끼워 넣기: 여섯 단계를 차례로(4 단계는 K 첫 추정과 산출 뒤 두 번), 단계마다 자막 한 줄. 끝나면 처음부터, 화면 밖에서는 멈춘다 */
+if (EMBED) {
+  const SEQ = [
+    { stage: 1, dur: 6, cap: '촬영 조건을 먼저 잠급니다. 초점과 줌이 보정 뒤에 달라지면 그 K 는 무효가 됩니다.' },
+    { stage: 2, dur: 6, cap: `보드를 자세 ${N_VIEWS}가지로 찍습니다. 보드가 이미지 평면을 고루 덮어야 하고, ${MIN_VIEWS}장보다 적으면 풀지 않습니다.` },
+    { stage: 3, dur: 6, cap: '사진마다 보드의 코너를 검출합니다. 코너 픽셀 하나가 보드 좌표 하나와 짝이 됩니다.' },
+    { stage: 4, dur: 5, solvedK: false, cap: '짝에서 K 를 처음 추정합니다. 보드 점을 다시 투영하면 검출 픽셀과 어긋나는 잔차가 보입니다.' },
+    { stage: 4, dur: 6, solvedK: true, cap: 'K 와 왜곡 계수와 자세를 같이 고쳐 잔차를 줄입니다. 이 회차의 재투영 RMS 는 ' + FILE.rms + ' px 입니다.' },
+    { stage: 5, dur: 6, cap: '풀 때 뺀 묶음의 코너로 검산합니다. 픽셀 오차를 사람이 서는 깊이 ' + (DEPTH / 100).toFixed(1) + ' m 에서의 cm 로 바꿔 봅니다.' },
+    { stage: 6, dur: 6, cap: 'K 4개와 왜곡 계수 5개를 파일로 적습니다. 위치 보정과 측정이 이 파일을 읽습니다.' },
+  ];
+  const player = $('#player'), capEl = $('#cap'), fill = $('#fill');
+  let k = 0, t = 0, last = 0, raf = 0, on = true;
+  const show = () => { const s = SEQ[k]; state.stage = s.stage; state.solvedK = !!s.solvedK; capEl.textContent = s.cap; refresh(); };
+  const tick = now => {
+    raf = 0;
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    t += dt;
+    if (t >= SEQ[k].dur) { t = 0; k = (k + 1) % SEQ.length; show(); }
+    fill.style.width = ((k + t / SEQ[k].dur) / SEQ.length * 100).toFixed(2) + '%';
+    if (on) raf = requestAnimationFrame(tick);
+  };
+  const run = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } };
+  player.hidden = false; show(); run();
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { on = es.some(e => e.isIntersecting); if (on) run(); }, { threshold: 0.05 }).observe(document.body);
+}
 </script>
 
 </body></html>

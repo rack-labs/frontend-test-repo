@@ -340,7 +340,6 @@ img, video { display: block; max-width: 100%; height: auto; }
 
 /* the rig: one viewer on a sheet, the part picked beside it */
 .hw { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(24px, 4vw, 56px); align-items: start; margin-top: clamp(32px, 5vh, 56px); }
-.hw-sheet { padding: 10px; }
 /* on the home page the drawing sits straight on the section, no sheet, no border, like the hero */
 .hw-stage { position: relative; }
 .hw-frame { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: transparent; }
@@ -348,8 +347,8 @@ img, video { display: block; max-width: 100%; height: auto; }
 .hw-frame img { object-fit: cover; }
 .hw-frame iframe { border: 0; opacity: 0; transition: opacity .6s ease; }
 .hw-frame.ready iframe { opacity: 1; }
-.hw-bar, .deck-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 6px 2px; }
-.hw-actions, .deck-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.deck-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 6px 2px; }
+.deck-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .hw-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
 .hw-tabs [role=tab] {
   font: 500 14px/1 var(--display); padding: 10px 16px; cursor: pointer;
@@ -399,11 +398,14 @@ img, video { display: block; max-width: 100%; height: auto; }
 .hiw .cols { margin-bottom: clamp(24px, 4vh, 40px); }
 .hiw .text .lede + .lede { margin-top: 14px; }
 .facts.look { margin-top: 0; }
-.facts.look dd { font-size: 14px; }
+.facts.look > div { grid-template-columns: auto minmax(0, 1fr); }
+.facts.look dt { white-space: nowrap; }
+.facts.look dd { font-size: 14px; text-align: left; }
 .facts.look ul { margin: 6px 0 0; padding-left: 18px; color: var(--dim); line-height: 1.55; }
 .facts.look li + li { margin-top: 4px; }
-.hiw-frame { aspect-ratio: 16 / 10; }
-.hiw-frame.tall { aspect-ratio: 4 / 3; }
+/* each frame fits the window height, so the caption and the progress bar are in view with the drawing */
+.hiw-frame { aspect-ratio: 16 / 10; max-width: calc(80vh * 1.6); margin: 0 auto; }
+.hiw-frame.tall { aspect-ratio: 4 / 3; max-width: calc(80vh * 4 / 3); }
 .hiw-frame .placeholder { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font: 13px/1.5 var(--mono); color: var(--muted); }
 .hiw-frame iframe { opacity: 0; transition: opacity .5s ease; }
 .hiw-frame.ready iframe { opacity: 1; }

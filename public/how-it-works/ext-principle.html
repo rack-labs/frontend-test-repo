@@ -80,6 +80,20 @@ body.video .card{background:none;border:0;box-shadow:none;width:min(1100px,100%)
 body.video .meta{font-size:13px;justify-content:center}
 body.video .meta .file{background:none;padding:0;color:var(--muted)}
 body.video .cap{font-size:20px;line-height:1.55;min-height:0;max-width:none;text-align:center;text-wrap:balance}
+/* 사이트 끼워 넣기용(?embed=1&bg=eceef1): 탭·시점·단계 이름·버튼·안내를 숨기고, 얇은 진행 막대 하나와 상자 없는 자막만 남긴다.
+   바탕은 ?bg= 로 받아 섹션과 같은 색으로 그린다. 끝나면 처음부터 다시 돌고, 화면 밖에 있는 동안은 멈춘다 */
+body.embed{background:var(--bg)}
+body.embed .v3d{background:transparent;bottom:92px}
+body.embed .top,body.embed .meta,body.embed .ctl{display:none}
+body.embed .player{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-bottom:max(10px,env(safe-area-inset-bottom,0px))}
+body.embed .card{background:none;border:0;box-shadow:none;width:min(820px,100%);padding:0;gap:10px;justify-items:center;text-align:center}
+body.embed .cap{display:grid;align-content:end;font-size:15px;line-height:1.5;min-height:3em;max-width:none;text-align:center;text-wrap:balance}
+body.embed .row{width:100%}
+body.embed .bar{gap:0;height:3px;min-width:0;border-radius:2px;overflow:hidden;background:color-mix(in srgb,var(--fg) 12%,transparent)}
+body.embed .bar .st{gap:0}
+body.embed .bar .sg{min-width:0;border-radius:0;background:transparent}
+body.embed .bar .sg[aria-current="true"]{box-shadow:none}
+@media (max-width:560px){ body.embed .v3d{bottom:112px} body.embed .cap{min-height:4.5em} }
 .err{display:flex;align-items:center;justify-content:center;height:100%;font:600 12px/1.4 var(--mono);color:var(--muted);padding:16px;text-align:center}
 </style>
 
@@ -278,8 +292,14 @@ const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (s, el = document) => el.querySelector(s);
 /* ?video=1 — 영상 저장용 화면(버튼 숨김). ?render=1 — 밖에서 window.__seek(비트, 초) 로 프레임을 찍는다(자동 재생·시계 없음) */
 const Q = new URLSearchParams(location.search);
-const VIDEO = Q.get('video') === '1', RENDER = Q.get('render') === '1';
+const VIDEO = Q.get('video') === '1', RENDER = Q.get('render') === '1', EMBED = Q.get('embed') === '1';
 if (VIDEO) document.body.classList.add('video');
+/* ?embed=1 — 사이트에 끼워 넣는 화면: 자막과 진행 막대만, 자동 재생·되풀이. ?bg=eceef1 — 바탕색(섹션과 같게) */
+if (EMBED) {
+  document.body.classList.add('embed');
+  const bg = Q.get('bg') || '';
+  if (/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(bg)) document.documentElement.style.setProperty('--bg', '#' + bg);
+}
 
 /* ═══════════════════ 뷰어 (격벽·눈금·점 짚기·궤도 + 프레임 갱신·시점 보간) ═══════════════════ */
 const VIEWS = { free: [2.45, 1.12], top: [Math.PI, 0.05], front: [Math.PI, 1.42], side: [Math.PI / 2, 1.42] };
@@ -945,8 +965,8 @@ function loop(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   const bt = beat();
   if (state.playing) {
-    if (RM) { hold += dt; if (hold >= Math.min(bt.dur, 3)) { if (state.i < BEATS.length - 1) { goto(state.i + 1); return; } state.playing = false; renderControls(); } }
-    else { state.t += dt; if (state.t >= bt.dur) { if (state.i < BEATS.length - 1) { goto(state.i + 1); return; } state.t = bt.dur; state.playing = false; renderControls(); } }
+    if (RM) { hold += dt; if (hold >= Math.min(bt.dur, 3)) { if (state.i < BEATS.length - 1) { goto(state.i + 1); return; } if (EMBED) { goto(0); return; } state.playing = false; renderControls(); } }
+    else { state.t += dt; if (state.t >= bt.dur) { if (state.i < BEATS.length - 1) { goto(state.i + 1); return; } if (EMBED) { goto(0); return; } state.t = bt.dur; state.playing = false; renderControls(); } }
   }
   viewer.frame(state.t, now);
   renderProgress();
@@ -993,6 +1013,16 @@ if (RENDER) {
 } else {
   const st = stageFromHash();
   goto(st ? BEATS.findIndex(x => x.stage === st) : 0, { play: !RM });
+  /* 끼워 넣기: 화면 밖으로 나가면 멈추고, 돌아오면 이어서 돈다(한 페이지에 애니메이션 다섯이 같이 돌지 않게) */
+  if (EMBED && 'IntersectionObserver' in window && !RM) {
+    let seen = true;
+    new IntersectionObserver(es => {
+      const on = es.some(e => e.isIntersecting);
+      if (on === seen) return; seen = on;
+      if (on) { if (!state.playing) { state.playing = true; renderControls(); ensureLoop(); } }
+      else if (state.playing) { state.playing = false; renderControls(); }
+    }, { threshold: 0.05 }).observe(document.body);
+  }
 }
 </script>
 
