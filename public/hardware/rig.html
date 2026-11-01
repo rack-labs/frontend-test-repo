@@ -27,9 +27,6 @@
   .lab.ko { font: 500 11px/1 var(--font); color: var(--fg-2); background: var(--surface); padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line); }
   .lab.dim { z-index: 2; font: 600 10.5px/1 var(--font-mono); color: #1f2937; background: var(--surface); padding: 1px 3px; }
   .tick { position: absolute; left: 0; top: 0; z-index: 1; transform: translate(-50%, -50%); font: 600 10px/1 var(--font-mono); }
-  .note { position: absolute; left: 10px; bottom: 8px; font: 600 10.5px/1 var(--font-mono); }
-  .legend { position: absolute; right: 10px; bottom: 8px; font: 500 10.5px/1.5 var(--font); color: var(--fg-3); text-align: right; }
-  @media (max-width: 540px) { .note, .legend { display: none; } }   /* in a phone-wide frame the two lines run into each other */
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -50,8 +47,8 @@ const Q = new URLSearchParams(location.search);
 const KO = Q.get('lang') === 'ko';
 if (KO) document.documentElement.lang = 'ko';
 const T = KO
-  ? { tablet: '태블릿', enc: '연산 장비함', power: '전원', note: '바닥 격자와 치수는 cm, 높이는 바닥 기준', legend: '카메라마다 선 하나, USB 케이블과 노출 신호선이 함께 갑니다. 태블릿은 USB 케이블 하나<br>장비함 하나에 Jetson Orin NX, 트리거 보드, USB 허브' }
-  : { tablet: 'Tablet', enc: 'Compute unit', power: 'Power', note: 'Floor grid and dimensions in cm, heights from the floor', legend: 'One line per camera: its USB cable and exposure-signal wire run together. The tablet has one USB cable<br>One enclosure holds the Jetson Orin NX, the trigger board and the USB hub' };
+  ? { tablet: '태블릿', enc: '장비함', power: '전원' }
+  : { tablet: 'Tablet', enc: 'Compute enclosure', power: 'Power' };
 // ?bg=eceef1: the page colour behind the drawing, so the frame blends into the page that embeds it
 const BGQ = (new URLSearchParams(location.search).get('bg') || '').replace(/[^0-9a-fA-F]/g, '');
 if (BGQ) { document.documentElement.style.setProperty('--bg', '#' + BGQ); document.documentElement.style.setProperty('--surface', '#' + BGQ); }
@@ -84,7 +81,7 @@ const applyTheme = () => {
   C = HERO ? PAL.hero : PAL.light;
   if (HERO) { mats.steel.opacity = 0.22; mats.steelEdge.opacity = 0.6; }
   for (const k of Object.keys(mats)) if (C[k] !== undefined) mats[k].color.setHex(C[k]);
-  overlay.querySelectorAll('.tick, .note').forEach(el => { el.style.color = C.text; });
+  overlay.querySelectorAll('.tick').forEach(el => { el.style.color = C.text; });
   draw();
 };
 
@@ -105,10 +102,6 @@ const major = (v, R) => HERO ? v % 100 === 0 : (v === R[0] || v === R[1]);
   const tick = (t, p) => { const el = document.createElement('div'); el.className = 'tick'; el.textContent = t; overlay.appendChild(el); labels.push({ el, at: p, kind: 'tick' }); };
   for (let x = RX[0]; x <= RX[1]; x += STEP) tick(String(x), new THREE.Vector3(x, 0, RZ[1] + STEP * 0.35));
   for (let z = RZ[0]; z <= RZ[1]; z += STEP) tick(String(-z), new THREE.Vector3(RX[0] - STEP * 0.35, 0, z));
-  const note = document.createElement('div'); note.className = 'note'; note.textContent = T.note; overlay.appendChild(note);
-  const legend = document.createElement('div'); legend.className = 'legend';
-  legend.innerHTML = T.legend;
-  overlay.appendChild(legend);
 }
 
 /* ── 파워랙: rack-presets.json 의 pvc_prototype(제작 실측) 치수. 부재 배치는 scratch-rack-geom.js createPowerRack 과 같다 ── */

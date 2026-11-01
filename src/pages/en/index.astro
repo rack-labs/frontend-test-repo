@@ -26,19 +26,18 @@ const PDF = { href: '/report/RackTracker_Project_Report.pdf', size: '8 MB', page
 
 const parts = [
   {
-    id: 'rig', tab: 'Rig layout', title: 'Rig layout, 3D', alt: 'Rig layout drawing: the rack, three cameras, the tablet and the compute enclosure', kicker: 'The rig as built',
-    lede: 'A power-rack mock-up with the three cameras on its rear storage posts, the tablet on the right post and the compute enclosure on the left one. The camera poses are the real ones from the position calibration of 28 August 2026, so what the viewer shows is where the cameras actually look.',
+    id: 'rig', tab: 'Rig layout', title: 'Rig layout, 3D', alt: 'Rig layout drawing: the rack, three cameras, the tablet and the compute enclosure',
     spec: [
       ['Rack', '118 × 106 × 241 cm, PVC mock-up'],
       ['Cameras', '3 on the rear posts, turned 90° to portrait'],
-      ['Compute', 'Jetson Orin NX 16 GB, in one enclosure with the trigger board'],
+      ['Edge computer', 'Jetson Orin NX 16 GB, in one enclosure with the trigger board'],
       ['Display', 'tablet, USB tethered'],
     ],
     links: [['/report/#4-리그-하드웨어', 'Report, chapter 4'], ['/how-it-works/', 'How it works']],
   },
   {
-    id: 'carrier', tab: 'Compute unit', title: 'Compute carrier, 3D', alt: 'The Advantech carrier board with the Jetson Orin NX on it', kicker: 'Jetson Orin NX on an Advantech MIC-711D-OX',
-    lede: 'The computer beside the rack. An NVIDIA Jetson Orin NX module sits on an Advantech carrier in a fanless aluminium case; the board is drawn from photographs of the unit in the rig, every part taller than a millimetre in place. It runs the joint detector, the triangulation and everything after it.',
+    id: 'carrier', tab: 'Edge computer', title: 'Edge computer, 3D', alt: 'The Advantech carrier board with the Jetson Orin NX on it', kicker: 'Jetson Orin NX on an Advantech MIC-711D-OX',
+    lede: 'The edge inference and compute unit. Everything from joint detection to load calculation finishes here.',
     spec: [
       ['Module', 'Jetson Orin NX 16 GB, 157 TOPS'],
       ['GPU', '1,024 CUDA cores, 2 DLA engines'],
@@ -49,7 +48,7 @@ const parts = [
   },
   {
     id: 'camera', tab: 'Camera module', title: 'Camera module, 3D', alt: 'The camera module board with the AR0234 sensor', kicker: 'DECXIN-3081V1 with the onsemi AR0234 sensor',
-    lede: 'One of the three cameras, without its housing: a 38 mm board with a global-shutter sensor and a wide, low-distortion M12 lens. The three fire together on one hardware trigger line, so a fast bar and limbs are caught straight and at the same instant in all three views.',
+    lede: 'One of the three, the board without its housing. The global shutter keeps a fast bar and limbs straight, and one trigger line makes the three cameras take the same instant.',
     spec: [
       ['Sensor', 'onsemi AR0234CS, global shutter'],
       ['Resolution', '1920 × 1200 at 30 fps'],
@@ -203,17 +202,17 @@ const parts = [
           </div>
         </div>
         <div class="hw-side">
-          <p class="lede">RackTracker is a physical product: three global-shutter cameras and an NVIDIA Jetson fixed to the rack, with the software that runs on it, installed as one unit per rack. The joints found in the three views are intersected into 3D positions, and when one view is occluded the other two carry it.</p>
-          <p>Because the setup never changes, every session compares with the last one on the same footing. Processing finishes on the computer beside the rack, on a closed network, so member video never leaves the gym.</p>
+          <p class="lede">Three cameras, an edge computer and the software, installed as one unit per rack. The joints found from three directions are intersected into 3D positions, and when one camera is occluded the other two carry on.</p>
+          <p>With the cameras fixed to the rack, the capture conditions are standardized. Video never leaves the rig.</p>
           <dl class="facts row">
-            <div><dt>Shutter spread across three cameras</dt><dd>0.12 ms<small>measured with a logic analyzer</small></dd></div>
-            <div><dt>Joints recovered with three cameras</dt><dd>70%<small>CMU Panoptic. Standard triangulation: 40%</small></dd></div>
-            <div><dt>Joint position error</dt><dd>~3 cm<small>the same as with two cameras</small></dd></div>
+            <div><dt>Shutter offset, three cameras</dt><dd>0.12 ms<small>measured with a logic analyzer; up to 16.7 ms without the trigger</small></dd></div>
+            <div><dt>Joints recovered</dt><dd>70%<small>standard triangulation 40%, same three cameras, public dataset</small></dd></div>
+            <div><dt>Joint position error</dt><dd>3.6 cm<small>4.5 cm before refinement, on Fit3D</small></dd></div>
           </dl>
           {parts.map((p, i) => (
             <div class="hw-panel" id={`hw-${p.id}`} data-page={p.id} role="tabpanel" aria-labelledby={`tab-${p.id}`} hidden={i !== 0}>
-              <p class="kicker">{p.kicker}</p>
-              <p>{p.lede}</p>
+              {p.kicker && <p class="kicker">{p.kicker}</p>}
+              {p.lede && <p>{p.lede}</p>}
               <dl class="spec">
                 {p.spec.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}
               </dl>
