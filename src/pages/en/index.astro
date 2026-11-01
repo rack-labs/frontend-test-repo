@@ -26,44 +26,35 @@ const PDF = { href: '/report/RackTracker_Project_Report.pdf', size: '8 MB', page
 
 const parts = [
   {
-    id: 'rig', tab: 'Rig layout', title: 'Rig layout, 3D', kicker: 'The rig as built',
+    id: 'rig', tab: 'Rig layout', title: 'Rig layout, 3D', alt: 'Rig layout drawing: the rack, three cameras, the tablet and the compute enclosure', kicker: 'The rig as built',
     lede: 'A power-rack mock-up with the three cameras on its rear storage posts, the tablet on the right post and the compute enclosure on the left one. The camera poses are the real ones from the position calibration of 28 August 2026, so what the viewer shows is where the cameras actually look.',
     spec: [
-      ['Rack', '118 × 106 × 241 cm', 'PVC mock-up of a power rack, built to measure'],
-      ['Cameras', '3, on the rear posts', 'turned 90° so a person 2 m away fits one frame top to toe'],
-      ['Trigger', 'one pulse to all three', 'exposure spread across the cameras 0.12 ms (median)'],
-      ['Capture', '1920 × 1200 at 30 fps', 'MJPG, three cameras on one powered USB 3 hub'],
-      ['Compute', 'Jetson Orin NX 16 GB', 'in one enclosure with the trigger board and the hub'],
-      ['Display', 'tablet, USB tethered', 'a closed link: no video leaves the rack'],
-      ['Sync', '100% of pulses', '900 of 900 per camera once USB 3 power saving was off'],
+      ['Rack', '118 × 106 × 241 cm, PVC mock-up'],
+      ['Cameras', '3 on the rear posts, turned 90° to portrait'],
+      ['Compute', 'Jetson Orin NX 16 GB, in one enclosure with the trigger board'],
+      ['Display', 'tablet, USB tethered'],
     ],
     links: [['/report/#4-리그-하드웨어', 'Report, chapter 4'], ['/how-it-works/', 'How it works']],
   },
   {
-    id: 'carrier', tab: 'Compute unit', title: 'Compute carrier, 3D', kicker: 'Jetson Orin NX on an Advantech MIC-711D-OX',
+    id: 'carrier', tab: 'Compute unit', title: 'Compute carrier, 3D', alt: 'The Advantech carrier board with the Jetson Orin NX on it', kicker: 'Jetson Orin NX on an Advantech MIC-711D-OX',
     lede: 'The computer beside the rack. An NVIDIA Jetson Orin NX module sits on an Advantech carrier in a fanless aluminium case; the board is drawn from photographs of the unit in the rig, every part taller than a millimetre in place. It runs the joint detector, the triangulation and everything after it.',
     spec: [
-      ['Module', 'Jetson Orin NX 16 GB', 'Super mode: 157 TOPS, 8-core Arm Cortex-A78AE at 2.0 GHz'],
-      ['GPU', '1,024 CUDA cores, 1,173 MHz', 'Ampere, with two DLA engines'],
-      ['Memory', '16 GB LPDDR5', 'NVMe SSD on the M.2 2280 slot'],
-      ['Power', '10 to 40 W', 'passive cooling, no fan'],
-      ['Carrier', 'MIC-711D-OX', '125 × 124.14 × 50.62 mm'],
-      ['I/O used', 'USB 3.2 Gen1 × 2, USB 2.0, GbE', 'the cameras on one hub, the tablet on the other port'],
-      ['Software', 'JetPack 6.2.1, TensorRT', 'the rig OS and the kiosk server, Linux'],
+      ['Module', 'Jetson Orin NX 16 GB, 157 TOPS'],
+      ['GPU', '1,024 CUDA cores, 2 DLA engines'],
+      ['Power', '10 to 40 W, no fan'],
+      ['I/O used', 'USB 3.2 Gen1 × 2, USB 2.0, GbE'],
     ],
     links: [['https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/', 'NVIDIA Jetson Orin'], ['https://www.advantech.com/en/search?q=MIC-711D-OX', 'Advantech MIC-711D-OX'], ['/report/#4-2-연산-장비와-usb', 'Report, 4-2']],
   },
   {
-    id: 'camera', tab: 'Camera module', title: 'Camera module, 3D', kicker: 'DECXIN-3081V1 with the onsemi AR0234 sensor',
+    id: 'camera', tab: 'Camera module', title: 'Camera module, 3D', alt: 'The camera module board with the AR0234 sensor', kicker: 'DECXIN-3081V1 with the onsemi AR0234 sensor',
     lede: 'One of the three cameras, without its housing: a 38 mm board with a global-shutter sensor and a wide, low-distortion M12 lens. The three fire together on one hardware trigger line, so a fast bar and limbs are caught straight and at the same instant in all three views.',
     spec: [
-      ['Sensor', 'onsemi AR0234CS', '1/2.6-inch, 2.3 MP, global shutter'],
-      ['Resolution', '1920 × 1200', 'used at 30 fps per camera'],
-      ['Lens', 'M12, 4.1 mm, F2.0', 'about 120°, low distortion; calibrated per camera'],
-      ['Board', '38 × 38 mm', 'four M2 holes on a 34 mm pitch'],
-      ['Interface', 'USB 3.0, USB-C', 'UVC; MJPG when three stream on one hub'],
-      ['Trigger', 'TRG / STRB / GND header', 'one frame per rising edge of the external trigger'],
-      ['Exposure', 'fixed per session', 'auto exposure, white balance and focus are off'],
+      ['Sensor', 'onsemi AR0234CS, global shutter'],
+      ['Resolution', '1920 × 1200 at 30 fps'],
+      ['Lens', 'M12, 4.1 mm, F2.0, about 120°'],
+      ['Trigger', 'TRG pin, one frame per rising edge'],
     ],
     links: [['https://www.onsemi.com/products/sensors/image-sensors/ar0234cs', 'onsemi AR0234CS'], ['/report/#4-1-카메라와-동기-트리거', 'Report, 4-1'], ['/how-it-works/#shutter', 'Shutter, how it works']],
   },
@@ -191,35 +182,35 @@ const parts = [
         <h2 id="hw-title">The rig</h2>
         <p>Three cameras, a trigger board, an edge computer and a tablet, fixed to one power rack</p>
       </div>
-      <div class="cols">
-        <div class="text">
-          <p class="lede">RackTracker is a physical product: three global-shutter cameras and an NVIDIA Jetson fixed to the rack, with the software that runs on it, installed as one unit per rack. The cameras fire on one electrical trigger, the joints found in each view are intersected from three directions, and when one view is occluded the other two carry it.</p>
-          <p>Because the setup never changes, every session compares with the last one on the same footing. Processing finishes on the computer beside the rack, on a closed network, so member video never leaves the gym.</p>
-        </div>
-        <dl class="facts">
-          <div><dt>Shutter spread across three cameras</dt><dd>0.12 ms<small>measured with a logic analyzer</small></dd></div>
-          <div><dt>Joints recovered with three cameras</dt><dd>70%<small>CMU Panoptic. Standard triangulation: 40%</small></dd></div>
-          <div><dt>Joint position error</dt><dd>~3 cm<small>the same as with two cameras</small></dd></div>
-        </dl>
-      </div>
-
       <div class="hw">
         <div class="hw-stage">
-          <div class="hw-frame" id="hw-frame">
-            <img class="hw-still" id="hw-still" src="/hardware/still/rig.webp" width="1200" height="900" alt="Rig layout drawing: the rack, three cameras, the tablet and the compute enclosure">
-            <iframe id="hw-view" title="Rig layout, 3D" loading="lazy"></iframe>
+          <div class="hw-tabs" role="tablist" aria-label="Part" data-page="rig">
+            {parts.map((p, i) => <button type="button" role="tab" id={`tab-${p.id}`} aria-selected={i === 0 ? 'true' : 'false'} aria-controls={`hw-${p.id}`} data-page={p.id}>{p.tab}</button>)}
+            <button type="button" class="hw-opt" aria-pressed="false" data-opt="dim" data-for="rig">Dimensions</button>
+          </div>
+          <div class="hw-frames">
+            {parts.map((p, i) => (
+              <div class:list={['hw-frame', { on: i === 0 }]} data-page={p.id} aria-hidden={i === 0 ? 'false' : 'true'} inert={i !== 0}>
+                <img src={`/hardware/still/${p.id}.webp`} width="1200" height="900" alt={p.alt} loading="lazy" decoding="async">
+                <iframe title={p.title} data-src={`/hardware/${p.id}.html?bg=eceef1${p.id === 'rig' ? '&dim=0' : ''}`} loading="lazy"></iframe>
+              </div>
+            ))}
           </div>
         </div>
         <div class="hw-side">
-          <div class="hw-tabs" role="tablist" aria-label="Part">
-            {parts.map((p, i) => <button type="button" role="tab" id={`tab-${p.id}`} aria-selected={i === 0 ? 'true' : 'false'} aria-controls={`hw-${p.id}`} data-page={p.id} data-title={p.title}>{p.tab}</button>)}
-          </div>
+          <p class="lede">RackTracker is a physical product: three global-shutter cameras and an NVIDIA Jetson fixed to the rack, with the software that runs on it, installed as one unit per rack. The joints found in the three views are intersected into 3D positions, and when one view is occluded the other two carry it.</p>
+          <p>Because the setup never changes, every session compares with the last one on the same footing. Processing finishes on the computer beside the rack, on a closed network, so member video never leaves the gym.</p>
+          <dl class="facts row">
+            <div><dt>Shutter spread across three cameras</dt><dd>0.12 ms<small>measured with a logic analyzer</small></dd></div>
+            <div><dt>Joints recovered with three cameras</dt><dd>70%<small>CMU Panoptic. Standard triangulation: 40%</small></dd></div>
+            <div><dt>Joint position error</dt><dd>~3 cm<small>the same as with two cameras</small></dd></div>
+          </dl>
           {parts.map((p, i) => (
-            <div class="hw-panel" id={`hw-${p.id}`} role="tabpanel" aria-labelledby={`tab-${p.id}`} hidden={i !== 0}>
+            <div class="hw-panel" id={`hw-${p.id}`} data-page={p.id} role="tabpanel" aria-labelledby={`tab-${p.id}`} hidden={i !== 0}>
               <p class="kicker">{p.kicker}</p>
               <p>{p.lede}</p>
               <dl class="spec">
-                {p.spec.map(([k, v, s]) => <div><dt>{k}</dt><dd>{v}<small>{s}</small></dd></div>)}
+                {p.spec.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}
               </dl>
               <p class="links">{p.links.map(([href, label]) => <a href={href} rel={href.startsWith('http') ? 'noopener' : undefined}>{label}</a>)}</p>
             </div>
@@ -227,30 +218,12 @@ const parts = [
         </div>
       </div>
       <script>
-        // One viewer frame, three pages behind it (public/hardware/*.html). The page loads only once the
-        // section is near the screen; until its first frame is drawn (it posts {hw:'ready'}) the still
-        // of that part stands in, and it stays if WebGL is missing. The pages draw on the page colour
-        // (?bg=), with no chrome of their own, so the drawing sits on the section like the hero does.
-        const frame = document.getElementById('hw-frame') as HTMLElement;
-        const view = document.getElementById('hw-view') as HTMLIFrameElement;
-        const stillImg = document.getElementById('hw-still') as HTMLImageElement;
-        const tabs = [...document.querySelectorAll<HTMLButtonElement>('.hw-tabs [role=tab]')];
-        let near = false;
-        const pageOf = (id: string) => `/hardware/${id}.html`;
-        const load = (id: string) => { frame.classList.remove('ready'); view.src = pageOf(id) + '?bg=eceef1'; };
-        const show = (btn: HTMLButtonElement) => {
-          const id = btn.dataset.page!;
-          tabs.forEach(b => { const on = b === btn; b.setAttribute('aria-selected', String(on)); (document.getElementById(b.getAttribute('aria-controls')!) as HTMLElement).hidden = !on; });
-          stillImg.src = `/hardware/still/${id}.webp`; view.title = btn.dataset.title!;
-          if (near) load(id); else frame.classList.remove('ready');
-        };
-        tabs.forEach(b => b.addEventListener('click', () => show(b)));
-        addEventListener('message', e => { if (e.data && e.data.hw === 'ready') frame.classList.add('ready'); });
-        const start = () => { near = true; const on = tabs.find(b => b.getAttribute('aria-selected') === 'true')!; load(on.dataset.page!); };
-        if ('IntersectionObserver' in window) {
-          const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); start(); } }, { rootMargin: '300px 0px' });
-          io.observe(frame);
-        } else start();
+        // Three viewer pages (public/hardware/*.html) in one stack behind the tabs, run by src/lib/viewer-tabs.js:
+        // a frame shows its still until its page has drawn, hidden pages are paused, and the others load in
+        // idle time so a tab switch is immediate. The pages draw on the page colour (?bg=), with no chrome of
+        // their own, so the drawing sits on the section like the hero does.
+        import { mountViewerTabs } from '../../lib/viewer-tabs.js';
+        mountViewerTabs(document.getElementById('hardware')!);
       </script>
     </section>
 
