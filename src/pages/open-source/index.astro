@@ -1,0 +1,120 @@
+---
+import Base from '../../layouts/Base.astro';
+import SiteBar from '../../components/SiteBar.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+// The open-source page, Korean edition (the default; English at /en/open-source/): the two
+// tools that come out of building RackTracker with Claude Code. These sections stood at the
+// foot of the home page until the home page became the review in one scroll (November 2026).
+---
+<Base
+  lang="ko"
+  title="Rack Labs 오픈 소스"
+  description="Rack Labs 가 만드는 과정에서 나와 다른 팀을 위해 공개하는 도구. 학습된 신경망을 층마다 3D 공간에 세우는 pipeplot, Claude Code 가 일하는 저장소를 위한 workflow 와 문서 저장소와 backstop 인 agent-workflow-kit."
+  ogType="website"
+  ogTitle="Rack Labs 오픈 소스"
+  ogDescription="pipeplot 과 agent-workflow-kit. RackTracker 를 만들면서 만든 도구입니다."
+  path="/open-source/"
+  alt="/en/open-source/"
+>
+  <SiteBar lang="ko" current="/open-source/" alt="/en/open-source/" />
+
+  <main id="top">
+    <section class="wing first" id="open-source" aria-labelledby="os-title">
+      <div class="head">
+        <h2 id="os-title">오픈 소스</h2>
+        <p>만드는 과정에서 나온 도구, 다른 팀을 위한 공개</p>
+      </div>
+      <p class="lede">RackTracker 를 Claude Code 로 만들면서 프로젝트 두 개가 나왔습니다. pipeplot 은 지금 서비스 중이고 코드를 오픈 소스로 공개할 예정입니다. agent-workflow-kit 은 MIT 라이선스로 GitHub 에 올라가 있습니다.</p>
+      <dl class="facts" aria-label="오픈 소스 프로젝트">
+        <div><dt><a href="#pipeplot">pipeplot</a></dt><dd>오픈 소스 공개 예정<small>pipeplot.pages.dev 에서 서비스 중</small></dd></div>
+        <div><dt><a href="#agent-workflow-kit">agent-workflow-kit</a></dt><dd>MIT, v0.2.13<small>github.com/lhk0721/agent-workflow-kit</small></dd></div>
+      </dl>
+    </section>
+
+    <section class="pp" id="pipeplot" aria-labelledby="pp-title">
+      <div class="poster" aria-hidden="true">
+        <video id="pp-video" muted loop playsinline disablepictureinpicture preload="none" poster="/assets/pipeplot-hero.webp"></video>
+        <script is:inline>
+          // The scenes render live (assets/pipeplot-live.js, pipeplot's own
+          // three.js hero) when WebGL is there and motion is allowed; the
+          // recorded loop is the fallback. Two rungs for the video, as on
+          // pipeplot: 1080p for wide screens, 720p for narrow ones.
+          (function () {
+            var v = document.getElementById('pp-video');
+            var rung = matchMedia('(max-width: 900px)').matches ? 'pipeplot-hero' : 'pipeplot-hero-1080';
+            [['webm', 'video/webm'], ['mp4', 'video/mp4']].forEach(function (t) {
+              var s = document.createElement('source');
+              s.src = '/assets/' + rung + '.' + t[0]; s.type = t[1]; v.appendChild(s);
+            });
+            var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var webgl = false;
+            try { var c = document.createElement('canvas'); webgl = !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) {}
+            var playVideo = function () { v.hidden = false; v.preload = 'auto'; v.play().catch(function () {}); };
+            if (still) return;                 // the poster still stands alone
+            if (!webgl) { playVideo(); return; }
+            import('/assets/pipeplot-live.js')
+              .then(function (m) {
+                return m.mountHeroLive(v.parentNode, {
+                  force: /hero=live/.test(location.hash),   // skip the frame-time gate, for checks
+                  onLive: function () { v.pause(); v.hidden = true; },
+                  onFallback: playVideo
+                });
+              })
+              .catch(function (e) { console.warn('[pipeplot hero] live path failed:', e); playVideo(); });
+          })();
+        </script>
+      </div>
+      <div class="veil" aria-hidden="true"></div>
+      <div class="copy">
+        <p class="kicker">pipeplot, 오픈 소스 공개 예정</p>
+        <h2 id="pp-title">신경망을 한 층씩,<br>걸어 다닐 수 있는<br>공간에 세웁니다.</h2>
+        <p class="lede">모델마다 한 쪽입니다. 모델 쪽은 실제로 학습한 가중치와 활성값을 3D 공간에 세우고, 개념 쪽은 한 사람이 그 개념을 이해한 순서대로 장면을 쌓습니다.</p>
+        <p class="lede">지금까지 AlexNet, VGG-16, GoogLeNet, ResNet-34 네 모델과 개념 쪽들이 있습니다. ML 과 DL 을 배우는 자리와 그 둘레의 커뮤니티로 키워 가고 있으며, 코드는 오픈 소스로 공개할 예정입니다.</p>
+        <div class="cta">
+          <a class="btn" href="https://pipeplot.pages.dev" rel="noopener">pipeplot 열기</a>
+          <a class="btn ghost" href="https://pipeplot.pages.dev/#models" rel="noopener">모델 보기</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wing" id="agent-workflow-kit" aria-labelledby="awk-title">
+      <div class="head">
+        <h2 id="awk-title">agent-workflow-kit</h2>
+        <p>MIT 오픈 소스. Claude Code 가 일하는 저장소를 위한 workflow, Markdown 문서 저장소, backstop</p>
+      </div>
+      <div class="cols">
+        <div class="text">
+          <p class="lede">Agent Workflow Kit 은 저장소에 세 가지를 줍니다. 요청을 이슈와 branch 와 문서로 바꾸고 git 위에서 여러 개를 동시에 돌리는 workflow, 에이전트의 컨텍스트를 작고 정확하게 유지하도록 설계한 Markdown 문서 저장소, 그리고 단계를 건너뛰면 걸리는 backstop 입니다.</p>
+          <p>이 저장소가 단일 원본입니다. 대상 저장소마다 install.mjs 로 git 추적 사본을 받으므로, 여기서 고친 것이 다음 업데이트 때 모든 저장소에 닿고 사본마다 어긋나지 않습니다.</p>
+          <dl class="facts">
+            <div><dt>버전</dt><dd>0.2.13<small>릴리스 노트와 함께 갱신</small></dd></div>
+            <div><dt>Skill</dt><dd>9개<small>issue-start, post-pr-cleanup, ui-evidence, ko-writing 등</small></dd></div>
+            <div><dt>라이선스</dt><dd>MIT<small>Node 20 이상</small></dd></div>
+          </dl>
+          <div class="cta">
+            <a class="btn" href="https://github.com/lhk0721/agent-workflow-kit" rel="noopener">GitHub 에서 보기</a>
+          </div>
+        </div>
+        <div class="figs">
+          <figure class="sheet">
+            <img src="/assets/awk-work-unit.png" width="1323" height="520" alt="작업 단위 하나의 흐름: 이슈, branch 와 worktree, 관리 문서와 포인터, 그다음 수정, 리뷰 게이트, commit, PR 과 정리" />
+            <figcaption>그림 1. 작업 단위 하나, 이슈에서 정리까지.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <SiteFooter lang="ko" />
+
+  <script is:inline>
+    // Reduced motion: show the still instead of the video
+    (function () {
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var v = document.getElementById('pp-video');
+      var img = document.createElement('img');
+      img.src = v.getAttribute('poster'); img.alt = ''; img.decoding = 'async';
+      v.replaceWith(img);
+    })();
+  </script>
+</Base>

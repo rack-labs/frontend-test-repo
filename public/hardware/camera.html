@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camera module DECXIN-3081V1 (AR0234)</title>
+<style>html, body { margin: 0; background: #fafafa; overflow: hidden; height: 100%; } canvas { display: block; }</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three/addons/" } }</script>
+</head>
+<body>
+<script type="module">
+/* Dexin DECXIN-3081V1-USB3.0 (AR0234, 렌즈 EFL 4.1 F2.0 M12) — 보유 실물 사진(2026-10-26 앞·뒤 + 영상)과 규격서 5쪽 도면.
+   치수(도면): PCB 38×38×1.6, 홀 Ø2 34 피치, 홀더 17각 · PCB 위 8.8, 앞머리까지 PCB 위 22.3. 홀더 귀(나사) 피치 20, 나사 머리는 뒷면.
+   실물 배치: 앞면은 거의 비어 있고(오른쪽 위 작은 IC 묶음, 금색 패드 배열 2, 오른쪽 가장자리 흰 글자), 부품은 거의 뒷면에.
+   뒷면: 수직 Type-C(오른쪽 가운데, 앞에서 본 x≈+12), STRB/TRG/GND 3핀 1.25 옆꽂이 커넥터(뒤 윗변 모서리), USB 컨트롤러, 플래시 SOIC-8, 24 MHz 수정.
+   질감 = 실물 사진을 모서리 홀 4개로 펴서(24 px/mm) 그대로. 높이 있는 부품만 3D, 작은 수동 부품 자리는 사진에서 자동 추출(tex/cam-parts.json).
+   좌표: mm, 보드 윗면 y=0, 렌즈 +y, 앞면 사진 위 = -z, 왼쪽 = -x. 뒷면 사진은 x 가 뒤집힌다(뒷면 mm xb → world x = -xb). ?explode=0..1 로 분해 */
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { setup, M, box, cyl, ring, disc, ready, num, DUO } from './common.js';
+
+const E = Math.min(1, Math.max(0, num('explode', 0)));
+const B = 38, PCB_T = 1.6, CONN_H = 7.5;
+const { scene } = setup({ floorY: -PCB_T - CONN_H - 6 * E - 0.1, gridStep: 5, gridMajor: 25, gridExtent: 150, fov: num('fov', 26) });
+window.__cam({ theta: num('theta', 0.55), phi: num('phi', 0.86), radius: num('radius', 125), tx: num('tx', 0), ty: num('ty', 7 + 6 * E), tz: num('tz', 0) });
+
+const S = (o) => new THREE.MeshStandardMaterial(o);
+const Ph = (o) => new THREE.MeshPhysicalMaterial(o);
+const MM = {
+  pcbEdge: S({ color: 0x2a2520, roughness: 0.75, metalness: 0 }),
+  holder: Ph({ color: 0x17191c, roughness: 0.6, metalness: 0.05, envMapIntensity: 0.45, clearcoat: 0.2, clearcoatRoughness: 0.7 }),
+  barrel: S({ color: 0x1b1d20, roughness: 0.42, metalness: 0.55, envMapIntensity: 0.9 }),
+  knurl: S({ color: 0x1f2124, roughness: 0.5, metalness: 0.55, envMapIntensity: 0.9, flatShading: true }),
+  steel: S({ color: 0xb6bcc4, roughness: 0.33, metalness: 0.95, envMapIntensity: 1.0 }),
+  ic: Ph({ color: 0x0f1113, roughness: 0.35, metalness: 0.05, envMapIntensity: 0.7, clearcoat: 0.4, clearcoatRoughness: 0.35 }),
+  passive: S({ color: 0xcfcdc6, roughness: 0.5, metalness: 0.2, envMapIntensity: 0.6 }),
+  capGray: S({ color: 0x8e9398, roughness: 0.45, metalness: 0.5, envMapIntensity: 0.7 }),
+  crystal: S({ color: 0xc8ccd0, roughness: 0.3, metalness: 0.9, envMapIntensity: 1.0 }),
+  ind: S({ color: 0x24262a, roughness: 0.6, metalness: 0.2, envMapIntensity: 0.5 }),
+  white: S({ color: 0xece8de, roughness: 0.6, metalness: 0, envMapIntensity: 0.4 }),
+  gold: S({ color: 0xd6ab4a, roughness: 0.35, metalness: 0.9, envMapIntensity: 1.0 }),
+  slot: S({ color: 0x050607, roughness: 0.9, metalness: 0, envMapIntensity: 0.05 }),
+  pupil: S({ color: 0x03050a, roughness: 0.2, metalness: 0.1, envMapIntensity: 0.3 }),
+  glass: Ph({ color: 0x1a2c40, roughness: 0.02, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 2.6, reflectivity: 1 }),
+  coat: Ph({ color: 0x6a4fc0, roughness: 0.04, metalness: 0, clearcoat: 1, envMapIntensity: 2.0, transparent: true, opacity: 0.28, depthWrite: false }),
+};
+const rbox = (parent, w, h, d, [x, y, z], mat, r = 0.5, seg = 3) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, seg, r), mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m; };
+
+/* ── PCB: 앞·뒷면 실물 질감 ── */
+const loader = new THREE.TextureLoader();
+// photo textures only outside the two-colour look (they live in scripts/hardware-renders/hero/tex/)
+const [texF, texB] = DUO ? [null, null] : await Promise.all([loader.loadAsync('./tex/cam-front.png'), loader.loadAsync('./tex/cam-back.png')]);
+if (!DUO) { for (const t of [texF, texB]) { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16; } texB.center.set(0.5, 0.5); texB.rotation = Math.PI; }                        // 뒷면: 사진 왼쪽 = +x, 위 = -z
+const frontMat = Ph({ map: texF, roughness: 0.55, metalness: 0.05, envMapIntensity: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.5 });
+const backMat = Ph({ map: texB, roughness: 0.55, metalness: 0.05, envMapIntensity: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.5 });
+{ const m = new THREE.Mesh(new THREE.BoxGeometry(B, PCB_T, B), [MM.pcbEdge, MM.pcbEdge, frontMat, backMat, MM.pcbEdge, MM.pcbEdge]);
+  m.position.set(0, -PCB_T / 2, 0); m.castShadow = m.receiveShadow = true; scene.add(m); }
+for (const sx of [-1, 1]) for (const sz of [-1, 1]) { disc(scene, 1.1, [sx * 17, 0.01, sz * 17], MM.slot, { seg: 24 }); disc(scene, 1.1, [sx * 17, -PCB_T - 0.01, sz * 17], MM.slot, { axis: '-y', seg: 24 }); }
+
+const parts = await (await fetch('./tex/cam-parts.json')).json();
+const inside = (x, z, rects) => rects.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
+
+/* ── 앞면: 작은 IC 묶음(오른쪽 위)만 3D ── */
+rbox(scene, 2.7, 0.9, 1.7, [9.0, 0.45, -14.2], MM.ic, 0.15);
+for (const [x, z, w, d] of parts.front) { const big = w * d > 2.6; box(scene, Math.min(3.4, w), big ? 1.1 : 0.45, Math.min(2.4, d), [x, big ? 0.55 : 0.225, z], big ? MM.capGray : MM.passive, { shadow: false }); }
+
+/* ── 센서 AR0234(홀더 아래, 분해도에서 보임): 검정 세라믹 LGA + 유리창 ── */
+rbox(scene, 9.0, 1.2, 9.0, [0, 0.6, 0], MM.ic, 0.2);
+box(scene, 6.4, 0.1, 4.8, [0, 1.22, 0], MM.glass, { shadow: false });
+disc(scene, 1.2, [0, 1.28, 0], MM.pupil, { seg: 32 });
+
+/* ── 렌즈 홀더: 17각 둥근 블록(위로 살짝 좁아짐) + 앞뒤(z) 귀, 귀 위는 구멍만(나사 머리는 뒷면) ── */
+const HOLD_H = 8.8;
+const holder = new THREE.Group(); holder.position.y = 6 * E; scene.add(holder);
+{ const g = new RoundedBoxGeometry(17, HOLD_H, 17, 4, 2.2); const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i); const s = 1 - 0.08 * ((y + HOLD_H / 2) / HOLD_H); p.setX(i, p.getX(i) * s); p.setZ(i, p.getZ(i) * s); }
+  g.computeVertexNormals(); const m = new THREE.Mesh(g, MM.holder); m.position.y = HOLD_H / 2; m.castShadow = m.receiveShadow = true; holder.add(m); }
+for (const sz of [-1, 1]) { rbox(holder, 5.4, 7.0, 3.8, [0, 3.5, sz * 10.3], MM.holder, 1.3); disc(holder, 0.9, [0, 7.01, sz * 10.1], MM.slot, { seg: 20 }); }
+cyl(holder, 6.8, 0.6, [0, HOLD_H + 0.3, 0], MM.holder, { seg: 48 });
+
+/* ── 렌즈: 얇은 링 → 경통 Ø13 → 원뿔로 Ø16 앞머리 → 앞유리 돔 ── */
+const lens = new THREE.Group(); lens.position.y = HOLD_H + 6 * E + 12 * E; scene.add(lens);
+cyl(lens, 6.9, 1.0, [0, 0.5, 0], MM.knurl, { seg: 40 });
+cyl(lens, 6.5, 5.5, [0, 1.0 + 2.75, 0], MM.barrel, { seg: 64 });
+for (let k = 0; k < 4; k++) ring(lens, 6.55, 0.16, [0, 1.8 + k * 0.8, 0], MM.knurl, { seg: 64 });       // 나사산
+cyl(lens, 8.0, 2.0, [0, 6.5 + 1.0, 0], MM.barrel, { seg: 64, r2: 6.5 });                                  // 원뿔
+const HEAD_Y = 8.5;
+cyl(lens, 8.0, 5.0, [0, HEAD_Y + 2.5, 0], MM.barrel, { seg: 64 });
+cyl(lens, 8.0, 0.8, [0, HEAD_Y + 5.4, 0], MM.barrel, { seg: 64, r2: 7.2 });                               // 앞면 모따기
+const FACE = HEAD_Y + 5.8;
+{ const face = new THREE.Mesh(new THREE.RingGeometry(6.3, 7.25, 64), MM.barrel); face.rotation.x = -Math.PI / 2; face.position.y = FACE + 0.001; lens.add(face);   // 앞면 테(가운데 뚫림)
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(6.3, 6.3, 1.4, 64, 1, true), new THREE.MeshStandardMaterial({ color: 0x0a0b0d, roughness: 0.6, metalness: 0.3, side: THREE.BackSide })); wall.position.y = FACE - 0.7; lens.add(wall); }   // 홈 벽
+disc(lens, 6.3, [0, FACE - 1.4, 0], MM.pupil, { seg: 64 });
+ring(lens, 6.0, 0.12, [0, FACE - 1.15, 0], MM.steel, { seg: 64 });                                        // 유리 가장자리 빛 테
+ring(lens, 3.6, 0.09, [0, FACE - 1.3, 0], MM.capGray, { seg: 64 });                                       // 안쪽 렌즈알 테
+{ const R = 15, cap = 1.3, th = Math.acos((R - cap) / R);
+  const g1 = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 24, 0, Math.PI * 2, 0, th), MM.glass); g1.position.y = FACE - 1.1 - (R - cap); lens.add(g1);
+  const g2 = new THREE.Mesh(new THREE.SphereGeometry(R + 0.05, 64, 24, 0, Math.PI * 2, 0, th), MM.coat); g2.position.y = FACE - 1.1 - (R - cap) + 0.03; lens.add(g2); }
+
+/* ── 뒷면(아래로 매달림): 실물 뒷면 사진 좌표(xb, zb) → world (-xb, zb) ── */
+const back = new THREE.Group(); back.position.y = -6 * E; scene.add(back);
+const BY = -PCB_T;                                                                                      // 뒷면 보드면
+const under = (parent, w, h, d, [x, z], mat, r = 0) => (r ? rbox(parent, w, h, d, [x, BY - h / 2, z], mat, r) : box(parent, w, h, d, [x, BY - h / 2, z], mat));
+under(back, 5.2, CONN_H, 8.5, [11.8, -0.6], MM.steel);                                                  // 수직 Type-C
+rbox(back, 2.4, 0.8, 6.6, [11.8, BY - CONN_H - 0.3, -0.6], MM.slot, 0.35);
+for (const sz of [-1, 1]) under(back, 1.2, 2.2, 1.0, [11.8, -0.6 + sz * 5.0], MM.steel);
+under(back, 7.0, 3.1, 4.4, [8.2, -17.1], MM.white);                                                     // STRB/TRG/GND 3핀 옆꽂이
+box(back, 5.6, 2.0, 0.5, [8.2, BY - 1.7, -19.1], MM.slot, { shadow: false });
+for (const dx of [-1.25, 0, 1.25]) box(back, 0.4, 1.6, 0.6, [8.2 + dx, BY - 1.6, -18.7], MM.gold, { shadow: false });
+under(back, 5.0, 1.0, 8.0, [-10.9, 3.3], MM.ic, 0.15);                                                   // USB 컨트롤러
+box(back, 0.8, 0.3, 8.0, [-10.9 - 2.9, BY - 0.15, 3.3], MM.steel, { shadow: false });
+under(back, 4.0, 0.9, 4.0, [7.75, 10.0], MM.ic, 0.15);                                                   // QFN
+{ under(back, 3.9, 1.5, 3.2, [-10.2, 14.0], MM.ic, 0.2);                                                // SOIC-8 플래시
+  for (const dx of [-1.9, -0.63, 0.63, 1.9]) for (const sz of [-1, 1]) { box(back, 0.45, 0.25, 1.0, [-10.2 + dx, BY - 0.15, 14.0 + sz * 2.3], MM.steel); box(back, 0.45, 0.8, 0.25, [-10.2 + dx, BY - 0.5, 14.0 + sz * 1.75], MM.steel); } }
+under(back, 3.2, 0.8, 2.5, [-16.0, 12.0], MM.crystal, 0.2);                                              // 24 MHz 수정
+under(back, 1.7, 1.0, 3.1, [17.1, -9.3], MM.ic, 0.15);
+under(back, 2.9, 1.2, 2.9, [13.2, -12.3], MM.ind, 0.3);
+under(back, 2.9, 1.0, 1.6, [13.5, -8.5], MM.ic, 0.15);
+for (const [x, z] of [[-8.3, -10.9], [-12.9, -10.7]]) under(back, 3.2, 1.6, 2.5, [x, z], MM.capGray, 0.2);
+for (const [x, z] of [[-8.5, -14.8], [-13.5, -15.2]]) under(back, 2.5, 1.0, 1.5, [x, z], MM.ic, 0.15);
+under(back, 2.3, 1.0, 2.5, [12.1, 16.3], MM.ic, 0.15);
+for (const sz of [-1, 1]) { cyl(back, 1.6, 1.0, [0, BY - 0.5, sz * 10.1], MM.steel, { seg: 24 }); box(back, 2.0, 0.3, 0.35, [0, BY - 1.0, sz * 10.1], MM.slot, { shadow: false }); box(back, 0.35, 0.3, 2.0, [0, BY - 1.0, sz * 10.1], MM.slot, { shadow: false }); }   // 홀더 나사 머리
+const AVOID_B = [[8.5, -5.5, 15.1, 4.3], [4.2, -19.5, 12.2, -14.6], [-13.9, -1.2, -7.9, 7.8], [5.5, 7.8, 10, 12.2], [-12.7, 11.4, -7.7, 16.6], [-17.8, 10.6, -14.2, 13.4]];
+for (const [xb, zb, w, d] of parts.back) {
+  const x = -xb, z = zb; if (inside(x, z, AVOID_B)) continue;
+  const big = w * d > 2.6; box(back, Math.min(3.4, w), big ? 0.9 : 0.45, Math.min(2.4, d), [x, BY - (big ? 0.45 : 0.225), z], big ? MM.capGray : MM.passive, { shadow: false });
+}
+await ready({ light: [frontMat, backMat, MM.pcbEdge, MM.glass],       // 두 색 모드: 기판과 렌즈 유리만 밝게, 렌즈 몸통·홀더·부품은 어둡게
+  masks: new Map([[frontMat, './tex/cam-front-duo.png'], [backMat, { url: './tex/cam-back-duo.png', center: [0.5, 0.5], rotation: Math.PI }]]) });   // the back photo was turned by 180°, so is its mask   // 기판 실크·패드·배선은 어두운 선으로
+</script>
+</body>
+</html>

@@ -1,6 +1,9 @@
 ---
 // One <head> for every page: meta, Open Graph, favicons, fonts, styles.
 // Page-specific bits come in as props; nothing here is per-page markup.
+// Korean is the site's default language (/), English lives under /en/; a page
+// with an edition in the other language names it in `alt` so the two point at
+// each other for crawlers (the visible switch is in SiteBar).
 interface Props {
   lang: 'en' | 'ko';
   title: string;
@@ -9,14 +12,16 @@ interface Props {
   ogTitle: string;
   ogDescription: string;
   path: string;
+  alt?: string;
   styles?: string[];
 }
 
-const { lang, title, description, ogType, ogTitle, ogDescription, path, styles = ['/style.css'] } = Astro.props;
-const families = ['Archivo:wdth,wght@62..125,300..800', 'IBM+Plex+Mono:wght@400;500'];
-if (lang === 'ko') families.push('Noto+Sans+KR:wght@400;500;700');
+const { lang, title, description, ogType, ogTitle, ogDescription, path, alt, styles = ['/style.css'] } = Astro.props;
+const families = ['Archivo:wdth,wght@62..125,300..800', 'IBM+Plex+Mono:wght@400;500', 'Noto+Sans+KR:wght@400;500;700'];
 const fonts = `https://fonts.googleapis.com/css2?${families.map((f) => `family=${f}`).join('&')}&display=swap`;
 const url = new URL(path, Astro.site).href;
+const altUrl = alt ? new URL(alt, Astro.site).href : undefined;
+const other = lang === 'ko' ? 'en' : 'ko';
 const ogImage = new URL('/assets/og.png', Astro.site).href;
 ---
 <!doctype html>
@@ -31,6 +36,10 @@ const ogImage = new URL('/assets/og.png', Astro.site).href;
   <meta property="og:description" content={ogDescription} />
   <meta property="og:url" content={url} />
   <meta property="og:image" content={ogImage} />
+  <meta property="og:locale" content={lang === 'ko' ? 'ko_KR' : 'en_US'} />
+  {altUrl && <link rel="alternate" hreflang={lang} href={url} />}
+  {altUrl && <link rel="alternate" hreflang={other} href={altUrl} />}
+  {altUrl && <link rel="alternate" hreflang="x-default" href={lang === 'ko' ? url : altUrl} />}
   <link rel="icon" href="/favicon.ico" sizes="32x32" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

@@ -1,34 +1,49 @@
 ---
 // Footer. The home page also carries the copy-address button (script in
-// index.astro), the documents row and the business registration.
+// index.astro) and the business registration; the documents row is on every page.
+// Korean and English editions share the markup; the labels follow `lang`.
 interface Props {
+  lang: 'ko' | 'en';
   home?: boolean;
 }
 
-const { home = false } = Astro.props;
+const { lang, home = false } = Astro.props;
 const email = 'dlgusrb6546@racktracker.dev';
+const en = lang === 'en';
+const bp = en ? '/en/business-plan/' : '/business-plan/';
 ---
 <footer class="foot" id="contact">
   <div class="who">
     <p class="brand">Rack Labs</p>
-    <p>An AI-native startup at the prototype stage. Our main business is RackTracker, a hardware edge device and its software supplied as one physical product. We build everything with Claude Code and open-source the tools we make along the way.</p>
+    {en
+      ? <p>An AI-native startup at the prototype stage. Our main business is RackTracker, a hardware edge device and its software supplied as one physical product. We build everything with Claude Code and open-source the tools we make along the way.</p>
+      : <p>시제품 단계의 AI 네이티브 스타트업입니다. 주력 사업은 RackTracker 로, 랙에 다는 하드웨어와 그 위에서 도는 소프트웨어를 한 제품으로 공급합니다. 모든 것을 Claude Code 로 만들고, 그 과정에서 만든 도구는 오픈 소스로 공개합니다.</p>}
   </div>
   <dl class="contact">
-    <div><dt>Founder</dt><dd>Hunkun Lee</dd></div>
+    <div><dt>{en ? 'Founder' : '대표'}</dt><dd>{en ? 'Hunkun Lee' : '이현규'}</dd></div>
     {home
-      ? <div><dt>Email</dt><dd><a href={`mailto:${email}`}>{email}</a> <button class="copybtn" type="button" data-copy={email}>Copy address</button></dd></div>
-      : <div><dt>Email</dt><dd><a href={`mailto:${email}`}>{email}</a></dd></div>}
+      ? <div><dt>{en ? 'Email' : '이메일'}</dt><dd><a href={`mailto:${email}`}>{email}</a> <button class="copybtn" type="button" data-copy={email} data-done={en ? 'Copied' : '복사 완료'} data-selected={en ? 'Address selected' : '주소 선택됨'}>{en ? 'Copy address' : '주소 복사'}</button></dd></div>
+      : <div><dt>{en ? 'Email' : '이메일'}</dt><dd><a href={`mailto:${email}`}>{email}</a></dd></div>}
     <div><dt>GitHub</dt><dd><a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd></div>
-    {home && <div><dt>Documents</dt><dd><a href="/business-plan/">Business plan</a> <span class="alt">(<a href="/business-plan/ko/" hreflang="ko" lang="ko">한국어 원문</a>)</span></dd></div>}
+    {en
+      ? <div><dt>Documents</dt><dd><a href="/report/" hreflang="ko">Project report</a> <span class="alt">(<a href="/report/RackTracker_Project_Report.pdf" download>PDF</a>)</span>, <a href="/slides/#/graduation-review/1" hreflang="ko">Review deck</a>, <a href={bp}>Business plan</a> <span class="alt">(<a href="/business-plan/" hreflang="ko" lang="ko">한국어 원문</a>)</span></dd></div>
+      : <div><dt>문서</dt><dd><a href="/report/">Project Report</a> <span class="alt">(<a href="/report/RackTracker_Project_Report.pdf" download>PDF</a>)</span>, <a href="/slides/#/graduation-review/1">심사 발표 자료</a>, <a href={bp}>사업계획서</a> <span class="alt">(<a href="/en/business-plan/" hreflang="en" lang="en">English</a>)</span></dd></div>}
   </dl>
-  {home && (
-    <dl class="reg" aria-label="Business registration">
-      <div><dt>Business name</dt><dd>랙랩스 (RackLabs)</dd></div>
-      <div><dt>Registration no.</dt><dd>510-12-84645</dd></div>
-      <div><dt>Representative</dt><dd>Hunkun Lee (이현규)</dd></div>
-      <div><dt>Address</dt><dd>14 Pobangteo 6-gil, Seodaemun-gu, Seoul (서울특별시 서대문구 포방터6길 14, 홍은동)</dd></div>
-      <div><dt>Industry</dt><dd>Information and communications (정보통신업)</dd></div>
-    </dl>
+  {home && (en
+    ? <dl class="reg" aria-label="Business registration">
+        <div><dt>Business name</dt><dd>랙랩스 (RackLabs)</dd></div>
+        <div><dt>Registration no.</dt><dd>510-12-84645</dd></div>
+        <div><dt>Representative</dt><dd>Hunkun Lee (이현규)</dd></div>
+        <div><dt>Address</dt><dd>14 Pobangteo 6-gil, Seodaemun-gu, Seoul (서울특별시 서대문구 포방터6길 14, 홍은동)</dd></div>
+        <div><dt>Industry</dt><dd>Information and communications (정보통신업)</dd></div>
+      </dl>
+    : <dl class="reg" aria-label="사업자 정보">
+        <div><dt>상호</dt><dd>랙랩스 (RackLabs)</dd></div>
+        <div><dt>사업자등록번호</dt><dd>510-12-84645</dd></div>
+        <div><dt>대표자</dt><dd>이현규</dd></div>
+        <div><dt>주소</dt><dd>서울특별시 서대문구 포방터6길 14 (홍은동)</dd></div>
+        <div><dt>업종</dt><dd>정보통신업</dd></div>
+      </dl>
   )}
-  <p class="fine">Everything we ship is built with Claude Code. 2026 Rack Labs</p>
+  <p class="fine">{en ? 'Everything we ship is built with Claude Code. 2026 Rack Labs' : '모든 제품을 Claude Code 로 만듭니다. 2026 Rack Labs'}</p>
 </footer>

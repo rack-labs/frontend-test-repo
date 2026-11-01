@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compute carrier MIC-711D-OX with Jetson Orin NX</title>
+<style>html, body { margin: 0; background: #fafafa; overflow: hidden; height: 100%; } canvas { display: block; }</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three/addons/" } }</script>
+</head>
+<body>
+<script type="module">
+/* Advantech MIC-711D-OX (보유 실물, Orin NX) — 125 × 124.14 × 50.62 mm. 근거 = 2026-10-26 실물 사진(윗면 정면 IMG_4096, 비스듬 p_04/p_05) + ON 데이터시트 도면.
+   · PCB 윗면 질감 = 실물 윗면 사진을 보드 네 귀로 펴서(16 px/mm) 그대로. 높이 1 mm 넘는 부품만 3D 로 올린다(자리도 같은 사진에서 읽음, tex/mic-frame.json 의 H 로 px→mm).
+   · 실물에는 M.2 2280 NVMe + 검정 핀 방열판(흰 밴드 2) 이 꽂혀 있다. 포트 5(USB ×5 · HDMI · LAN · PWR 2핀)는 PCB 아랫면 앞 가장자리.
+   · 베이스(검정 방열 블록) 는 데이터시트 도면: 옆벽 둘 + 윗판, 아래 가운데 팬 하우징, 고무 발 4. PCB 는 윗판에서 14 mm 떠 있다(스탠드오프 6).
+   좌표: mm, y 위(발바닥 y=0), 앞(포트) = +z, 사진 오른쪽 = +x. 부품 자리는 _board_half.jpg(사진 크롭의 1/2) px 로 적고 hp() 가 mm 로 바꾼다. */
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { setup, M, box, cyl, ring, disc, screw, ready, num, DUO } from './common.js';
+
+const W = 125, D = 124.14;
+const FOOT = 6.5, WALL_TOP = 26, PLATE = 5, GAP = 14.2, PCB_T = 1.6;
+const PCB_BOT = WALL_TOP + GAP, PCB_TOP = PCB_BOT + PCB_T, T = PCB_TOP;
+const { scene } = setup({ floorY: 0, gridStep: 10, gridMajor: 50, gridExtent: 500, fov: num('fov', 26) });
+window.__cam({ theta: num('theta', 0.72), phi: num('phi', 1.08), radius: num('radius', 400), tx: num('tx', 0), ty: num('ty', 24), tz: num('tz', 0) });
+
+const S = (o) => new THREE.MeshStandardMaterial(o);
+const Ph = (o) => new THREE.MeshPhysicalMaterial(o);
+const MM = {
+  base: Ph({ color: 0x15171a, roughness: 0.62, metalness: 0.35, envMapIntensity: 0.7, clearcoat: 0.15, clearcoatRoughness: 0.6 }),
+  baseIn: S({ color: 0x0d0f11, roughness: 0.8, metalness: 0.3, envMapIntensity: 0.4 }),
+  rubber: S({ color: 0x0e1012, roughness: 0.95, metalness: 0, envMapIntensity: 0.15 }),
+  pcbEdge: S({ color: 0x1d4d30, roughness: 0.7, metalness: 0 }),
+  pcbBot: S({ color: 0x205636, roughness: 0.6, metalness: 0.05, envMapIntensity: 0.4 }),
+  steel: S({ color: 0xb4bac2, roughness: 0.32, metalness: 0.95, envMapIntensity: 1.0 }),
+  steelDark: S({ color: 0x8d949c, roughness: 0.45, metalness: 0.9, envMapIntensity: 0.8 }),
+  copper: S({ color: 0xd98f7a, roughness: 0.45, metalness: 0.7, envMapIntensity: 0.8 }),
+  connDark: S({ color: 0x23262b, roughness: 0.6, metalness: 0.05, envMapIntensity: 0.5 }),
+  cream: S({ color: 0xe9e4d6, roughness: 0.65, metalness: 0, envMapIntensity: 0.4 }),
+  white: S({ color: 0xf0ede6, roughness: 0.6, metalness: 0, envMapIntensity: 0.4 }),
+  black: S({ color: 0x121416, roughness: 0.5, metalness: 0.05, envMapIntensity: 0.6 }),
+  ic: Ph({ color: 0x0f1113, roughness: 0.35, metalness: 0.05, envMapIntensity: 0.7, clearcoat: 0.4, clearcoatRoughness: 0.35 }),
+  ind: S({ color: 0x2b2d30, roughness: 0.55, metalness: 0.2, envMapIntensity: 0.5 }),
+  indGray: S({ color: 0x8a8f96, roughness: 0.5, metalness: 0.5, envMapIntensity: 0.6 }),
+  polyCap: S({ color: 0x1a1c1f, roughness: 0.45, metalness: 0.1, envMapIntensity: 0.6 }),
+  passive: S({ color: 0xa8a396, roughness: 0.6, metalness: 0.15, envMapIntensity: 0.4 }),
+  gold: S({ color: 0xd6ab4a, roughness: 0.35, metalness: 0.9, envMapIntensity: 1.0 }),
+  green: S({ color: 0x2d8f4c, roughness: 0.55, metalness: 0, envMapIntensity: 0.4 }),
+  blue: S({ color: 0x1e5db5, roughness: 0.5, metalness: 0, envMapIntensity: 0.4 }),
+  slot: S({ color: 0x06070a, roughness: 0.9, metalness: 0, envMapIntensity: 0.05 }),
+  module: S({ color: 0x14301e, roughness: 0.6, metalness: 0.05 }),
+  hs: Ph({ color: 0x111214, roughness: 0.55, metalness: 0.5, envMapIntensity: 0.8, clearcoat: 0.1 }),     // SSD 방열판(검정 아노다이징)
+  band: S({ color: 0xf2f1ec, roughness: 0.7, metalness: 0, envMapIntensity: 0.3 }),
+  ssd: S({ color: 0x163a24, roughness: 0.6, metalness: 0.05 }),
+};
+const frame = await (await fetch('./tex/mic-frame.json')).json(); const H = frame.H;
+const hp = (hx, hy) => { const X = hx * 2, Y = hy * 2, w = H[6] * X + H[7] * Y + H[8]; return [(H[0] * X + H[1] * Y + H[2]) / w - W / 2, (H[3] * X + H[4] * Y + H[5]) / w - D / 2]; };
+const rbox = (w, h, d, [x, y, z], mat, r = 1, seg = 3) => { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, seg, r), mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; scene.add(m); return m; };
+const onTop = (hx, hy, w, h, d, mat, { r = 0, dx = 0, dz = 0 } = {}) => { const [x, z] = hp(hx, hy); return r ? rbox(w, h, d, [x + dx, T + h / 2, z + dz], mat, r) : box(scene, w, h, d, [x + dx, T + h / 2, z + dz], mat); };
+
+/* ── 베이스 ── */
+for (const sx of [-1, 1]) for (const z of [51, -41]) rbox(17, FOOT, 17, [sx * 49.5, FOOT / 2, z], MM.rubber, 2.5);
+const WALL_W = 17, WALL_H = WALL_TOP - FOOT;
+for (const sx of [-1, 1]) rbox(WALL_W, WALL_H, D, [sx * (W / 2 - WALL_W / 2), FOOT + WALL_H / 2, 0], MM.base, 3, 4);
+rbox(W - 2 * WALL_W + 2, WALL_H - PLATE, 6, [0, FOOT + (WALL_H - PLATE) / 2, -D / 2 + 3], MM.base, 1.2);
+rbox(W, PLATE, D, [0, WALL_TOP - PLATE / 2, 0], MM.base, 1.0);
+{ const hz0 = -46, hz1 = 12.5, hx = 3;
+  rbox(61, WALL_TOP - PLATE - FOOT, hz1 - hz0, [hx, FOOT + (WALL_TOP - PLATE - FOOT) / 2, (hz0 + hz1) / 2], MM.baseIn, 2.5);
+  disc(scene, 29, [hx, FOOT - 0.02, -16.7], MM.slot, { axis: '-y', seg: 64 });
+  for (const r of [8, 14, 20, 26]) ring(scene, r, 0.5, [hx, FOOT - 0.08, -16.7], MM.base, { seg: 64 });
+  for (let k = 0; k < 4; k++) { const m = box(scene, 1.0, 0.5, 56, [hx, FOOT - 0.08, -16.7], MM.base); m.rotation.y = k * Math.PI / 4; } }
+for (let x = -24; x <= 30; x += 4) for (let z = 16; z <= 34; z += 4) box(scene, 2.2, 0.4, 2.2, [x, WALL_TOP - PLATE - 0.1, z], MM.slot, { shadow: false });
+
+/* ── PCB 와 베이스 사이: 스탠드오프 6 · Jetson 모듈 · 포트 ── */
+const SCREWS = [[120, 95], [1045, 100], [118, 915], [1045, 925]];
+const RINGS = [[330, 555], [885, 575]];
+for (const p of [...SCREWS, ...RINGS]) { const [x, z] = hp(...p); cyl(scene, 2.3, GAP, [x, WALL_TOP + GAP / 2, z], MM.steelDark, { seg: 6 }); }
+{ const mx = 3, mz = -6;
+  rbox(60, 7, 38, [mx, WALL_TOP + 3.5, mz], MM.baseIn, 1.0);
+  box(scene, 69.6, 1.2, 45, [mx, WALL_TOP + 7.6, mz], MM.module);
+  box(scene, 72, 4.6, 6, [mx, PCB_BOT - 2.3, mz - 25.5], MM.black); }
+function port(xc, w, h, d, { tongue, tongueMat = MM.blue, two = false, slotH = h - 1.6 } = {}) {
+  const y = PCB_BOT - h / 2, z = D / 2 - d / 2;
+  box(scene, w, h, d, [xc, y, z], MM.steel);
+  for (const sy of (two ? [y + h / 4 + 0.1, y - h / 4 - 0.1] : [y])) {
+    box(scene, w - 1.6, two ? h / 2 - 1.8 : slotH, 0.6, [xc, sy, D / 2 - 0.25], MM.slot, { shadow: false });
+    if (tongue) box(scene, w - 3.2, 1.6, 7, [xc, sy + 0.6, D / 2 - 3.6], tongueMat, { shadow: false });
+  }
+}
+port(-43, 13.1, 7.2, 17, { tongue: true, tongueMat: MM.black });
+port(-31, 13.1, 13.4, 17.5, { tongue: true, two: true });
+port(-19, 13.1, 13.4, 17.5, { tongue: true, two: true });
+box(scene, 15, 6.3, 12, [-3.3, PCB_BOT - 3.15, D / 2 - 6], MM.steel); box(scene, 13.2, 3.8, 0.6, [-3.3, PCB_BOT - 3.3, D / 2 - 0.25], MM.slot, { shadow: false });
+box(scene, 16, 13.3, 21, [18, PCB_BOT - 6.65, D / 2 - 10.5], MM.steel); box(scene, 12, 8.2, 0.6, [18, PCB_BOT - 5.2, D / 2 - 0.25], MM.slot, { shadow: false });
+box(scene, 2.2, 1.2, 0.5, [11.8, PCB_BOT - 12, D / 2 - 0.2], M.led, { shadow: false }); box(scene, 2.2, 1.2, 0.5, [24.2, PCB_BOT - 12, D / 2 - 0.2], M.ledAmber, { shadow: false });
+box(scene, 15.2, 10, 9.5, [42, PCB_BOT - 5, D / 2 - 4.75], MM.green);
+for (const dx of [-3.81, 3.81]) { box(scene, 3.4, 3.4, 0.6, [42 + dx, PCB_BOT - 6.5, D / 2 - 0.25], MM.slot, { shadow: false }); cyl(scene, 1.4, 0.4, [42 + dx, PCB_BOT - 10.1, D / 2 - 4.75], MM.steelDark, { seg: 16 }); }
+
+/* ── PCB ── */
+// the photo texture only outside the two-colour look (it lives in scripts/hardware-renders/hero/tex/)
+const tex = DUO ? null : await new THREE.TextureLoader().loadAsync('./tex/mic-top.png');
+if (tex) { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16; }
+const pcbTopMat = Ph({ map: tex, color: 0xd9ddd6, roughness: 0.6, metalness: 0.03, envMapIntensity: 0.35, clearcoat: 0.12, clearcoatRoughness: 0.55 });
+{ const m = new THREE.Mesh(new THREE.BoxGeometry(W, PCB_T, D), [MM.pcbEdge, MM.pcbEdge, pcbTopMat, MM.pcbBot, MM.pcbEdge, MM.pcbEdge]);
+  m.position.set(0, PCB_BOT + PCB_T / 2, 0); m.castShadow = m.receiveShadow = true; scene.add(m); }
+
+/* ── PCB 윗면 부품(_board_half.jpg px) ── */
+for (const p of SCREWS) { const [x, z] = hp(...p); cyl(scene, 3.6, 0.3, [x, T + 0.15, z], MM.steelDark, { seg: 32 }); screw(scene, 2.6, [x, T + 0.3, z], MM.steel); }
+for (const p of RINGS) { const [x, z] = hp(...p); ring(scene, 3.8, 0.35, [x, T + 0.1, z], MM.copper, { seg: 48 }); }
+{ const [x, z] = hp(885, 575); screw(scene, 2.2, [x, T + 0.1, z], MM.steel); }
+for (const p of [[218, 703], [575, 520], [790, 520]]) { const [x, z] = hp(...p); cyl(scene, 2.4, 5.0, [x, T + 2.5, z], MM.steel, { seg: p[1] === 520 ? 32 : 6 }); disc(scene, 1.1, [x, T + 5.01, z], MM.slot, { seg: 16 }); }
+{ // M.2 2280 NVMe + 방열판: 소켓(윗변 가운데) → 카드 80 → 끝 나사. 방열판은 소켓 위까지 덮고(실물), 흰 밴드 2
+  const [sx] = hp(440, 400); const zSock = hp(440, 82)[1], zScrew = hp(440, 775)[1];
+  box(scene, 22, 4, 7.5, [sx, T + 2, zSock], MM.connDark); box(scene, 20, 1.2, 0.5, [sx, T + 2.6, zSock + 3.6], MM.slot, { shadow: false });
+  const z0 = zSock + 2, z1 = zScrew; box(scene, 22, 0.8, z1 - z0, [sx, T + 2.9, (z0 + z1) / 2], MM.ssd);
+  screw(scene, 1.8, [sx, T + 3.3, zScrew], MM.steel);
+  const hz0 = -D / 2 + 1.5, hz1 = zScrew - 7.5, hzc = (hz0 + hz1) / 2, hl = hz1 - hz0;
+  rbox(24, 3.0, hl, [sx, T + 3.3 + 1.5, hzc], MM.hs, 0.5);
+  for (let k = -3; k <= 3; k++) box(scene, 2.0, 5.5, hl, [sx + k * 3.4, T + 6.3 + 2.75, hzc], MM.hs);
+  for (const hy of [235, 615]) { const z = hp(440, hy)[1]; rbox(25.2, 10.4, 2.7, [sx, T + 2.3 + 5.2, z], MM.band, 0.4); }
+}
+onTop(670, 125, 28, 5.5, 6.7, MM.cream, { r: 0.4 }); { const [x, z] = hp(670, 125); box(scene, 26, 1.2, 0.5, [x, T + 4.1, z + 3.2], MM.slot, { shadow: false }); }   // Mini PCIe
+onTop(200, 268, 24, 4, 7, MM.connDark, { r: 0.4 }); { const [x, z] = hp(200, 268); box(scene, 22, 1.2, 0.5, [x, T + 2.6, z + 3.4], MM.slot, { shadow: false }); for (let k = -10; k <= 10; k += 0.8) box(scene, 0.35, 0.4, 0.9, [x + k, T + 0.2, z - 3.6], MM.gold, { shadow: false }); }   // M.2 3052
+for (const p of [[213, 150], [955, 152]]) { onTop(p[0], p[1], 11, 1.0, 12, MM.black); onTop(p[0], p[1], 10, 1.4, 9.5, MM.steelDark, { r: 0.4, dz: 0.5 }); onTop(p[0], p[1], 10, 1.5, 1.0, MM.steelDark, { dz: -5 }); }   // SIM ×2
+{ const [x, z] = hp(112, 478); box(scene, 5, 3, 35, [x, T + 1.5, z], MM.black); for (let k = -16; k <= 16; k += 0.5) box(scene, 3.4, 0.3, 0.2, [x, T + 3.05, z + k], MM.gold, { shadow: false }); }   // B2B MIPI
+onTop(118, 823, 8, 6, 11.6, MM.white); { const [x, z] = hp(118, 823); box(scene, 0.6, 4.2, 9.6, [x - 3.8, T + 3.2, z], MM.slot, { shadow: false }); }       // USB2.0 4핀(왼쪽을 봄)
+onTop(1050, 825, 7, 6, 10, MM.white); { const [x, z] = hp(1050, 825); box(scene, 0.6, 4.2, 8, [x + 3.3, T + 3.2, z], MM.slot, { shadow: false }); }          // DC Out 4핀(오른쪽을 봄)
+onTop(97, 178, 4.5, 5, 7, MM.white); { const [x, z] = hp(97, 178); box(scene, 0.6, 3.4, 5.4, [x - 2.1, T + 2.7, z], MM.slot, { shadow: false }); }           // 2핀 흰 커넥터
+for (const [hx, hy, n] of [[1057, 585, 2], [1060, 632, 4], [1057, 760, 2]]) { const [x, z] = hp(hx, hy); box(scene, 2.6, 2.5, 2.54 * n, [x, T + 1.25, z], MM.black); for (let k = 0; k < n; k++) box(scene, 0.6, 6.5, 0.6, [x, T + 3.25, z + (k - (n - 1) / 2) * 2.54], MM.gold); }   // 핀 헤더
+for (const p of [[1067, 215], [1062, 500]]) { const [x, z] = hp(...p); box(scene, 4.5, 2.0, 4.5, [x, T + 1, z], MM.black); cyl(scene, 1.3, 1.6, [x, T + 2.8, z], MM.black, { seg: 24 }); }   // 버튼 REC · RST
+{ const [x, z] = hp(1007, 330); box(scene, 10.5, 2.0, 14, [x, T + 1, z], MM.steelDark); box(scene, 0.6, 1.2, 11, [x + 5.3, T + 1.1, z], MM.slot, { shadow: false }); }   // micro SD
+{ const [x, z] = hp(1060, 430); box(scene, 5, 2.8, 7.5, [x, T + 1.4, z], MM.steel); box(scene, 0.6, 1.4, 5.6, [x + 2.6, T + 1.4, z], MM.slot, { shadow: false }); }      // OTG micro USB
+onTop(898, 370, 12, 7, 12, MM.ind, { r: 1.0 });                                                                                                                        // ZR2 인덕터
+for (const p of [[935, 500], [745, 675], [750, 790]]) onTop(p[0], p[1], 5.8, 4, 5.8, MM.indGray, { r: 0.5 });
+onTop(300, 405, 5, 3, 5, MM.ind, { r: 0.5 });
+for (const p of [[905, 285], [600, 605], [600, 650], [600, 775]]) { onTop(p[0], p[1], 7.3, 2.8, 4.3, MM.polyCap, { r: 0.3 }); onTop(p[0], p[1], 6.6, 0.15, 3.6, MM.steelDark, { dx: 0, dz: 0 }).position.y = T + 2.85; }   // 폴리머 캡
+for (const p of [[820, 790], [1000, 710]]) { onTop(p[0], p[1], 6.5, 2.3, 6, MM.black); const [x, z] = hp(...p); box(scene, 5.5, 0.4, 1.6, [x, T + 0.2, z + 3.6], MM.steelDark, { shadow: false }); }   // D-PAK
+for (const [hx, hy, w, d] of [[880, 470, 7, 7], [740, 610, 4, 4], [325, 785, 5, 5], [195, 560, 5, 5], [575, 715, 4, 4], [880, 405, 5, 4]]) onTop(hx, hy, w, 1.1, d, MM.ic, { r: 0.15 });   // 납작한 IC
+
+// 작은 수동 부품: 사진(질감 프레임 mm)에서 자동 추출. 큰 부품 자리는 뺀다
+const parts = await (await fetch('./tex/mic-parts.json')).json();
+const bigs = [[440, 400, 26, 130], [670, 125, 30, 9], [200, 268, 26, 9], [213, 150, 13, 14], [955, 152, 13, 14], [112, 478, 7, 37], [118, 823, 10, 13], [1050, 825, 9, 12], [1007, 330, 12, 15], [898, 370, 13, 13]].map(([hx, hy, w, d]) => { const [x, z] = hp(hx, hy); return [x - w / 2, z - d / 2, x + w / 2, z + d / 2]; });
+let n = 0;
+for (const [mx, mz, w, d] of parts) {
+  const x = mx - W / 2, z = mz - D / 2;
+  if (bigs.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) continue;
+  if (SCREWS.concat(RINGS).some(p => { const [sx, sz] = hp(...p); return Math.hypot(sx - x, sz - z) < 5; })) continue;
+  box(scene, Math.min(3.2, Math.max(0.9, w * 0.9)), 0.5, Math.min(3.2, Math.max(0.6, d * 0.9)), [x, T + 0.25, z], MM.passive, { shadow: false }); n++;
+}
+console.log('passives', n);
+await ready({ light: [pcbTopMat, MM.pcbBot, MM.pcbEdge, MM.steel, MM.steelDark, MM.green, MM.blue, MM.gold, MM.copper, MM.band],   // 두 색 모드: 기판·틈의 포트·스탠드오프·방열판 띠만 밝게, 베이스와 윗면 부품은 어둡게
+  masks: new Map([[pcbTopMat, './tex/mic-top-duo.png']]) });   // 기판 실크·패드·배선은 어두운 선으로
+</script>
+</body>
+</html>

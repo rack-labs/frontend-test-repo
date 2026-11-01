@@ -1,0 +1,167 @@
+<title>RackTracker 히어로 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  /* 레이아웃: 랜딩 사이트 히어로(왼쪽 카피·오른쪽 포스터 6:5)를 그대로 재현한 무대 하나 + 아래에 화면 4장 고르는 띠.
+     색·글꼴 토큰은 사이트 style.css 값 그대로(어두운 한 가지 모습으로 고정) */
+  :root { color-scheme: dark;
+    --bg: #0b0d10; --bg2: #11151b; --line: #2a3340; --ink: #e6eaf0; --body: #cfd6e0; --dim: #9aa4b2; --muted: #64748b; --faint: #3d4654; --tint: #8fbcbc;
+    --display: 'Archivo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+    --text: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --gutter: clamp(16px, 4vw, 56px); }
+  html, body { background: var(--bg); color: var(--body); }
+  body { margin: 0; font: 15px/1.6 var(--text); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px; border-bottom: 1px solid var(--line); }
+  .bar .brand { font: 600 14px/1 var(--display); color: var(--ink); letter-spacing: .02em; }
+  .bar .brand small { color: var(--dim); font: 500 12px/1 var(--mono); margin-left: 10px; }
+  .bar nav { display: flex; gap: 18px; font-size: 13px; color: var(--dim); }
+  .bar nav span:first-child { color: var(--ink); }
+
+  /* 히어로 무대: 사이트와 같은 비율. 포스터는 오른쪽에 radial mask 로 녹인다 */
+  .hero { position: relative; display: grid; grid-template-columns: 1fr; align-items: end; min-height: min(78vh, 760px); padding: 72px 0 40px; overflow: hidden; isolation: isolate; }
+  .hero .poster { position: absolute; inset: 0; z-index: -2; pointer-events: none; display: flex; justify-content: flex-end; align-items: center; padding: 48px calc(var(--gutter) * .3) 0 0; }
+  .hero .frame { position: relative; width: min(64vw, 118vh); max-width: 1180px; max-width: min(1180px, 100%); aspect-ratio: 6 / 5;
+    -webkit-mask-image: radial-gradient(ellipse 62% 66% at 50% 50%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 62% 66% at 50% 50%, #000 62%, transparent 100%); }
+  .hero .frame > * { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.1s ease; background: var(--bg); }
+  .hero .frame > .on { opacity: .92; }
+  .hero .veil { position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(11,13,16,.5) 0%, rgba(11,13,16,0) 28%, rgba(11,13,16,0) 58%, rgba(11,13,16,.9) 100%),
+                linear-gradient(90deg, rgba(11,13,16,.75) 0%, rgba(11,13,16,.25) 45%, rgba(11,13,16,0) 70%); }
+  .hero .copy { max-width: 880px; }
+  .kicker { font: 500 12px/1 var(--mono); color: var(--tint); letter-spacing: .08em; text-transform: uppercase; margin: 0 0 18px; }
+  h1 { font: 700 clamp(40px, 6.2vw, 88px)/.96 var(--display); letter-spacing: -.01em; color: var(--ink); margin: 0 0 22px; text-wrap: balance; max-width: 12ch; }
+  .lede { font-size: clamp(16px, 1.3vw, 19px); line-height: 1.55; max-width: 60ch; color: var(--body); margin: 0 0 26px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { display: inline-block; padding: 11px 18px; border-radius: 999px; font: 600 14px/1 var(--display); color: var(--bg); background: var(--ink); }
+  .btn.ghost { color: var(--ink); background: transparent; border: 1px solid var(--line); }
+
+  /* 화면 고르기 띠: 썸네일 4 + 진행 막대. 자동으로 넘어가고, 누르면 그 화면으로 */
+  .pick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+  .pick button { all: unset; cursor: pointer; display: grid; gap: 8px; min-width: 0; border-radius: 6px; padding: 8px; border: 1px solid transparent; }
+  .pick button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+  .pick button[aria-pressed="true"] { border-color: var(--line); background: var(--bg2); }
+  .pick img { display: block; width: 100%; aspect-ratio: 6 / 5; object-fit: cover; border-radius: 4px; opacity: .8; }
+  .pick button[aria-pressed="true"] img { opacity: 1; }
+  .pick .t { font: 500 13px/1.3 var(--text); color: var(--ink); }
+  .pick .s { font: 500 11px/1.4 var(--mono); color: var(--dim); }
+  .pick .p { height: 2px; background: var(--faint); border-radius: 1px; overflow: hidden; }
+  .pick .p i { display: block; height: 100%; width: 0; background: var(--tint); }
+  .pick button[aria-pressed="true"] .p i { animation: fill var(--dwell) linear forwards; }
+  @keyframes fill { to { width: 100%; } }
+  .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 18px; font-size: 13px; color: var(--dim); }
+  .tools label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .tools select, .tools input { accent-color: var(--tint); }
+  .tools select { font: inherit; color: var(--ink); background: var(--bg2); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; }
+
+  /* 아래: 화면마다 큰 정지 화면 + 무엇을 근거로 그렸는지 한 줄 */
+  .sheet { margin-top: 56px; display: grid; gap: 40px; }
+  .sheet h2 { font: 600 18px/1.3 var(--display); color: var(--ink); margin: 0 0 6px; }
+  .sheet p { margin: 0 0 12px; color: var(--dim); max-width: 70ch; }
+  .sheet .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+  .sheet img { display: block; width: 100%; max-width: 100%; border-radius: 6px; border: 1px solid var(--line); }
+  .sheet figcaption { font: 500 12px/1.5 var(--mono); color: var(--muted); margin-top: 6px; }
+  @media (max-width: 900px) {
+    .hero { min-height: 0; display: block; padding-top: 24px; }
+    .hero .poster { position: static; display: block; padding: 0; margin: 0 auto 8px; width: min(92vw, 56vh); }
+    .hero .frame { width: 100%; aspect-ratio: 1 / 1; }
+    .hero .veil { display: none; }
+    .pick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bar nav { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .hero .frame > * { transition: none; } .pick button[aria-pressed="true"] .p i { animation: none; width: 100%; } }
+</style>
+
+<div class="bar">
+  <div class="brand">Rack Labs <small>racktracker.dev · 히어로 시안 2026-10-26</small></div>
+  <nav><span>RackTracker</span><span>Open source</span><span>Business plan</span></nav>
+</div>
+
+<section class="hero" aria-label="히어로">
+  <div class="poster" aria-hidden="true">
+    <div class="frame" id="frame">
+      <video id="v-mesh" muted loop playsinline preload="auto" poster="{{ASSET:mesh.webp}}" class="on"><source src="{{ASSET:mesh-loop.webm}}" type="video/webm"></video>
+      <video id="v-rig" muted loop playsinline preload="auto" poster="{{ASSET:rig-back.webp}}"><source src="{{ASSET:rig-loop.webm}}" type="video/webm"></video>
+      <video id="v-mic711" muted loop playsinline preload="auto" poster="{{ASSET:mic711.webp}}"><source src="{{ASSET:mic711-loop.webm}}" type="video/webm"></video>
+      <video id="v-ar0234" muted loop playsinline preload="auto" poster="{{ASSET:ar0234.webp}}"><source src="{{ASSET:ar0234-loop.webm}}" type="video/webm"></video>
+    </div>
+  </div>
+  <div class="veil" aria-hidden="true"></div>
+  <div class="copy">
+    <p class="kicker">RackTracker by Rack Labs</p>
+    <h1>Turn the power rack into a motion-capture studio.</h1>
+    <p class="lede">Three synchronized cameras and an edge computer, mounted on the rack, show the trainer where the weight went on every rep: which joints took the load, and which muscles carried it.</p>
+    <div class="cta"><span class="btn">RackTracker</span><span class="btn ghost">Open source</span></div>
+  </div>
+</section>
+
+<div class="pick" id="pick" role="group" aria-label="화면 고르기">
+  <button type="button" data-k="mesh" aria-pressed="true"><img src="{{ASSET:mesh.webp}}" alt=""><span class="t">실제 세트 메시</span><span class="s">2026-10-05 · MHR · 지금 사이트</span><span class="p"><i></i></span></button>
+  <button type="button" data-k="rig" aria-pressed="false"><img src="{{ASSET:rig-back.webp}}" alt=""><span class="t">리그 배치</span><span class="s">카메라 3대 · 장비함 · 선</span><span class="p"><i></i></span></button>
+  <button type="button" data-k="mic711" aria-pressed="false"><img src="{{ASSET:mic711.webp}}" alt=""><span class="t">Jetson 캐리어</span><span class="s">MIC-711D · 125×124×51 mm</span><span class="p"><i></i></span></button>
+  <button type="button" data-k="ar0234" aria-pressed="false"><img src="{{ASSET:ar0234.webp}}" alt=""><span class="t">카메라 모듈</span><span class="s">AR0234 · 38×38×25 mm</span><span class="p"><i></i></span></button>
+</div>
+<div class="tools">
+  <label><input type="checkbox" id="auto" checked> 자동으로 넘기기</label>
+  <label>한 화면 <select id="dwell"><option value="4">4초</option><option value="6" selected>6초</option><option value="9">9초</option></select></label>
+  <label><input type="checkbox" id="still"> 정지 화면만</label>
+</div>
+
+<section class="sheet" aria-label="화면별 원본">
+  <div>
+    <h2>리그 배치</h2>
+    <p>리포트용 배치 렌더와 같은 모형입니다. 글자·치수·눈금을 빼고 사이트 배경색 위에 올렸습니다. 앞에서 본 것과 뒤에서 본 것 두 가지입니다.</p>
+    <div class="pair">
+      <figure><img src="{{ASSET:rig-front.webp}}" alt="파워랙 앞 오른쪽 위에서 본 리그 배치"><figcaption>rig-front.png · 2160×1800</figcaption></figure>
+      <figure><img src="{{ASSET:rig-back.webp}}" alt="파워랙 뒤 왼쪽 위에서 본 리그 배치, 장비함과 선이 보인다"><figcaption>rig-back.png · 2160×1800 · 루프는 이 시점</figcaption></figure>
+    </div>
+  </div>
+  <div>
+    <h2>Jetson 캐리어 MIC-711D</h2>
+    <p>보유 Orin NX 실물 사진(10월 26일 윗면 정면 촬영)으로 부품 자리를 잡았고, 높이 있는 부품(NVMe 방열판·소켓·커넥터)만 3D 로 올렸습니다. 색은 무광 두 가지뿐입니다. 기판과 틈의 포트는 밝은 색, 베이스 블록과 윗면 부품은 어두운 색입니다. 기판의 실크 글자·패드·배선은 사진을 두 단계로 나눠 어두운 선으로 남겼습니다. 베이스 방열 블록과 포트는 데이터시트 도면대로입니다.</p>
+    <figure><img src="{{ASSET:mic711.webp}}" alt="MIC-711D 캐리어 보드 3D 렌더"><figcaption>mic711.png · 2160×1800</figcaption></figure>
+  </div>
+  <div>
+    <h2>카메라 모듈 AR0234</h2>
+    <p>보유 DECXIN-3081V1 실물 사진(앞·뒤)과 영상으로 부품 자리와 렌즈 모양을 잡았고, 렌즈·홀더·Type-C·3핀 트리거 커넥터는 규격서 치수로 3D 로 올렸습니다. 색은 무광 두 가지뿐입니다. 기판과 렌즈 유리는 밝은 색, 렌즈 몸통·홀더·부품은 어두운 색입니다. 기판 앞뒤의 실크 글자·패드·배선은 사진을 두 단계로 나눠 어두운 선으로 남겼습니다.</p>
+    <div class="pair">
+      <figure><img src="{{ASSET:ar0234.webp}}" alt="AR0234 카메라 모듈 3D 렌더"><figcaption>ar0234.png · 2160×1800</figcaption></figure>
+      <figure><img src="{{ASSET:ar0234-exploded.webp}}" alt="AR0234 카메라 모듈 분해도"><figcaption>ar0234-exploded.png · 2160×1800</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var keys = ['mesh', 'rig', 'mic711', 'ar0234'], cur = 0, timer = null;
+  var auto = document.getElementById('auto'), dwell = document.getElementById('dwell'), still = document.getElementById('still');
+  var vids = {}; keys.forEach(function (k) { vids[k] = document.getElementById('v-' + k); });
+  var btns = Array.prototype.slice.call(document.querySelectorAll('#pick button'));
+  function setDwell() { document.documentElement.style.setProperty('--dwell', dwell.value + 's'); }
+  function play(v) { if (still.checked) { v.pause(); try { v.currentTime = 0; } catch (e) {} return; } v.play().catch(function () {}); }
+  function show(i) {
+    cur = (i + keys.length) % keys.length;
+    keys.forEach(function (k, j) {
+      var v = vids[k], on = j === cur;
+      v.classList.toggle('on', on);
+      if (on) play(v); else v.pause();
+    });
+    btns.forEach(function (b, j) {
+      b.setAttribute('aria-pressed', String(j === cur));
+      var bar = b.querySelector('.p i'); bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = '';
+    });
+    schedule();
+  }
+  function schedule() {
+    clearTimeout(timer);
+    if (auto.checked) timer = setTimeout(function () { show(cur + 1); }, parseFloat(dwell.value) * 1000);
+  }
+  btns.forEach(function (b, j) { b.addEventListener('click', function () { show(j); }); });
+  auto.addEventListener('change', schedule);
+  dwell.addEventListener('change', function () { setDwell(); show(cur); });
+  still.addEventListener('change', function () { keys.forEach(function (k) { if (still.checked) { vids[k].pause(); try { vids[k].currentTime = 0; } catch (e) {} } }); if (!still.checked) play(vids[keys[cur]]); });
+  setDwell();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { still.checked = true; auto.checked = false; }
+  show(0);
+})();
+</script>

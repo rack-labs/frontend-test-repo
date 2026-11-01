@@ -1,0 +1,113 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SiteBar from '../../../components/SiteBar.astro';
+import SiteFooter from '../../../components/SiteFooter.astro';
+// A reading of the 2026 scoping review of markerless motion capture (arXiv 2609.18667), the
+// paper that maps the field RackTracker works in. The numbers are the paper's; the last
+// section is our reading of them. The paper is under arXiv's non-exclusive licence, so this
+// page summarises and links rather than hosting a copy. Korean edition (the default): /research/.
+const ARXIV = { abs: 'https://arxiv.org/abs/2609.18667', pdf: 'https://arxiv.org/pdf/2609.18667' };
+---
+<Base
+  lang="en"
+  title="Research: where markerless motion capture stands — Rack Labs"
+  description="A reading of the 2026 PRISMA-ScR scoping review of video-based markerless motion capture for clinical biomechanics (117 studies, arXiv 2609.18667): the five architectures, how accurate they are, what is ready for the clinic, and where RackTracker's multi-view rig sits in that map."
+  ogType="article"
+  ogTitle="Where markerless motion capture stands"
+  ogDescription="117 validated studies, five architectures, joint angles still 5 degrees off, kinetics the next frontier. The 2026 scoping review, read from the rack."
+  path="/en/research/"
+  alt="/research/"
+  styles={['/style.css', '/doc.css']}
+>
+  <SiteBar lang="en" current="/en/research/" alt="/research/" />
+
+  <main class="doc-page">
+    <p class="doc-top">
+      <span>Rack Labs / Research</span>
+      <a href="/research/" hreflang="ko" lang="ko">한국어</a>
+    </p>
+
+    <article class="doc">
+      <p class="eyebrow">Research note, November 2026</p>
+      <h1>Where markerless motion capture stands</h1>
+      <p class="sub">A reading of the 2026 scoping review of video-based markerless motion capture for clinical biomechanics, and where RackTracker sits in its map.</p>
+      <dl class="meta">
+        <dt>Paper</dt><dd>Video-Based Markerless Motion Capture for Clinical and Rehabilitation Biomechanics: A PRISMA-ScR Scoping Review of Validated Architectures, Clinical Readiness, and Emerging Methods</dd>
+        <dt>Authors</dt><dd>Florian Delaplace, Elodie Piche, Frédéric Chorin, Raphael Zory. LAMHESS, Université Côte d'Azur; Centre Hospitalier Universitaire de Nice; Institut Universitaire de France</dd>
+        <dt>Published</dt><dd>arXiv 2609.18667, submitted 16 September 2026</dd>
+        <dt>Protocol</dt><dd>Pre-registered on OSF, doi 10.17605/OSF.IO/TBYPC</dd>
+      </dl>
+      <p class="links">
+        <a href={ARXIV.abs} rel="noopener">Abstract on arXiv</a>
+        <a href={ARXIV.pdf} rel="noopener">PDF on arXiv</a>
+      </p>
+      <p class="note">The paper is distributed under arXiv's non-exclusive licence, so this page summarises it and links to arXiv instead of hosting a copy. Every number below is the paper's, with the table or section it comes from. Section 6 is our reading and is marked as such.</p>
+
+      <h2 id="review"><span class="num">1</span>What the review did</h2>
+      <p>The authors searched PubMed, Scopus and IEEE Xplore for studies from January 2015 to February 2026 that measured human movement from ordinary video and compared the result with a reference system. Of 9,346 records, 117 studies were included after two reviewers screened them independently. From each study more than 90 items were extracted: the cameras, the calibration, the pose estimator, the downstream model, the reference, the population, the task and the errors.</p>
+      <p>The review has two levels. The upper level, which the authors call MACRO, is this validated corpus. The lower level, MICRO, is a separate sweep of 572 recent computer-vision papers and preprints from 2024 to 2026, sorted into the 17 blocks of a markerless pipeline, to see which new methods could close the gaps the validated corpus shows. Commercial black-box systems and depth cameras were excluded by design, so the result is a map of open architectures.</p>
+
+      <h2 id="families"><span class="num">2</span>Five architectures</h2>
+      <p>Every included study fits one of five families, by what it computes from the video (Table 1 of the paper, n = 117).</p>
+      <div class="tbl"><table>
+        <caption>Table 1. The five architectures and how many validated studies use each.</caption>
+        <thead><tr><th>Family</th><th>What it computes</th><th class="r">Studies</th><th class="r">Share</th></tr></thead>
+        <tbody>
+          <tr><td data-th="Family">2D monocular</td><td data-th="What it computes" class="w">2D joints in one camera's image; angles measured in the image plane</td><td data-th="Studies" class="r">47</td><td data-th="Share" class="r">40%</td></tr>
+          <tr><td data-th="Family">Multi-view triangulation</td><td data-th="What it computes" class="w">2D joints in several calibrated, synchronised cameras, intersected into 3D</td><td data-th="Studies" class="r">44</td><td data-th="Share" class="r">38%</td></tr>
+          <tr><td data-th="Family">Monocular 3D lifting</td><td data-th="What it computes" class="w">3D joints inferred from one camera by a learned model</td><td data-th="Studies" class="r">19</td><td data-th="Share" class="r">16%</td></tr>
+          <tr><td data-th="Family">Body mesh (SMPL)</td><td data-th="What it computes" class="w">A parametric body surface fitted to the video</td><td data-th="Studies" class="r">4</td><td data-th="Share" class="r">3%</td></tr>
+          <tr><td data-th="Family">End-to-end regression</td><td data-th="What it computes" class="w">Joint angles or kinematics regressed directly from the video</td><td data-th="Studies" class="r">3</td><td data-th="Share" class="r">3%</td></tr>
+        </tbody>
+      </table></div>
+      <p>The rest of Table 1 and section 3.1 describe the corpus. Of the 117 studies, 53 (45%) used one camera and 34 (29%) two; 53 used no camera calibration at all; 57 (49%) ran an OpenPose-family detector and 33 (28%) fed OpenSim. Eight studies (7%) reported real-time or near real-time processing. The reference was an optical marker-based system in 97 studies (83%). The settings were a laboratory in 100 studies, a clinical gait laboratory in 16, a home in 1 and outdoors in none. Healthy adults were the population in 72 studies; patient or clinical groups made up about 19%. Gait was the task in 67 studies, the squat in 4. The median study had 17 participants.</p>
+
+      <h2 id="accuracy"><span class="num">3</span>How accurate</h2>
+      <p>The review reads accuracy in joint angles, not in millimetres of keypoint position, because joint angles are what a clinician uses. It borrows the bands of McGinley and colleagues for marker-based gait analysis: an error of 2° or less is acceptable, 2° to 5° is reasonable, and over 5° is likely to mislead. Against an optical reference, the median absolute errors in the sagittal plane were these (Table 2 of the paper).</p>
+      <div class="tbl"><table>
+        <caption>Table 2. Sagittal-plane joint-angle error against an optical marker-based reference. Median of the studies' absolute errors, with the interquartile range and the share of studies at or under 5°.</caption>
+        <thead><tr><th>Joint</th><th class="r">Median error</th><th class="r">IQR</th><th class="r">Studies</th><th class="r">≤ 5°</th></tr></thead>
+        <tbody>
+          <tr><td data-th="Joint">Pelvis</td><td data-th="Median error" class="r">5.2°</td><td data-th="IQR" class="r">3.4 to 6.1</td><td data-th="Studies" class="r">5</td><td data-th="≤ 5°" class="r">40%</td></tr>
+          <tr><td data-th="Joint">Hip</td><td data-th="Median error" class="r">5.5°</td><td data-th="IQR" class="r">3.6 to 7.1</td><td data-th="Studies" class="r">57</td><td data-th="≤ 5°" class="r">47%</td></tr>
+          <tr><td data-th="Joint">Knee</td><td data-th="Median error" class="r">5.6°</td><td data-th="IQR" class="r">3.7 to 7.0</td><td data-th="Studies" class="r">65</td><td data-th="≤ 5°" class="r">40%</td></tr>
+          <tr><td data-th="Joint">Ankle</td><td data-th="Median error" class="r">5.9°</td><td data-th="IQR" class="r">3.6 to 8.4</td><td data-th="Studies" class="r">49</td><td data-th="≤ 5°" class="r">43%</td></tr>
+        </tbody>
+      </table></div>
+      <p>Across the sagittal lower-limb estimates, about 6% fell within 2°, about 37% between 2° and 5°, and about 57% over 5°. No family reached the 2° band: 2D monocular and multi-view triangulation sit at about 4° to 6°, monocular lifting at about 6° to 7°, and the mesh and end-to-end families have too few studies to place (section 3.3.3). The other two planes are barely reported. The knee has 65 sagittal estimates but 5 frontal and 3 transverse; the hip 57, 17 and 12. Where they exist, frontal errors at the hip and knee are near the sagittal ones, and transverse errors at the ankle reach 11° from a single study (sections 3.3.4 and Table 2).</p>
+
+      <h2 id="readiness"><span class="num">4</span>What is ready for the clinic</h2>
+      <p>From these numbers the authors sort markerless outputs into three tiers (Table 3 and section 4.6).</p>
+      <div class="tbl"><table>
+        <caption>Table 3. Clinical readiness of markerless outputs, as the review grades them.</caption>
+        <thead><tr><th>Tier</th><th>Outputs</th><th>Fit for</th></tr></thead>
+        <tbody>
+          <tr><td data-th="Tier">Clinically usable</td><td data-th="Outputs" class="w">Spatiotemporal gait variables</td><td data-th="Fit for" class="w">Routine measurement</td></tr>
+          <tr><td data-th="Tier">Screening and trends</td><td data-th="Outputs" class="w">Sagittal-plane joint angles</td><td data-th="Fit for" class="w">Screening and following change over time; a difference of 3° to 5° cannot be resolved</td></tr>
+          <tr><td data-th="Tier">Research only</td><td data-th="Outputs" class="w">Frontal and transverse angles, kinetics without force plates, profiling of pathological gait</td><td data-th="Fit for" class="w">Studies, not decisions about a person</td></tr>
+        </tbody>
+      </table></div>
+      <p>Kinetics, the forces and moments at the joints, is what the authors call the next frontier (section 4.3). Only 34% of the studies validated spatiotemporal variables at all, and 9 studies compared kinetics with force plates. Of the 117 studies, 8 ran in real time.</p>
+
+      <h2 id="triangulation"><span class="num">5</span>Multi-view triangulation, in the authors' words</h2>
+      <p>Section 4.2 of the review grades the families by maturity. On the family RackTracker belongs to:</p>
+      <div class="quote">
+        <p>"Multi-view triangulation is the more mature route to full three-dimensional biomechanics. It is the only family that routinely reports frontal and transverse kinematics, and it concentrates the inverse-kinematics and musculoskeletal pipelines, notably the OpenCap lineage, that make joint angles interpretable. It remains laboratory-bound and needs several synchronised, calibrated cameras."</p>
+        <p class="src">Delaplace, Piche, Chorin and Zory, section 4.2.</p>
+      </div>
+      <p>The paper's conclusion names three conditions for progress: evaluation that reports joint angles rather than keypoint-position error, validation in the populations and settings that matter, and a shorter lag between computer-vision innovation and biomedical validation. Its chapter 5 adds design guidelines for systems meant to be deployed clinically. The principle behind them is that the kinematics must rest on what holds for everyone, anatomy, mechanics and a model of the individual, rather than on priors learned from a population that may not include the person in front of the camera.</p>
+
+      <h2 id="racktracker"><span class="num">6</span>What this means for RackTracker</h2>
+      <p class="small">This section is our reading, not the paper's.</p>
+      <p><strong>RackTracker is a multi-view triangulation system.</strong> Three calibrated, synchronised cameras, 2D joints in each view, intersection into 3D, then a body model and inverse dynamics. That is the family the review calls the more mature route to full 3D biomechanics, and the only one that routinely reports the frontal and transverse planes, which is where left-right asymmetry shows.</p>
+      <p><strong>The family's constraint is the rig's starting point.</strong> The review's reservation is that triangulation stays in the laboratory because it needs several synchronised, calibrated cameras. RackTracker makes the rack the laboratory: the cameras are bolted to it, synchronisation is a hardware trigger pulse shared by all three, and both calibrations are procedures of the rig OS run from the kiosk. In the corpus, 100 of 117 studies were done in a laboratory, 1 at home and none outdoors; a gym is not among the settings at all. Squats appear in 4 studies, gait in 67. The rig measures the lifts done in a rack.</p>
+      <p><strong>Kinetics is the output the rig is built for.</strong> The review's next frontier, joint loads, had 9 force-plate comparisons in eleven years. RackTracker reports the load carried by each joint on every rep, computed by inverse dynamics from the triangulated joints and the known load on the bar. Those are model values today. A validation against a marker-based system and force plates, in a motion-analysis laboratory, is the next study we are planning.</p>
+      <p><strong>The design guidelines point the way the rig already leans.</strong> Chapter 5 asks for kinematic inference that is person-specific and model-based rather than learned, and for a parametric body model early in the pipeline. The rig triangulates first, fits a parametric body model to the result, and computes its kinetics from a mechanical model, with no learned prior standing in for the person.</p>
+      <p><strong>Where to be careful.</strong> The review excludes commercial systems and depth cameras, synthesises narratively rather than by meta-analysis, and treats the 2° and 5° bands as reference points rather than thresholds, since the optical reference itself carries soft-tissue error. Its accuracy numbers are for gait in laboratories; a loaded squat in a gym is a different task, and the rig's own accuracy has to be shown on that task.</p>
+
+      <p class="note">Further reading: the <a href="/report/">Project Report</a> (Korean) covers the rig's calibration, triangulation and load computation in chapters 4 to 8, and <a href="/how-it-works/">How it works</a> shows them as animations.</p>
+    </article>
+  </main>
+
+  <SiteFooter lang="en" />
+</Base>
