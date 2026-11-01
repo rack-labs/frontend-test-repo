@@ -22,7 +22,7 @@ const fonts = `https://fonts.googleapis.com/css2?${families.map((f) => `family=$
 const url = new URL(path, Astro.site).href;
 const altUrl = alt ? new URL(alt, Astro.site).href : undefined;
 const other = lang === 'ko' ? 'en' : 'ko';
-const ogImage = new URL('/assets/og.png', Astro.site).href;
+const ogImage = new URL('/assets/og-logo.png', Astro.site).href;
 ---
 <!doctype html>
 <html lang={lang}>
