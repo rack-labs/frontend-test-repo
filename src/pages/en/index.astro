@@ -10,15 +10,18 @@ import { getHeadings } from '../../report/project-report.md';
 // The deeper pages, How it works, Research and Open source, hang off the top bar.
 const chapters = getHeadings().filter((h) => h.depth === 2);
 
-// The demo video. Until the narrated demo of a full set is cut, the slot plays the clip of the
-// rig turning (scene 7 of that video's script). A YouTube id, when set, adds a link beside it.
+// The demo video: the narrated demo of one full set (5 min 19 s, 88 MB). Files over the 25 MiB
+// static-asset limit live in the R2 bucket racktracker-files behind files.racktracker.dev (dated
+// keys, immutable cache); the poster is the RackTracker title card. A YouTube id,
+// when set, adds a link beside it.
+const FILES = 'https://files.racktracker.dev';
 const DEMO = {
-  src: '/assets/demo/rig-hw-spin.mp4', type: 'video/mp4', poster: '/assets/demo/rig-hw-spin.webp', width: 1920, height: 1080,
+  src: `${FILES}/demo/RackTracker_demo_2026-11-01.mp4`, type: 'video/mp4', poster: '/assets/demo/demo-thumbnail.webp', width: 1920, height: 1080,
   youtube: '',
-  note: 'Preview clip: the rig and its parts. The narrated demo of a full set, about five minutes, is being cut and will take this slot.',
+  note: 'Five minutes 19 seconds, narrated in Korean with Korean subtitles.',
 };
-// The PowerPoint export of the deck (75 MB) is served from object storage, not with the page files; empty until it is up.
-const PPTX = '';
+// The PowerPoint export of the deck (98 MB), from the same bucket; its Content-Disposition names the download RackTracker.pptx.
+const PPTX = `${FILES}/graduation-review/RackTracker_2026-11-01.pptx`;
 const PDF = { href: '/report/RackTracker_Project_Report.pdf', size: '8 MB', pages: 40 };
 
 const parts = [
@@ -279,7 +282,7 @@ const parts = [
             <button type="button" class="mini" id="deck-full">Full screen</button>
             <a class="mini" href="/slides/#/graduation-review/1" target="_blank" rel="noopener">Open in a new tab</a>
             {PPTX
-              ? <a class="mini strong" href={PPTX} download>Download PowerPoint</a>
+              ? <a class="mini strong" href={PPTX} download>Download PowerPoint (98 MB)</a>
               : <span class="mini off" title="The PowerPoint export is being put up">PowerPoint, soon</span>}
           </span>
         </div>

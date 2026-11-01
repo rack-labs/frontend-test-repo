@@ -24,6 +24,7 @@
   --sheet-line: #e6e8eb;
   --display: 'Archivo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Noto Sans KR', 'Malgun Gothic', monospace;
+  --bar: 68px;
   --gutter: clamp(16px, 4vw, 56px);
   --wing: clamp(64px, 10vh, 140px);
   --radius: 6px;
@@ -32,7 +33,7 @@
 
 html { scroll-behavior: smooth; }
 /* anchor targets stop below the sticky bar */
-[id] { scroll-margin-top: 72px; }
+[id] { scroll-margin-top: calc(var(--bar) + 12px); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
 body {
@@ -52,24 +53,36 @@ img, video { display: block; max-width: 100%; height: auto; }
 .bar {
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; justify-content: space-between; gap: 24px;
-  height: 60px; padding: 0 var(--gutter); margin-bottom: -60px;
-  font: 14px/1 var(--mono); letter-spacing: .04em;
+  height: var(--bar); padding: 0 var(--gutter); margin-bottom: calc(-1 * var(--bar));
+  font: 16px/1 var(--mono); letter-spacing: .04em;
   border-bottom: 1px solid transparent;
   transition: background 240ms ease, border-color 240ms ease;
 }
 .bar.solid { background: rgb(var(--bg-rgb) / .85); backdrop-filter: blur(10px); border-color: var(--line); }
 .bar .brand {
-  display: inline-flex; align-items: center; gap: 10px;
-  color: var(--ink); font: 600 17px/1 var(--display); letter-spacing: .18em; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 12px;
+  color: var(--ink); font: 600 22px/1 var(--display); letter-spacing: .16em; white-space: nowrap;
 }
-.bar .brand svg { width: 18px; height: 18px; flex: none; fill: currentColor; }
+.bar .brand svg { width: 24px; height: 24px; flex: none; fill: currentColor; }
 .bar nav { display: flex; gap: clamp(16px, 3vw, 32px); overflow-x: auto; white-space: nowrap; }
 .bar nav a { color: var(--dim); padding: 6px 0; }
 .bar nav a:hover { color: var(--ink); }
 /* language switch at the right end; the section links sit just left of it */
 .bar nav:not(.lang) { margin-left: auto; }
-.bar .lang { gap: 12px; padding-left: 16px; border-left: 1px solid var(--line); }
+.bar .lang { flex: none; gap: 14px; padding-left: 18px; border-left: 1px solid var(--line); }
 .bar .lang span { color: var(--ink); padding: 6px 0; }
+/* narrower desktops and tablets: the links tighten before they start to scroll,
+   so no width hides more of them than the old 14px bar did; the switch never shrinks */
+@media (max-width: 1279px) and (min-width: 641px) {
+  .bar { font-size: 15px; }
+  .bar nav { gap: 16px; }
+}
+@media (max-width: 1140px) and (min-width: 641px) {
+  .bar { font-size: 14px; }
+  .bar nav { gap: 14px; }
+  .bar .brand { gap: 10px; font-size: 19px; }
+  .bar .brand svg { width: 21px; height: 21px; }
+}
 
 /* shared copy pieces */
 .kicker {
@@ -121,7 +134,7 @@ img, video { display: block; max-width: 100%; height: auto; }
 .hero .poster {
   position: absolute; inset: 0; z-index: -3; pointer-events: none;
   display: flex; justify-content: flex-end; align-items: center;
-  padding: 72px calc(var(--gutter) * .5) 0 0;
+  padding: calc(var(--bar) + 12px) calc(var(--gutter) * .5) 0 0;
 }
 .hero .stage {
   position: relative; width: min(64vw, 118vh); max-width: 1180px; aspect-ratio: 6 / 5;
@@ -161,6 +174,9 @@ img, video { display: block; max-width: 100%; height: auto; }
   font-variation-settings: 'wdth' 82; text-wrap: balance;
 }
 .hero h1 .nb { white-space: nowrap; }
+/* Hangul fills the em box (no ascender/descender zone), so the Latin display
+   leading of .94 lets the two Korean lines touch; the Korean page gets 1.1 */
+.hero h1:lang(ko) { line-height: 1.1; }
 .hero .lede { margin-top: 22px; }
 .hero .cue {
   position: absolute; right: var(--gutter); bottom: 20px;
@@ -320,8 +336,8 @@ img, video { display: block; max-width: 100%; height: auto; }
 @media (max-width: 640px) {
   /* the bar wraps to two lines and stops overlaying the hero */
   .bar { flex-wrap: wrap; height: auto; margin-bottom: 0; padding: 14px var(--gutter) 12px; row-gap: 10px; }
-  [id] { scroll-margin-top: 120px; }
-  .bar nav { width: 100%; flex-wrap: wrap; white-space: normal; overflow: visible; gap: 6px 18px; font-size: 12px; }
+  [id] { scroll-margin-top: 132px; }
+  .bar nav { width: 100%; flex-wrap: wrap; white-space: normal; overflow: visible; gap: 6px 18px; font-size: 14px; }
   .bar .lang { width: auto; order: 1; margin-left: auto; padding: 0; border: 0; gap: 10px; }   /* beside the brand, the links below */
   .bar nav:not(.lang) { order: 2; margin-left: 0; }
   .hero { padding-top: 24px; }
@@ -331,7 +347,7 @@ img, video { display: block; max-width: 100%; height: auto; }
 
 /* ── the review in one scroll (November 2026) ───────────────────────────── */
 /* pages without a hero start below the bar */
-.wing.first { padding-top: calc(60px + var(--wing)); border-top: 0; }
+.wing.first { padding-top: calc(var(--bar) + var(--wing)); border-top: 0; }
 /* small round actions under a sheet */
 .mini {
   display: inline-flex; align-items: center; padding: 7px 13px; cursor: pointer;

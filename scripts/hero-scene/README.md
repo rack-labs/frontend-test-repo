@@ -11,6 +11,12 @@ then the move from the floor frame to the rack frame. The rig is built in rack c
 the calibration floor frame by the shift the layout render used (x 17 cm,
 z 46.05 cm), so its cameras are the measurement's cameras.
 
+The person is rack-tracker's MHR body model fitted to the scene's example pose,
+skinned on the GPU from `public/assets/hero-mesh/` (made by `../hero-mesh/`,
+see its README); the model's own skeleton is drawn inside the translucent mesh
+and the measured 33 joints on top. In the burst beat body and skeleton snap to
+each measured frame together.
+
 The camera follows the key moments by itself (`RIG_KEYS` and `MEASURE_KEYS` in
 that file, seconds on the sequence clock); a visitor's drag takes it over, and
 it eases back after five idle seconds. Labels, captions, dimensions and the
