@@ -81,7 +81,7 @@ body.embed .tabs{display:none}
 body.embed .inset{bottom:auto;top:12px;right:12px}
 .player{position:absolute;z-index:5;left:0;right:0;bottom:0;padding:0 max(12px,env(safe-area-inset-left,0px)) max(10px,env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none}
 .player .card{width:min(820px,100%);display:grid;gap:10px;justify-items:center;text-align:center}
-.player .cap{display:grid;align-content:end;margin:0;font-size:15px;line-height:1.5;min-height:3em;text-wrap:balance}
+.player .cap{display:grid;align-content:end;margin:0;font-size:1.125rem;word-break:keep-all;line-height:1.5;min-height:3em;text-wrap:balance}
 .player .bar{width:100%;height:3px;border-radius:2px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden}
 .player .bar i{display:block;height:100%;width:0;background:var(--accent)}
 @media (max-width:560px){ body.embed .v3d{bottom:112px} .player .cap{min-height:4.5em} }

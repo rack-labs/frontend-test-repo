@@ -28,6 +28,7 @@ ap.add_argument("--pose", default="data/pose.json")
 ap.add_argument("--out", required=True)
 ap.add_argument("--device", default="cuda")
 ap.add_argument("--lambda-t", type=float, default=None, help="angle smoothing across phases (default: the product's)")
+ap.add_argument("--identity", default="member.json", help="JSON with the 45 MHR shape values ('identity'); '' = the average body")
 ns = ap.parse_args()
 BACKEND = Path(ns.backend).resolve()
 sys.path.insert(0, str(BACKEND))
@@ -63,8 +64,15 @@ cfg = MhrFitConfig(device=str(m.device))
 if ns.lambda_t is not None:
     cfg.lambda_t = ns.lambda_t
 log = lambda s: print("  " + s)
+identity = None
+member = {}
+if ns.identity:
+    member = json.loads(Path(ns.identity).read_text(encoding="utf-8"))
+    identity = np.asarray(member["identity"], dtype=np.float32)
+    assert identity.shape == (45,), identity.shape
+    print(f"identity from {ns.identity} (|identity| {np.linalg.norm(identity):.2f})")
 res = MhrFitter(m, cfg, log=log).fit(positions=positions, observed=observed, obs_pixel=obs_pixel, obs_valid=obs_valid,
-                                     obs_conf=obs_conf, cameras=cams)
+                                     obs_conf=obs_conf, cameras=cams, identity=identity)
 err = np.linalg.norm(res.landmarks - positions, axis=-1)                # [P,33] cm
 by_joint = {n: round(float(err[:, j].mean()), 2) for j, n in enumerate(POSE_LANDMARK_NAMES)}
 worst = sorted(by_joint.items(), key=lambda kv: -kv[1])[:6]
@@ -74,14 +82,27 @@ print(f"fit {res.stats.get('seconds_total')} s, residual {res.stats.get('resid_p
 pose = torch.tensor(res.pose, device=m.device)
 with torch.no_grad():
     states = m.skeleton_state(pose).cpu().numpy().astype(np.float32)  # [P,127,8]
-    rest = m.rest_vertices(None)                                         # [1,V,3]
+    rest = m.rest_vertices(identity)                                     # [1,V,3]
     v_lbs = m.skin(torch.tensor(states, device=m.device), rest)
-    v_plain = m.vertices(pose, None, correctives=False)
-    v_full = m.vertices(pose, None, correctives=True)
+    v_plain = m.vertices(pose, identity, correctives=False)
+    v_full = m.vertices(pose, identity, correctives=True)
     d_lbs = (v_lbs - v_plain).norm(dim=-1)
     d_cor = (v_full - v_plain).norm(dim=-1)
 print(f"GPU-skinning check: |LBS − model without correctives| max {d_lbs.max():.3f} cm; "
       f"correctives left out: mean {d_cor.mean():.2f} cm, max {d_cor.max():.2f} cm")
+# the body as it will be seen: standing (phase 0) height crown to sole, shoulder joint span, a head
+# proxy (crown to the neck joint); bottom (last phase) hip above knee from the fitted landmarks.
+# #655: against MediaPipe landmarks the bone scales come out short and the head (no scale of its
+# own) looks big, so hero-scene.js sizes the stick figure until this height meets the member's
+v0 = v_full[0].cpu().numpy(); j0 = states[0]
+jn = {n: i for i, n in enumerate(m.joint_names)}
+crown, sole = float(v0[:, 1].max()), float(v0[:, 1].min())
+neck_y = float(j0[jn["c_neck"], 1]); head_y = float(j0[jn["c_head"], 1])
+sh_w = float(np.linalg.norm(j0[jn["l_uparm"], :3] - j0[jn["r_uparm"], :3]))
+lm = res.landmarks[-1]; hip_knee = float((lm[23, 1] + lm[24, 1]) / 2 - (lm[25, 1] + lm[26, 1]) / 2)
+body = {"standingHeightCm": round(crown - sole, 1), "crownToNeckJointCm": round(crown - neck_y, 1), "crownToHeadJointCm": round(crown - head_y, 1),
+        "shoulderJointSpanCm": round(sh_w, 1), "bottomHipAboveKneeCm": round(hip_knee, 1), "memberHeightCm": member.get("heightCm")}
+print("body:", body, "→ height ratio to member", round(body["standingHeightCm"] / member["heightCm"], 3) if member.get("heightCm") else "n/a")
 
 # skin table: up to four (joint, weight) a vertex, heaviest first
 sj = m._skin_joint.cpu().numpy(); sw = m._skin_weight.cpu().numpy(); sv = m._skin_vertex.cpu().numpy()
@@ -106,7 +127,8 @@ header = {"vertices": int(m.n_vertices), "faces": int(m.faces.shape[0]), "joints
           "bodyNames": list(MHR_BODY_JOINTS), "units": "cm; rest mm",
           "fit": {"residualPx": res.stats.get("resid_px_mean"), "error3dCm": round(float(err.mean()), 3),
                   "correctivesLeftOutCm": round(float(d_cor.mean()), 3), "lambdaT": cfg.lambda_t,
-                  "boneScale": [round(float(v), 4) for v in res.bone_scale[:18]]},
+                  "identity": ns.identity or "average", "boneScale": [round(float(v), 4) for v in res.bone_scale[:18]]},
+          "body": body,
           "sections": {}}
 # lay out: header first (its own length depends on the offsets, so size it with placeholders, then fill)
 def pack(hdr):
