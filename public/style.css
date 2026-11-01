@@ -353,9 +353,13 @@ main { --measure: 1600px; }
   .photos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
-  /* the bar wraps to two lines and stops overlaying the hero */
-  .bar { flex-wrap: wrap; height: auto; margin-bottom: 0; padding: 14px var(--gutter) 12px; row-gap: 10px; }
-  [id] { scroll-margin-top: 132px; }
+  /* the bar wraps to two lines and stops overlaying the hero. Two lines are a quarter of the
+     screen, so the bar slides up as the page scrolls down and comes back on the first scroll up
+     (html.bar-away, SiteBar.astro). A jump to a section hides it too, so the section lands at
+     the top of the screen and not under the room the bar would take */
+  .bar { flex-wrap: wrap; height: auto; margin-bottom: 0; padding: 14px var(--gutter) 12px; row-gap: 10px; transition: transform 240ms ease, background 240ms ease, border-color 240ms ease; }
+  html.bar-away .bar { transform: translateY(-100%); }
+  [id] { scroll-margin-top: 12px; }
   .bar nav { width: 100%; flex-wrap: wrap; white-space: normal; overflow: visible; gap: 6px 18px; font-size: .875rem; }
   .bar .lang { width: auto; order: 1; margin-left: auto; padding: 0; border: 0; gap: 10px; }   /* beside the brand, the links below */
   .bar nav:not(.lang) { order: 2; margin-left: 0; }
@@ -378,6 +382,9 @@ main { --measure: 1600px; }
 .mini.strong { color: var(--ink); border-color: var(--ink); }
 .mini.off { color: var(--muted); border-style: dashed; cursor: default; }
 .hint { font: var(--fs-xs)/1.5 var(--mono); color: var(--muted); }
+/* under the deck the hint names the way the slides turn here: the keys with a mouse, a swipe on a touch screen */
+.hint.touch { display: none; }
+@media (hover: none) and (pointer: coarse) { .hint.kbd { display: none; } .hint.touch { display: inline; } }
 
 /* the rig: one grid. Left, the tabs and the stack of three viewers; right, the copy, the three
    figures and the picked part's panel in reading order. Nothing sticks: both columns scroll with

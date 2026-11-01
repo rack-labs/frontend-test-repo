@@ -55,3 +55,30 @@ const en = lang === 'en' ? undefined : alt;
     </nav>
   )}
 </header>
+<script is:inline>
+  // On a phone the bar is two lines tall (a quarter of the screen), so it slides up as the page
+  // scrolls down and comes back on the first scroll up (html.bar-away; style.css, 640px and
+  // under). A jump to a section, from a link here or from the address, hides it before the
+  // scroll starts and holds it for a second, so the section lands at the top and not under the bar.
+  (function () {
+    var html = document.documentElement, bar = document.getElementById('bar');
+    var last = window.scrollY, hold = 0;
+    function away(on) { html.classList.toggle('bar-away', on); }
+    function jump() { away(true); hold = Date.now() + 1000; }
+    window.addEventListener('scroll', function () {
+      var y = window.scrollY;
+      if (Date.now() < hold) { last = y; return; }
+      if (y <= 24) away(false);
+      else if (y > last + 4) away(true);
+      else if (y < last - 4) away(false);
+      else return;
+      last = y;
+    }, { passive: true });
+    bar.addEventListener('click', function (e) {
+      var a = e.target.closest('a');
+      if (a && a.hash && a.hash !== '#top' && a.host === location.host && a.pathname === location.pathname) jump();
+    });
+    if (location.hash && location.hash !== '#top') jump();
+    setTimeout(function () { last = window.scrollY; if (last <= 24) away(false); }, 1100);
+  })();
+</script>

@@ -36,6 +36,29 @@
       html.present :has(> [data-deck-frame]) > :not([data-deck-frame]) { display: none !important }
       html.present [data-deck-frame] { border: 0; border-radius: 0; box-shadow: none; }
       html.present.idle, html.present.idle * { cursor: none !important }
+
+      /* a touch screen (?embed or the slide show): the arrow buttons go (scaled to a phone they
+         are 12px, a finger's edge), the slide takes the full width, and it turns with a swipe
+         (script below); the window pans up and down and pinches as before. On the first slide two
+         arrows blink at the edges to say so, until the first touch (html.hint) */
+      @media (hover: none) and (pointer: coarse) {
+        html.embed { font-size: min(1.25vw, 2.2222vh); }
+        html.embed [class*="_navBtn_"] { display: none !important }
+        html.embed [data-deck-frame] { border-radius: 0; border-inline: 0; }
+        html.embed body, html.present body { touch-action: pan-y pinch-zoom; }
+      }
+      .turn { display: none; }
+      html.hint .turn {
+        display: flex; position: fixed; inset: 0; z-index: 9; justify-content: space-between; align-items: center;
+        padding: 0 3vw; pointer-events: none;
+      }
+      .turn span {
+        display: grid; place-items: center; width: 11vw; height: 11vw; border-radius: 50%;
+        background: rgba(16, 24, 32, .55); color: #fff; font: 500 7vw/1 system-ui, sans-serif;
+        animation: turn-blink 1.4s ease-in-out infinite;
+      }
+      @keyframes turn-blink { 0%, 100% { opacity: .2 } 50% { opacity: 1 } }
+      @media (prefers-reduced-motion: reduce) { .turn span { animation: none; } }
     </style>
     <script>
       // The slide show is on while this page itself is full screen (the home page asks for it).
@@ -64,6 +87,41 @@
           html.classList.remove('idle'); clearTimeout(still);
           if (on()) still = setTimeout(() => html.classList.add('idle'), 2000);
         });
+      })();
+    </script>
+    <script>
+      // A touch screen turns the slides with a swipe: a finger that moves sideways by more than a
+      // thumb's width and more sideways than up or down (css above hides the arrow buttons there).
+      // Only in ?embed and the slide show; the plain page keeps its buttons. On the first slide the
+      // blinking arrows stay until the first touch or key.
+      (() => {
+        const html = document.documentElement;
+        if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
+        const on = () => html.classList.contains('embed') || html.classList.contains('present');
+        const turn = (key) => window.dispatchEvent(new KeyboardEvent('keydown', { key }));
+        let x0, y0, x1, y1, seen = false;
+        const hint = () => html.classList.toggle('hint', on() && !seen && /\/1$/.test(location.hash));
+        const saw = () => { seen = true; hint(); };
+        document.addEventListener('DOMContentLoaded', () => {
+          const el = document.createElement('div');
+          el.className = 'turn'; el.setAttribute('aria-hidden', 'true');
+          el.innerHTML = '<span>\u2039</span><span>\u203a</span>';
+          document.body.append(el); hint();
+        });
+        window.addEventListener('keydown', saw);
+        document.addEventListener('touchstart', (e) => {
+          saw();
+          const t = e.touches[0]; x0 = x1 = t.clientX; y0 = y1 = t.clientY;
+        }, { passive: true });
+        document.addEventListener('touchmove', (e) => {
+          const t = e.touches[0]; x1 = t.clientX; y1 = t.clientY;
+        }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+          if (e.touches.length || !on()) return;
+          const dx = x1 - x0, dy = y1 - y0;
+          if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+          turn(dx < 0 ? 'ArrowRight' : 'ArrowLeft');
+        }, { passive: true });
       })();
     </script>
   </head>
