@@ -1,0 +1,56 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SiteBar from '../../../components/SiteBar.astro';
+import SiteFooter from '../../../components/SiteFooter.astro';
+import { Content, getHeadings } from '../../../report/project-report-en.md';
+import 'katex/dist/katex.min.css';
+// The English edition of the Project Report, as one page. src/report/project-report-en.md is a
+// translation of the Korean manuscript that scripts/report/import.mjs brings in (same figures under
+// /report/figures/, same tables set in HTML, same section numbers); the figures themselves and the
+// PDF are the Korean originals. Korean edition (the default): /report/.
+const headings = getHeadings().filter((h) => h.depth === 2 || h.depth === 3);
+const PDF = { href: '/report/RackTracker_Project_Report.pdf', size: '8 MB', pages: 40 };
+---
+<Base
+  lang="en"
+  title="RackTracker Project Report"
+  description="The RackTracker Project Report for the graduation review: turning a power rack into a motion-capture studio with multi-view triangulation and a small edge computer. The problem and the goal, the rig hardware, the rig OS, the 3D measurement pipeline, analysis and screens, validation and performance. 29 figures, 7 tables."
+  ogType="article"
+  ogTitle="RackTracker Project Report"
+  ogDescription="Turning a power rack into a motion-capture studio with multi-view triangulation and a small edge computer. Project Report for the graduation review, October 2026."
+  path="/en/report/"
+  alt="/report/"
+  styles={['/style.css', '/doc.css']}
+>
+  <SiteBar lang="en" current="/en/report/" alt="/report/" />
+
+  <main class="doc-page">
+    <p class="doc-top">
+      <span>Rack Labs / Project Report</span>
+      <a href={PDF.href} download>Download the PDF (Korean, {PDF.size}, {PDF.pages} pages)</a>
+    </p>
+
+    <article class="doc report">
+      <p class="eyebrow">Project Report for the graduation review, October 2026</p>
+      <h1>RackTracker</h1>
+      <p class="sub">Turning a power rack into a motion-capture studio with multi-view triangulation and a small edge computer</p>
+      <dl class="meta">
+        <dt>Author</dt><dd>Hunkun Lee (tech lead), Rack Labs</dd>
+        <dt>As of</dt><dd>2026-10-25</dd>
+        <dt>Length</dt><dd>9 chapters, 29 figures, 7 tables</dd>
+        <dt>Contact</dt><dd><a href="mailto:dlgusrb6546@racktracker.dev">dlgusrb6546@racktracker.dev</a>, <a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd>
+      </dl>
+
+      <nav class="toc" aria-labelledby="toc-title">
+        <h2 id="toc-title">Contents</h2>
+        <ol>
+          {headings.map((h) => <li class={`d${h.depth}`}><a href={`#${h.slug}`}>{h.text}</a></li>)}
+        </ol>
+      </nav>
+
+      <Content />
+    </article>
+  </main>
+
+  <SiteFooter lang="en" />
+</Base>
