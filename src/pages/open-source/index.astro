@@ -9,7 +9,7 @@ import SiteFooter from '../../components/SiteFooter.astro';
 <Base
   lang="ko"
   title="Rack Labs 오픈 소스"
-  description="Rack Labs 가 만드는 과정에서 나와 다른 팀을 위해 공개하는 도구. 학습된 신경망을 층마다 3D 공간에 세우는 pipeplot, Claude Code 가 일하는 저장소를 위한 workflow 와 문서 저장소와 backstop 인 agent-workflow-kit."
+  description="Rack Labs 가 만드는 과정에서 나와 다른 팀을 위해 공개하는 도구. 학습된 신경망을 층마다 3D 공간에 세우는 pipeplot, Claude Code 와 몇 달짜리 프로젝트를 하기 위한 에이전트 하네스 agent-workflow-kit."
   ogType="website"
   ogTitle="Rack Labs 오픈 소스"
   ogDescription="pipeplot 과 agent-workflow-kit. RackTracker 를 만들면서 만든 도구입니다."
@@ -80,15 +80,26 @@ import SiteFooter from '../../components/SiteFooter.astro';
     <section class="wing" id="agent-workflow-kit" aria-labelledby="awk-title">
       <div class="head">
         <h2 id="awk-title">agent-workflow-kit</h2>
-        <p>MIT 오픈 소스. Claude Code 가 일하는 저장소를 위한 workflow, Markdown 문서 저장소, backstop</p>
+        <p>MIT 오픈 소스. Claude Code 와 몇 달짜리 프로젝트를 하기 위한 에이전트 하네스</p>
       </div>
       <div class="cols">
         <div class="text">
-          <p class="lede">Agent Workflow Kit 은 저장소에 세 가지를 줍니다. 요청을 이슈와 branch 와 문서로 바꾸고 git 위에서 여러 개를 동시에 돌리는 workflow, 에이전트의 컨텍스트를 작고 정확하게 유지하도록 설계한 Markdown 문서 저장소, 그리고 단계를 건너뛰면 걸리는 backstop 입니다.</p>
-          <p>이 저장소가 단일 원본입니다. 대상 저장소마다 install.mjs 로 git 추적 사본을 받으므로, 여기서 고친 것이 다음 업데이트 때 모든 저장소에 닿고 사본마다 어긋나지 않습니다.</p>
+          <p class="lede">Claude Code 는 세션이 끝나면 그 세션에서 알게 된 것을 잊습니다. agent-workflow-kit 은 그래도 몇 달짜리 프로젝트가 이어지도록 규칙 문서, git hook, Claude Code hook, skill 을 한 묶음으로 저장소에 까는 에이전트 하네스입니다.</p>
+          <p>kit 저장소 하나가 원본이고, 쓰는 저장소마다 install.mjs 로 받아 같은 명령으로 갱신합니다. RackTracker 는 이 위에서 이슈와 PR 660개, commit 1,100개를 넘겼습니다.</p>
+          <dl class="facts look" aria-label="agent-workflow-kit 의 핵심">
+            <div><dt>핵심</dt><dd><ul>
+              <li>NoSQL 형태의 Markdown 문서 저장소</li>
+              <li>agentic search</li>
+              <li>운영체제로서의 git</li>
+              <li>작업 단위마다 남는 작업 로그</li>
+              <li>병렬 세션 간 소통과 상호배제</li>
+              <li>건너뛴 규칙을 잡는 backstop hook</li>
+            </ul></dd></div>
+          </dl>
           <dl class="facts">
             <div><dt>버전</dt><dd>0.2.13<small>릴리스 노트와 함께 갱신</small></dd></div>
-            <div><dt>Skill</dt><dd>9개<small>issue-start, post-pr-cleanup, ui-evidence, ko-writing 등</small></dd></div>
+            <div><dt>Skill</dt><dd>9개<small>issue-start, post-pr-cleanup, session-handoff, ko-writing 등</small></dd></div>
+            <div><dt>backstop</dt><dd>14개<small>git hook 검사 8, Claude Code hook 6</small></dd></div>
             <div><dt>라이선스</dt><dd>MIT<small>Node 20 이상</small></dd></div>
           </dl>
           <div class="cta">
