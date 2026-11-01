@@ -97,6 +97,8 @@
 .doc .tnote { margin: -12px 0 22px; font-size: var(--fs-sm); line-height: 1.55; color: var(--sheet-dim); max-width: none; }
 .doc.report td:first-child { white-space: normal; }
 .doc.report figure img { border: 0; }
+/* a table row set in bold = the rig's own values (table 5); the same blue as the accent of the report's figures */
+.doc.report .tbl td strong { color: #0072B2; font-weight: 600; }
 /* figure 4 is a square scene that the PDF pads with white to twice its height so it takes less of
    the page; here that padding reads as a broken frame, so the square alone is shown, centred */
 .doc.report img[src$="/fig04_mono_depth.jpg"] { width: min(100%, max(50%, 20rem)); aspect-ratio: 1 / 1; object-fit: cover; margin-inline: auto; }
