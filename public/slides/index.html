@@ -39,9 +39,9 @@
 
       /* a touch screen (?embed or the slide show): the arrow buttons go (scaled to a phone they
          are 12px, a finger's edge), the slide takes the full width, and it turns with a swipe
-         (script below); the window pans up and down and pinches as before. On the first slide one
-         arrow blinks at the right edge to say so (nothing lies before that slide), until the
-         first touch (html.hint) */
+         (script below); the window pans up and down and pinches as before. On the first slide a ›
+         slides in from the right edge and leftward, the way the finger goes, until the first
+         touch (html.hint); a blinking round button there read as a button, not a swipe */
       @media (hover: none) and (pointer: coarse) {
         html.embed { font-size: min(1.25vw, 2.2222vh); }
         html.embed [class*="_navBtn_"] { display: none !important }
@@ -51,14 +51,18 @@
       .turn { display: none; }
       html.hint .turn {
         display: flex; position: fixed; inset: 0; z-index: 9; justify-content: flex-end; align-items: center;
-        padding: 0 3vw; pointer-events: none;
+        padding: 0 5vw; pointer-events: none;
       }
       .turn span {
-        display: grid; place-items: center; width: 11vw; height: 11vw; border-radius: 50%;
-        background: rgba(16, 24, 32, .55); color: #fff; font: 500 7vw/1 system-ui, sans-serif;
-        animation: turn-blink 1.4s ease-in-out infinite;
+        font: 600 15vw/1 system-ui, sans-serif; color: rgba(16, 24, 32, .72);
+        text-shadow: 0 0 1.5vw rgba(255, 255, 255, .9), 0 0 .4vw rgba(255, 255, 255, 1);
+        animation: turn-swipe 1.8s ease-in-out infinite;
       }
-      @keyframes turn-blink { 0%, 100% { opacity: .2 } 50% { opacity: 1 } }
+      @keyframes turn-swipe {
+        0% { transform: translateX(0); opacity: 0 }
+        20%, 65% { opacity: 1 }
+        100% { transform: translateX(-24vw); opacity: 0 }
+      }
       @media (prefers-reduced-motion: reduce) { .turn span { animation: none; } }
     </style>
     <script>
@@ -94,7 +98,7 @@
       // A touch screen turns the slides with a swipe: a finger that moves sideways by more than a
       // thumb's width and more sideways than up or down (css above hides the arrow buttons there).
       // Only in ?embed and the slide show; the plain page keeps its buttons. On the first slide the
-      // blinking arrow stays until the first touch or key.
+      // sliding › stays until the first touch or key.
       (() => {
         const html = document.documentElement;
         if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
