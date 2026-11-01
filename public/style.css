@@ -35,6 +35,9 @@
   --bar: 4.25rem;
   --gutter: clamp(1rem, 4vw, 3.5rem);
   --wing: clamp(64px, 10vh, 140px);
+  /* the demo video and the slide of the deck: one 16:9 size, at most about three-quarters of the
+     viewport height so either fits under the top bar */
+  --screen: min(1280px, calc(76vh * 16 / 9));
   --radius: 6px;
   --pill: 999px;
 }
@@ -377,7 +380,7 @@ img, video { display: block; max-width: 100%; height: auto; }
 .hw-frame img { object-fit: cover; }
 .hw-frame iframe { border: 0; opacity: 0; transition: opacity .6s ease; }
 .hw-frame.ready iframe { opacity: 1; }
-.deck-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 6px 2px; }
+.deck-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; max-width: var(--screen); margin-inline: auto; padding: 10px 6px 2px; }
 .deck-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .hw-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
 .hw-tabs [role=tab] {
@@ -399,16 +402,22 @@ img, video { display: block; max-width: 100%; height: auto; }
 .links a { color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: 1px; }
 .links a:hover { color: var(--tint); border-color: var(--tint); }
 
-/* demo: the bare player (no sheet frame), centred, at most about two-thirds of the viewport height
-   so it does not take over the landing page (the player's own full-screen button is there for a
-   closer look); the caption (length, narration) stays in the markup but is not shown */
-.demo { max-width: min(1080px, calc(64vh * 16 / 9)); margin-inline: auto; padding: 0; background: none; box-shadow: none; }
+/* demo: the bare player (no sheet frame), centred, --screen wide (the player's own full-screen
+   button is there for a closer look); the caption (length, narration) stays in the markup but is
+   not shown */
+.demo { max-width: var(--screen); margin-inline: auto; padding: 0; background: none; box-shadow: none; }
 .demo video { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; background: #000; }
 .demo figcaption { display: none; }
 
 /* the deck: the slide app straight on the section, no sheet and no frame (its ?embed canvas is
-   transparent, see public/slides/index.html); full screen is the slide show inside the frame */
-.deck-frame { position: relative; aspect-ratio: 16 / 10; overflow: hidden; }
+   transparent, see public/slides/index.html); full screen is the slide show inside the frame.
+   The deck page sets its two 2.75rem arrows and their gaps beside the 80rem slide (87.75rem in
+   all) and scales to the frame's width, so the frame is 87.75/80 of --screen for the slide itself
+   to be as wide as the demo video; on a narrow window it runs into the gutter, never past it */
+.deck-frame {
+  --w: min(calc(var(--screen) * 87.75 / 80), calc(100% * 87.75 / 80), calc(100% + 2 * var(--gutter)));
+  position: relative; width: var(--w); margin-inline: calc((100% - var(--w)) / 2); aspect-ratio: 16 / 10; overflow: hidden;
+}
 .deck-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
 /* the report: its chapters as the list */
@@ -420,7 +429,6 @@ img, video { display: block; max-width: 100%; height: auto; }
 @media (max-width: 900px) {
   .hw { grid-template-columns: 1fr; }
   .hw-frame { aspect-ratio: 1 / 1; }
-  .deck-frame { aspect-ratio: 4 / 3; }
 }
 
 /* how it works: five frames, one per page */

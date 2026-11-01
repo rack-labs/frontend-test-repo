@@ -23,6 +23,9 @@
       html.embed, html.embed body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
       html.embed body { background: transparent; }
       html.embed #root { height: 100%; display: grid; place-items: center; }
+      /* the deck's own shadow (0 30px 80px) reaches past the room the arrows leave beside the slide
+         and would be cut at the frame's edge; set in rem it stays inside that room at every size */
+      html.embed [data-deck-frame] { box-shadow: 0 1.125rem 3rem rgba(var(--ink-rgb), .14), 0 .5rem 1.5rem rgba(var(--ink-rgb), .08); }
 
       /* full screen = the slide show, as F5 in PowerPoint: the slide alone on black, as large as
          the screen allows (80rem × 45rem), without the bars, arrows and dots around it */

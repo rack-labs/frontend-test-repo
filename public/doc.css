@@ -97,6 +97,9 @@
 .doc .tnote { margin: -12px 0 22px; font-size: var(--fs-sm); line-height: 1.55; color: var(--sheet-dim); max-width: none; }
 .doc.report td:first-child { white-space: normal; }
 .doc.report figure img { border: 0; }
+/* figure 4 is a square scene that the PDF pads with white to twice its height so it takes less of
+   the page; here that padding reads as a broken frame, so the square alone is shown, centred */
+.doc.report img[src$="/fig04_mono_depth.jpg"] { width: min(100%, max(50%, 20rem)); aspect-ratio: 1 / 1; object-fit: cover; margin-inline: auto; }
 .doc .quote { margin: 18px 0 22px; padding: 16px 20px; border-left: 3px solid #1f5f5f; background: #f1f4f6; }
 .doc .quote p { margin: 0 0 8px; max-width: none; }
 .doc .quote .src { margin: 0; font-size: var(--fs-sm); color: var(--sheet-dim); }
