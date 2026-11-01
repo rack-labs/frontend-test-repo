@@ -209,14 +209,15 @@ img, video { display: block; max-width: 100%; height: auto; }
 }
 @media (prefers-reduced-motion: reduce) { .hero .cue i { animation: none; } }
 
-/* wings: the two product sections */
+/* wings: the product sections. Their content stops growing at --measure and sits centred, so on a
+   wide screen the blocks stay together instead of spreading to the edges; the demo player and
+   the deck set their own width (--screen) */
+main { --measure: 1600px; }
 .wing { padding: var(--wing) var(--gutter); border-top: 1px solid var(--line); }
-.head {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 16px 32px; flex-wrap: wrap;
-  margin-bottom: clamp(28px, 4vh, 48px);
-}
+.wing > :not(.sheet):not(.deck) { max-width: var(--measure); margin-inline: auto; }
+.head { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: clamp(28px, 4vh, 48px); }
 .head h2 { font-size: clamp(2rem, 4.2vw, 3.75rem); line-height: 1; letter-spacing: -.01em; font-variation-settings: 'wdth' 86; }
-.head p { margin: 0; color: var(--dim); font-size: var(--fs-sm); }
+.head p { margin: 0; max-width: 60ch; color: var(--dim); font-size: var(--fs-sm); }
 .cols { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 80px); align-items: start; }
 .text p + p { margin-top: 16px; }
 .text > p:not(.lede) { max-width: 54ch; color: var(--dim); }
@@ -375,33 +376,54 @@ img, video { display: block; max-width: 100%; height: auto; }
 .mini.off { color: var(--muted); border-style: dashed; cursor: default; }
 .hint { font: var(--fs-xs)/1.5 var(--mono); color: var(--muted); }
 
-/* the rig: one viewer on a sheet, the part picked beside it */
-.hw { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(24px, 4vw, 56px); align-items: start; margin-top: clamp(32px, 5vh, 56px); }
-/* on the home page the drawing sits straight on the section, no sheet, no border, like the hero */
-.hw-stage { position: relative; }
-.hw-frame { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: transparent; }
+/* the rig: one grid. Left, the tabs and the stack of three viewers (sticky, so the drawing stays
+   beside the copy); right, the copy, the three figures and the picked part's panel in reading
+   order. The drawing sits straight on the section, no sheet, no border, like the hero */
+.hw { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
+.hw-stage { position: sticky; top: calc(var(--bar) + 12px); }
+/* the stack: the frames lie on top of each other and only the active one is visible, so a tab
+   switch is immediate once its page is loaded (viewer-tabs.js). A frame shows its still until
+   its page has drawn, then the page fades in over it; the still stays if WebGL is missing */
+.hw-frames { position: relative; aspect-ratio: 4 / 3; max-height: 74vh; overflow: hidden; }
+.hw-frames.sized { aspect-ratio: auto; max-height: none; }
+.hw-frame { position: relative; overflow: hidden; background: transparent; }
+.hw-frames > .hw-frame { position: absolute; inset: 0; visibility: hidden; }
+.hw-frames > .hw-frame.on { visibility: visible; }
 .hw-frame > * { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hw-frame img { object-fit: cover; }
-.hw-frame iframe { border: 0; opacity: 0; transition: opacity .6s ease; }
+.hw-frame iframe { border: 0; opacity: 0; transition: opacity .35s ease; }
 .hw-frame.ready iframe { opacity: 1; }
 .deck-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; max-width: var(--screen); margin-inline: auto; padding: 10px 6px 2px; }
 .deck-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.hw-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
-.hw-tabs [role=tab] {
-  font: 500 var(--fs-sm)/1 var(--display); padding: .6875rem 1.125rem; cursor: pointer;
+/* the tabs sit on the drawing they change; a layer toggle (.hw-opt) can follow them on the right */
+.hw-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.hw-tabs [role=tab], .hw-opt {
+  display: inline-flex; align-items: center; font: 500 var(--fs-sm)/1 var(--display); padding: .6875rem 1.125rem; cursor: pointer;
   border: 1px solid var(--line); border-radius: var(--pill); background: none; color: var(--dim);
   transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
 }
-.hw-tabs [role=tab]:hover { color: var(--ink); border-color: var(--dim); }
+.hw-tabs [role=tab]:hover, .hw-opt:hover { color: var(--ink); border-color: var(--dim); }
 .hw-tabs [role=tab][aria-selected=true] { border-color: var(--ink); color: var(--ink); background: var(--sheet); }
+.hw-opt { margin-left: auto; }
+.hw-opt[hidden] { display: none; }
+.hw-opt::before { content: ''; width: 10px; height: 10px; margin-right: 8px; border: 1px solid currentColor; border-radius: 2px; }
+.hw-opt[aria-pressed=true] { color: var(--ink); }
+.hw-opt[aria-pressed=true]::before { background: currentColor; }
+/* the right column: the copy, the three figures in one row, then the picked part */
+.hw-side > p + p { margin-top: 16px; }
+.hw-side > p:not(.lede) { max-width: 54ch; color: var(--dim); }
+.facts.row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; max-width: none; margin-top: 28px; }
+.facts.row > div { display: block; padding: 14px 0 16px; border-bottom: 0; }
+.facts.row dd { margin-top: 6px; text-align: left; }
+.facts.row dt, .facts.look dt { font: var(--fs-xs)/1.6 var(--mono); color: var(--muted); }
+.hw-panel { margin-top: 20px; padding-top: 22px; border-top: 1px solid var(--line); }
 .hw-panel[hidden] { display: none; }
 .hw-panel .kicker { margin-bottom: 10px; }
 .hw-panel > p:not(.kicker):not(.links) { margin: 0; max-width: 54ch; color: var(--dim); font-size: var(--fs-md); }
 .spec { margin: 20px 0 0; padding: 0; border-top: 1px solid var(--line); }
-.spec > div { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.5; }
+.spec > div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.5; }
 .spec dt { margin: 0; color: var(--muted); font: var(--fs-xs)/1.7 var(--mono); }
 .spec dd { margin: 0; color: var(--ink); }
-.spec dd small { display: block; color: var(--muted); font-size: var(--fs-xs); }
 .links { display: flex; gap: 16px; flex-wrap: wrap; margin: 18px 0 0; font-size: var(--fs-sm); }
 .links a { color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: 1px; }
 .links a:hover { color: var(--tint); border-color: var(--tint); }
@@ -432,26 +454,43 @@ img, video { display: block; max-width: 100%; height: auto; }
 
 @media (max-width: 900px) {
   .hw { grid-template-columns: 1fr; }
-  .hw-frame { aspect-ratio: 1 / 1; }
+  .hw-stage { position: static; }
+  .hw-frames { aspect-ratio: 1 / 1; max-height: none; }
 }
 
-/* how it works: five frames, one per page */
+/* how it works: a chapter is one grid, the animation on the left (sticky, no taller than the
+   window) and the copy with what to look for on the right; the chapter strip under the bar */
 .hiw .head h2 .num { display: inline-block; min-width: 1.5em; margin-right: 4px; font: 500 .5em/1 var(--mono); color: var(--muted); vertical-align: .35em; }
-.hiw .cols { margin-bottom: clamp(24px, 4vh, 40px); }
-.hiw .text .lede + .lede { margin-top: 14px; }
-.facts.look { margin-top: 0; }
+.hiw-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
+/* both columns stick, so whichever is shorter than the window stays beside the other as it scrolls
+   (the shutter page is taller than the window; the lens copy is taller than its animation) */
+.hiw-stage, .hiw-text { position: sticky; top: calc(var(--bar) + 12px); }
+.hiw-stage .hw-frames { aspect-ratio: 16 / 10; }
+.hiw-stage .hw-frames.tall { aspect-ratio: 4 / 3; }
+.hiw-stage .hw-frames.sized { aspect-ratio: auto; }   /* the shutter page sets its own height; with a ratio left on, the height would set the width */
+.hiw-frame .placeholder { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font: var(--fs-xs)/1.5 var(--mono); color: var(--muted); }
+.hiw-text .lede + .lede { margin-top: 14px; }
+.facts.look { margin-top: 24px; max-width: none; }
 .facts.look > div { grid-template-columns: auto minmax(0, 1fr); }
 .facts.look dt { white-space: nowrap; }
 .facts.look dd { font-size: var(--fs-sm); text-align: left; }
-.facts.look ul { margin: 6px 0 0; padding-left: 18px; color: var(--dim); line-height: 1.55; }
+.facts.look ul { margin: 0; padding-left: 18px; color: var(--dim); line-height: 1.55; }
 .facts.look li + li { margin-top: 4px; }
-/* each frame fits the window height, so the caption and the progress bar are in view with the drawing */
-.hiw-frame { aspect-ratio: 16 / 10; max-width: calc(80vh * 1.6); margin: 0 auto; }
-.hiw-frame.tall { aspect-ratio: 4 / 3; max-width: calc(80vh * 4 / 3); }
-.hiw-frame .placeholder { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font: var(--fs-xs)/1.5 var(--mono); color: var(--muted); }
-.hiw-frame iframe { opacity: 0; transition: opacity .5s ease; }
-.hiw-frame.ready iframe { opacity: 1; }
+.steps-nav { position: sticky; top: var(--bar); z-index: 5; padding: 0 var(--gutter); background: rgb(var(--bg-rgb) / .92); backdrop-filter: blur(8px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.steps-nav ol { display: flex; gap: 6px 26px; flex-wrap: wrap; max-width: var(--measure); margin: 0 auto; padding: 14px 0; list-style: none; font: 500 var(--fs-sm)/1 var(--display); }
+.steps-nav a { color: var(--dim); }
+.steps-nav a:hover, .steps-nav a[aria-current] { color: var(--ink); }
+.steps-nav .num { margin-right: 6px; font: 500 var(--fs-xs)/1 var(--mono); color: var(--muted); }
+.hiw[id], .hiw [id] { scroll-margin-top: calc(var(--bar) + 60px); }   /* under the strip as well as the bar */
 .chapters small { display: block; font: var(--fs-xs)/1.5 var(--mono); color: var(--muted); }
 @media (max-width: 900px) {
-  .hiw-frame, .hiw-frame.tall { aspect-ratio: 3 / 4; }
+  .hiw-grid { grid-template-columns: 1fr; }
+  .hiw-stage, .hiw-text { position: static; }
+  .hiw-stage .hw-frames, .hiw-stage .hw-frames.tall { aspect-ratio: 3 / 4; }
+  .hiw-stage .hw-frames.sized { aspect-ratio: auto; }
+}
+@media (max-width: 640px) {
+  .facts.row { grid-template-columns: 1fr; }
+  .facts.row > div { border-bottom: 1px solid var(--line); }
+  .steps-nav { position: static; }
 }

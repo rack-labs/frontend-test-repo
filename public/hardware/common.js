@@ -107,6 +107,8 @@ export function setup({ w = num('w', 1440), h = num('h', 1200), fov = num('fov',
     _ctx.startSpin = () => { if (spinning) { last = 0; requestAnimationFrame(tick); } };
     _ctx.pauseSpin = (pause) => { if (pause) { spinning = false; } else if (SPIN && !armed) { spinning = true; last = 0; requestAnimationFrame(tick); } };
     document.addEventListener('visibilitychange', () => _ctx.pauseSpin(document.hidden));
+    // the page that embeds this one (viewer-tabs.js) pauses it behind a tab or off screen
+    addEventListener('message', e => { const m = e.data; if (!m || !m.hw) return; if (m.hw === 'pause') _ctx.pauseSpin(true); else if (m.hw === 'resume') _ctx.pauseSpin(false); });
   }
   return { renderer, scene, cam, view, render, key };
 }

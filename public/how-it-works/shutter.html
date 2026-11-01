@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html lang="ko"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><script>/* embed 와 바탕색을 그리기 전에 붙인다. JS 가 돈 뒤에 붙이면 원래 버튼이 한순간 보인다 */(() => { const q = new URLSearchParams(location.search); if (q.get('embed') !== '1') return; document.documentElement.classList.add('embed'); const bg = q.get('bg') || ''; if (/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(bg)) document.documentElement.style.setProperty('--bg', '#' + bg); })();</script>
 <title>롤링 셔터와 글로벌 셔터</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -200,6 +200,8 @@ html.embed .page-head, html.embed .controls, html.embed .foot { display: none; }
 .prog { display: none; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--fg) 12%, transparent); overflow: hidden; }
 .prog i { display: block; height: 100%; width: 0; background: var(--primary); }
 html.embed .prog { display: block; }
+/* 끼워 넣으면 쪽이 안에서 스크롤되지 않는다. 높이는 {hw:'size'} 로 알리고 끼워 넣는 쪽이 프레임을 그만큼 키운다 */
+html.embed, html.embed body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .btn, .btn-text .chev { transition: none; }
 }
@@ -794,6 +796,7 @@ html.embed .prog { display: block; }
     }
     renderGrid();
     panels.forEach(drawPanel);
+    if (!window.__hwReady) { window.__hwReady = true; requestAnimationFrame(() => { if (parent !== window) { try { parent.postMessage({ hw: 'ready', page: location.pathname }, '*'); } catch (_) { /* no parent */ } } }); }   // 첫 프레임을 그린 뒤 끼워 넣는 쪽(viewer-tabs.js)에 알린다
     if (EMBED) {
       gProg.style.width = (((g.t - gMin()) / (gMax() - gMin())) * 100).toFixed(2) + '%';
       pProg.style.width = (((pr.t + pr.pre) / (pr.T + pr.hold + pr.pre)) * 100).toFixed(2) + '%';
@@ -802,7 +805,15 @@ html.embed .prog { display: block; }
   }
   const run = () => { if (running) return; running = true; last = performance.now(); requestAnimationFrame(frame); };
   run();
-  if (EMBED && 'IntersectionObserver' in window) new IntersectionObserver(es => { on = es.some(e => e.isIntersecting); if (on) run(); }, { threshold: 0.05 }).observe(document.body);
+  /* 화면 밖이거나 끼워 넣는 쪽(viewer-tabs.js)이 멈추라고 하면 멈춘다; 쪽의 높이를 알려 프레임이 그만큼 커지게 한다 */
+  let held = false, seen = true;
+  const sync = () => { on = seen && !held; if (on) run(); };
+  addEventListener('message', e => { const m = e.data; if (!m || !m.hw) return; if (m.hw === 'pause' || m.hw === 'resume') { held = m.hw === 'pause'; sync(); } });
+  if (EMBED && 'IntersectionObserver' in window) new IntersectionObserver(es => { seen = es.some(e => e.isIntersecting); sync(); }, { threshold: 0.05 }).observe(document.body);
+  if (EMBED) {
+    const size = () => { if (parent !== window) { try { parent.postMessage({ hw: 'size', h: document.documentElement.scrollHeight, page: location.pathname }, '*'); } catch (_) { /* no parent */ } } };
+    new ResizeObserver(size).observe(document.body); addEventListener('load', size);
+  }
 })();
 </script>
 

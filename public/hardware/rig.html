@@ -29,6 +29,7 @@
   .tick { position: absolute; left: 0; top: 0; z-index: 1; transform: translate(-50%, -50%); font: 600 10px/1 var(--font-mono); }
   .note { position: absolute; left: 10px; bottom: 8px; font: 600 10.5px/1 var(--font-mono); }
   .legend { position: absolute; right: 10px; bottom: 8px; font: 500 10.5px/1.5 var(--font); color: var(--fg-3); text-align: right; }
+  @media (max-width: 540px) { .note, .legend { display: none; } }   /* in a phone-wide frame the two lines run into each other */
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -44,6 +45,13 @@ import * as THREE from '/vendor/three/three.module.min.js';
 const stage = document.getElementById('stage'), overlay = document.getElementById('overlay');
 /* 히어로 모드(?hero=1): 랜딩 사이트 배경(#0b0d10) 위에 글자 없이. 막대·이름표·눈금·치수를 숨기고 팔레트만 바꾼다. 기본(설계도) 모습은 그대로 */
 const HERO = new URLSearchParams(location.search).get('hero') === '1';
+const Q = new URLSearchParams(location.search);
+// ?lang=ko: the labels in Korean (the Korean home page embeds it so). ?dim=0: the dimension lines off until asked for ({hw:'show', key:'dim'})
+const KO = Q.get('lang') === 'ko';
+if (KO) document.documentElement.lang = 'ko';
+const T = KO
+  ? { tablet: '태블릿', enc: '연산 장비함', power: '전원', note: '바닥 격자와 치수는 cm, 높이는 바닥 기준', legend: '카메라마다 선 하나, USB 케이블과 노출 신호선이 함께 갑니다. 태블릿은 USB 케이블 하나<br>장비함 하나에 Jetson Orin NX, 트리거 보드, USB 허브' }
+  : { tablet: 'Tablet', enc: 'Compute unit', power: 'Power', note: 'Floor grid and dimensions in cm, heights from the floor', legend: 'One line per camera: its USB cable and exposure-signal wire run together. The tablet has one USB cable<br>One enclosure holds the Jetson Orin NX, the trigger board and the USB hub' };
 // ?bg=eceef1: the page colour behind the drawing, so the frame blends into the page that embeds it
 const BGQ = (new URLSearchParams(location.search).get('bg') || '').replace(/[^0-9a-fA-F]/g, '');
 if (BGQ) { document.documentElement.style.setProperty('--bg', '#' + BGQ); document.documentElement.style.setProperty('--surface', '#' + BGQ); }
@@ -97,9 +105,9 @@ const major = (v, R) => HERO ? v % 100 === 0 : (v === R[0] || v === R[1]);
   const tick = (t, p) => { const el = document.createElement('div'); el.className = 'tick'; el.textContent = t; overlay.appendChild(el); labels.push({ el, at: p, kind: 'tick' }); };
   for (let x = RX[0]; x <= RX[1]; x += STEP) tick(String(x), new THREE.Vector3(x, 0, RZ[1] + STEP * 0.35));
   for (let z = RZ[0]; z <= RZ[1]; z += STEP) tick(String(-z), new THREE.Vector3(RX[0] - STEP * 0.35, 0, z));
-  const note = document.createElement('div'); note.className = 'note'; note.textContent = 'Floor grid and dimensions in cm, heights from the floor'; overlay.appendChild(note);
+  const note = document.createElement('div'); note.className = 'note'; note.textContent = T.note; overlay.appendChild(note);
   const legend = document.createElement('div'); legend.className = 'legend';
-  legend.innerHTML = 'One line per camera: its USB cable and exposure-signal wire run together. The tablet has one USB cable<br>One enclosure holds the Jetson Orin NX, the trigger board and the USB hub';
+  legend.innerHTML = T.legend;
   overlay.appendChild(legend);
 }
 
@@ -217,7 +225,7 @@ const TAB = { w: 20.8, h: 32.6, t: 0.55, x: 48.0, y: 150, z: FACE_FS + 9.0 };
   rod(a0, back, 1.0, mats.arm); ball(back, 1.2, mats.arm);
   box(gear, TAB.w, TAB.h, TAB.t, [TAB.x, TAB.y, TAB.z], mats.dark);                                             // 몸체
   box(gear, TAB.w - 1.6, TAB.h - 1.6, 0.06, [TAB.x, TAB.y, TAB.z + TAB.t / 2 + 0.03], mats.screen, false);       // 화면
-  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = 'Tablet'; overlay.appendChild(lab);
+  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = T.tablet; overlay.appendChild(lab);
   labels.push({ el: lab, at: new THREE.Vector3(TAB.x, TAB.y + TAB.h / 2 + 4.5, TAB.z), kind: 'label' });
 }
 
@@ -236,7 +244,7 @@ const ENC_TOP = ENC.y + ENC.h / 2, ENC_BOT = ENC.y - ENC.h / 2, ENC_X = ENC.face
   box(g, ENC.w - 1.2, loTop - loBot, 0.3, [0, (loTop + loBot) / 2, lidZ], mats.box2, false);
   const led = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 10), mats.led); led.position.set(5.0, ENC.h / 2 - 1.6, lidZ + 0.15); g.add(led);
   for (let k = 0; k < 5; k++) box(g, 0.25, 0.6, 4.0, [-3 + k * 1.5, ENC.h / 2 + 0.3, 0.4 + ENC.d / 2], mats.box2, false);   // 방열 핀(윗면)
-  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = 'Compute unit: Jetson Orin NX, trigger board'; overlay.appendChild(lab);
+  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = T.enc; overlay.appendChild(lab);
   labels.push({ el: lab, at: new THREE.Vector3(ENC_X, ENC_TOP + 4.5, ENC.z), kind: 'label' });
 }
 
@@ -294,7 +302,7 @@ const intoBot = (lane) => [V(XO, ENC_BOT - 6, lane), V(XO, ENC_BOT - 2.5, lane),
   tube([...intoBot(LANE_B).reverse(), V(XO, 100, LANE_B), V(XO, 50, LANE_B), V(XO, 12, LANE_B), V(XO, 3, LANE_B - 0.5),
     V(XO - 2, 0.6, -100.5), V(-68, 0.6, -105), V(-77, 0.6, -109), end]);
   box(cables, 2.4, 1.2, 3.6, [end.x, end.y, end.z], mats.box2);
-  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = 'Power'; overlay.appendChild(lab);
+  const lab = document.createElement('div'); lab.className = 'lab ko'; lab.textContent = T.power; overlay.appendChild(lab);
   labels.push({ el: lab, at: end.clone().add(V(0, 7, 0)), kind: 'label' });
 }
 // 보관 기둥 바깥 옆면: 두 레인을 한 클립으로(위 구간 C3·C1, 아래 구간 C2·전원)
@@ -351,7 +359,7 @@ const apply = () => {
   cam.lookAt(target);
 };
 const tmp = new THREE.Vector3();
-const show = { fov: true, cable: true, label: !HERO, dim: !HERO };
+const show = { fov: true, cable: true, label: !HERO, dim: !HERO && Q.get('dim') !== '0' };
 const draw = () => {
   fovGroup.visible = show.fov; cables.visible = show.cable; dims.visible = show.dim;
   renderer.render(scene, cam);
@@ -389,6 +397,7 @@ new ResizeObserver(fit).observe(stage);
 const first = (location.hash || '').replace('#', '');
 applyTheme(); setView(VIEWS[first] ? first : 'report'); fit();
 window.__setView = setView; window.__show = (k, v) => { show[k] = v; draw(); };
+addEventListener('message', e => { const m = e.data; if (!m || m.hw !== 'show' || !(m.key in show)) return; show[m.key] = !!m.on; draw(); });   // the embedding page's layer toggle (viewer-tabs.js)
 window.__cam = (v) => { if (v.theta !== undefined) theta = v.theta; if (v.phi !== undefined) phi = v.phi; if (v.radius !== undefined) radius = v.radius; apply(); draw(); return { theta, phi, radius }; };   // 캡처 스크립트용(궤도 프레임)
 window.__view = { get theta() { return theta; }, get phi() { return phi; }, get radius() { return radius; } };
 window.__render = () => new Promise(r => { draw(); requestAnimationFrame(() => r(true)); });
