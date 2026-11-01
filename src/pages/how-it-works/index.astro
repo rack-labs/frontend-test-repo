@@ -119,14 +119,5 @@ const steps = [
     import { mountViewerTabs } from '../../lib/viewer-tabs.js';
     // one stack per chapter; a page loads once its stack comes near the screen
     document.querySelectorAll<HTMLElement>('.hiw-stage').forEach((s) => mountViewerTabs(s, { margin: '400px 0px' }));
-    // the strip marks the chapter on screen
-    const links = [...document.querySelectorAll<HTMLAnchorElement>('.steps-nav a')];
-    const sections = [...document.querySelectorAll<HTMLElement>('section.hiw')];
-    const mark = () => {
-      const y = scrollY + innerHeight * 0.4;
-      const cur = sections.filter((s) => s.offsetTop <= y).pop();
-      links.forEach((a) => { if (cur && a.getAttribute('href') === '#' + cur.id) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
-    };
-    addEventListener('scroll', mark, { passive: true }); mark();
   </script>
 </Base>

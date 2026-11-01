@@ -376,11 +376,10 @@ main { --measure: 1600px; }
 .mini.off { color: var(--muted); border-style: dashed; cursor: default; }
 .hint { font: var(--fs-xs)/1.5 var(--mono); color: var(--muted); }
 
-/* the rig: one grid. Left, the tabs and the stack of three viewers (sticky, so the drawing stays
-   beside the copy); right, the copy, the three figures and the picked part's panel in reading
-   order. The drawing sits straight on the section, no sheet, no border, like the hero */
+/* the rig: one grid. Left, the tabs and the stack of three viewers; right, the copy, the three
+   figures and the picked part's panel in reading order. Nothing sticks: both columns scroll with
+   the page. The drawing sits straight on the section, no sheet, no border, like the hero */
 .hw { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
-.hw-stage { position: sticky; top: calc(var(--bar) + 12px); }
 /* the stack: the frames lie on top of each other and only the active one is visible, so a tab
    switch is immediate once its page is loaded (viewer-tabs.js). A frame shows its still until
    its page has drawn, then the page fades in over it; the still stays if WebGL is missing */
@@ -455,17 +454,14 @@ main { --measure: 1600px; }
 
 @media (max-width: 900px) {
   .hw { grid-template-columns: 1fr; }
-  .hw-stage { position: static; }
   .hw-frames { aspect-ratio: 1 / 1; max-height: none; }
 }
 
-/* how it works: a chapter is one grid, the animation on the left (sticky, no taller than the
-   window) and the copy with what to look for on the right; the chapter strip under the bar */
+/* how it works: a chapter is one grid, the animation on the left and the copy with what to look
+   for on the right; the chapter strip is a plain table of contents under the heading. Nothing
+   sticks: the columns and the strip scroll with the page */
 .hiw .head h2 .num { display: inline-block; min-width: 1.5em; margin-right: 4px; font: 500 .5em/1 var(--mono); color: var(--muted); vertical-align: .35em; }
 .hiw-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
-/* both columns stick, so whichever is shorter than the window stays beside the other as it scrolls
-   (the shutter page is taller than the window; the lens copy is taller than its animation) */
-.hiw-stage, .hiw-text { position: sticky; top: calc(var(--bar) + 12px); }
 .hiw-stage .hw-frames { aspect-ratio: 16 / 10; }
 .hiw-stage .hw-frames.tall { aspect-ratio: 4 / 3; }
 .hiw-stage .hw-frames.sized { aspect-ratio: auto; }   /* the shutter page sets its own height; with a ratio left on, the height would set the width */
@@ -477,21 +473,18 @@ main { --measure: 1600px; }
 .facts.look dd { font-size: var(--fs-sm); text-align: left; }
 .facts.look ul { margin: 0; padding-left: 18px; color: var(--dim); line-height: 1.55; }
 .facts.look li + li { margin-top: 4px; }
-.steps-nav { position: sticky; top: var(--bar); z-index: 5; padding: 0 var(--gutter); background: rgb(var(--bg-rgb) / .92); backdrop-filter: blur(8px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.steps-nav { padding: 0 var(--gutter); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .steps-nav ol { display: flex; gap: 6px 26px; flex-wrap: wrap; max-width: var(--measure); margin: 0 auto; padding: 14px 0; list-style: none; font: 500 var(--fs-sm)/1 var(--display); }
 .steps-nav a { color: var(--dim); }
-.steps-nav a:hover, .steps-nav a[aria-current] { color: var(--ink); }
+.steps-nav a:hover { color: var(--ink); }
 .steps-nav .num { margin-right: 6px; font: 500 var(--fs-xs)/1 var(--mono); color: var(--muted); }
-.hiw[id], .hiw [id] { scroll-margin-top: calc(var(--bar) + 60px); }   /* under the strip as well as the bar */
 .chapters small { display: block; font: var(--fs-xs)/1.5 var(--mono); color: var(--muted); }
 @media (max-width: 900px) {
   .hiw-grid { grid-template-columns: 1fr; }
-  .hiw-stage, .hiw-text { position: static; }
   .hiw-stage .hw-frames, .hiw-stage .hw-frames.tall { aspect-ratio: 3 / 4; }
   .hiw-stage .hw-frames.sized { aspect-ratio: auto; }
 }
 @media (max-width: 640px) {
   .facts.row { grid-template-columns: 1fr; }
   .facts.row > div { border-bottom: 1px solid var(--line); }
-  .steps-nav { position: static; }
 }
