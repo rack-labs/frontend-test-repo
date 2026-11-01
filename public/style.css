@@ -223,6 +223,9 @@ main { --measure: 1600px; }
 .text > p:not(.lede) { max-width: 54ch; color: var(--dim); }
 .figs { display: grid; gap: 20px; }
 .figs .sheet.tall { max-width: 360px; }
+/* the report's first page: a capture of the page itself, so no plate around it */
+.figs .cover { margin: 0; }
+.figs .cover img { width: 100%; }
 
 /* prototype photos: real photographs sit straight on the page, no
    sheet, since the sheet marks a drawing. One row of four portraits, then
