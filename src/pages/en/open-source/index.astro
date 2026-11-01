@@ -1,0 +1,120 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SiteBar from '../../../components/SiteBar.astro';
+import SiteFooter from '../../../components/SiteFooter.astro';
+// The open-source page: the two tools that come out of building RackTracker with
+// Claude Code. These three sections stood at the foot of the home page until the
+// home page became the review in one scroll (November 2026).
+---
+<Base
+  lang="en"
+  title="Open source — Rack Labs"
+  description="Tools Rack Labs builds along the way and publishes for other teams: pipeplot, neural networks built layer by layer in walkable 3D space, and agent-workflow-kit, a workflow, document store and backstops for repositories where Claude Code does the work."
+  ogType="website"
+  ogTitle="Open source — Rack Labs"
+  ogDescription="pipeplot and agent-workflow-kit: the tools we build while building RackTracker."
+  path="/en/open-source/"
+  alt="/open-source/"
+>
+  <SiteBar lang="en" current="/en/open-source/" alt="/open-source/" />
+
+  <main id="top">
+    <section class="wing first" id="open-source" aria-labelledby="os-title">
+      <div class="head">
+        <h2 id="os-title">Open source</h2>
+        <p>Tools we build along the way, published for other teams</p>
+      </div>
+      <p class="lede">Two projects come out of building RackTracker with Claude Code. pipeplot is live now, and its code will be released as open source. agent-workflow-kit is already on GitHub under the MIT license.</p>
+      <dl class="facts" aria-label="Open-source projects">
+        <div><dt><a href="#pipeplot">pipeplot</a></dt><dd>Open-source release planned<small>live at pipeplot.pages.dev</small></dd></div>
+        <div><dt><a href="#agent-workflow-kit">agent-workflow-kit</a></dt><dd>MIT, v0.2.13<small>github.com/lhk0721/agent-workflow-kit</small></dd></div>
+      </dl>
+    </section>
+
+    <section class="pp" id="pipeplot" aria-labelledby="pp-title">
+      <div class="poster" aria-hidden="true">
+        <video id="pp-video" muted loop playsinline disablepictureinpicture preload="none" poster="/assets/pipeplot-hero.webp"></video>
+        <script is:inline>
+          // The scenes render live (assets/pipeplot-live.js, pipeplot's own
+          // three.js hero) when WebGL is there and motion is allowed; the
+          // recorded loop is the fallback. Two rungs for the video, as on
+          // pipeplot: 1080p for wide screens, 720p for narrow ones.
+          (function () {
+            var v = document.getElementById('pp-video');
+            var rung = matchMedia('(max-width: 900px)').matches ? 'pipeplot-hero' : 'pipeplot-hero-1080';
+            [['webm', 'video/webm'], ['mp4', 'video/mp4']].forEach(function (t) {
+              var s = document.createElement('source');
+              s.src = '/assets/' + rung + '.' + t[0]; s.type = t[1]; v.appendChild(s);
+            });
+            var still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var webgl = false;
+            try { var c = document.createElement('canvas'); webgl = !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) {}
+            var playVideo = function () { v.hidden = false; v.preload = 'auto'; v.play().catch(function () {}); };
+            if (still) return;                 // the poster still stands alone
+            if (!webgl) { playVideo(); return; }
+            import('/assets/pipeplot-live.js')
+              .then(function (m) {
+                return m.mountHeroLive(v.parentNode, {
+                  force: /hero=live/.test(location.hash),   // skip the frame-time gate, for checks
+                  onLive: function () { v.pause(); v.hidden = true; },
+                  onFallback: playVideo
+                });
+              })
+              .catch(function (e) { console.warn('[pipeplot hero] live path failed:', e); playVideo(); });
+          })();
+        </script>
+      </div>
+      <div class="veil" aria-hidden="true"></div>
+      <div class="copy">
+        <p class="kicker">pipeplot, open-source release planned</p>
+        <h2 id="pp-title">Neural networks,<br>built layer by layer<br>in walkable space.</h2>
+        <p class="lede">One page per model. Model pages stand real trained weights and activations up in 3D space, and concept pages stack scenes in the order one person came to understand the idea.</p>
+        <p class="lede">Four models so far, AlexNet, VGG-16, GoogLeNet and ResNet-34, plus concept pages. It is growing into a place to learn ML and DL, and a community around it. The code will be released as open source.</p>
+        <div class="cta">
+          <a class="btn" href="https://pipeplot.pages.dev" rel="noopener">Open pipeplot</a>
+          <a class="btn ghost" href="https://pipeplot.pages.dev/#models" rel="noopener">See the models</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wing" id="agent-workflow-kit" aria-labelledby="awk-title">
+      <div class="head">
+        <h2 id="awk-title">agent-workflow-kit</h2>
+        <p>Open source under MIT. A workflow, a Markdown document store and backstops for repositories where Claude Code does the work</p>
+      </div>
+      <div class="cols">
+        <div class="text">
+          <p class="lede">Agent Workflow Kit gives a repository three things: a workflow that turns a request into an issue, a branch and a document, and runs many of them at once on git; a document store kept in Markdown and engineered so the agent's context stays small and true; and backstops that fire when a step was skipped.</p>
+          <p>This repo is the single source: each target repo gets git-tracked copies through install.mjs, so a fix made here reaches every repo on its next update instead of drifting per copy.</p>
+          <dl class="facts">
+            <div><dt>Version</dt><dd>0.2.13<small>updated with the release notes</small></dd></div>
+            <div><dt>Skills</dt><dd>9<small>issue-start, post-pr-cleanup, ui-evidence, ko-writing and more</small></dd></div>
+            <div><dt>License</dt><dd>MIT<small>Node 20 or newer</small></dd></div>
+          </dl>
+          <div class="cta">
+            <a class="btn" href="https://github.com/lhk0721/agent-workflow-kit" rel="noopener">View on GitHub</a>
+          </div>
+        </div>
+        <div class="figs">
+          <figure class="sheet">
+            <img src="/assets/awk-work-unit.png" width="1323" height="520" alt="Flow of one work unit: issue, branch and worktree, management document and pointer, then edits, review gate, commit, and PR with cleanup" />
+            <figcaption>Figure 1. One work unit, from issue to cleanup.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <SiteFooter lang="en" />
+
+  <script is:inline>
+    // Reduced motion: show the still instead of the video
+    (function () {
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var v = document.getElementById('pp-video');
+      var img = document.createElement('img');
+      img.src = v.getAttribute('poster'); img.alt = ''; img.decoding = 'async';
+      v.replaceWith(img);
+    })();
+  </script>
+</Base>

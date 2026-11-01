@@ -2,30 +2,31 @@
 import Base from '../../layouts/Base.astro';
 import SiteBar from '../../components/SiteBar.astro';
 import SiteFooter from '../../components/SiteFooter.astro';
-// The open-source page: the two tools that come out of building RackTracker with
-// Claude Code. These three sections stood at the foot of the home page until the
-// home page became the review in one scroll (November 2026).
+// The open-source page, Korean edition (the default; English at /en/open-source/): the two
+// tools that come out of building RackTracker with Claude Code. These sections stood at the
+// foot of the home page until the home page became the review in one scroll (November 2026).
 ---
 <Base
-  lang="en"
-  title="Open source — Rack Labs"
-  description="Tools Rack Labs builds along the way and publishes for other teams: pipeplot, neural networks built layer by layer in walkable 3D space, and agent-workflow-kit, a workflow, document store and backstops for repositories where Claude Code does the work."
+  lang="ko"
+  title="Rack Labs 오픈 소스"
+  description="Rack Labs 가 만드는 과정에서 나와 다른 팀을 위해 공개하는 도구. 학습된 신경망을 층마다 3D 공간에 세우는 pipeplot, Claude Code 가 일하는 저장소를 위한 workflow 와 문서 저장소와 backstop 인 agent-workflow-kit."
   ogType="website"
-  ogTitle="Open source — Rack Labs"
-  ogDescription="pipeplot and agent-workflow-kit: the tools we build while building RackTracker."
+  ogTitle="Rack Labs 오픈 소스"
+  ogDescription="pipeplot 과 agent-workflow-kit. RackTracker 를 만들면서 만든 도구입니다."
   path="/open-source/"
+  alt="/en/open-source/"
 >
-  <SiteBar current="/open-source/" />
+  <SiteBar lang="ko" current="/open-source/" alt="/en/open-source/" />
 
   <main id="top">
     <section class="wing first" id="open-source" aria-labelledby="os-title">
       <div class="head">
-        <h2 id="os-title">Open source</h2>
-        <p>Tools we build along the way, published for other teams</p>
+        <h2 id="os-title">오픈 소스</h2>
+        <p>만드는 과정에서 나온 도구, 다른 팀을 위한 공개</p>
       </div>
-      <p class="lede">Two projects come out of building RackTracker with Claude Code. pipeplot is live now, and its code will be released as open source. agent-workflow-kit is already on GitHub under the MIT license.</p>
-      <dl class="facts" aria-label="Open-source projects">
-        <div><dt><a href="#pipeplot">pipeplot</a></dt><dd>Open-source release planned<small>live at pipeplot.pages.dev</small></dd></div>
+      <p class="lede">RackTracker 를 Claude Code 로 만들면서 프로젝트 두 개가 나왔습니다. pipeplot 은 지금 서비스 중이고 코드를 오픈 소스로 공개할 예정입니다. agent-workflow-kit 은 MIT 라이선스로 GitHub 에 올라가 있습니다.</p>
+      <dl class="facts" aria-label="오픈 소스 프로젝트">
+        <div><dt><a href="#pipeplot">pipeplot</a></dt><dd>오픈 소스 공개 예정<small>pipeplot.pages.dev 에서 서비스 중</small></dd></div>
         <div><dt><a href="#agent-workflow-kit">agent-workflow-kit</a></dt><dd>MIT, v0.2.13<small>github.com/lhk0721/agent-workflow-kit</small></dd></div>
       </dl>
     </section>
@@ -65,13 +66,13 @@ import SiteFooter from '../../components/SiteFooter.astro';
       </div>
       <div class="veil" aria-hidden="true"></div>
       <div class="copy">
-        <p class="kicker">pipeplot, open-source release planned</p>
-        <h2 id="pp-title">Neural networks,<br>built layer by layer<br>in walkable space.</h2>
-        <p class="lede">One page per model. Model pages stand real trained weights and activations up in 3D space, and concept pages stack scenes in the order one person came to understand the idea.</p>
-        <p class="lede">Four models so far, AlexNet, VGG-16, GoogLeNet and ResNet-34, plus concept pages. It is growing into a place to learn ML and DL, and a community around it. The code will be released as open source.</p>
+        <p class="kicker">pipeplot, 오픈 소스 공개 예정</p>
+        <h2 id="pp-title">신경망을 한 층씩,<br>걸어 다닐 수 있는<br>공간에 세웁니다.</h2>
+        <p class="lede">모델마다 한 쪽입니다. 모델 쪽은 실제로 학습한 가중치와 활성값을 3D 공간에 세우고, 개념 쪽은 한 사람이 그 개념을 이해한 순서대로 장면을 쌓습니다.</p>
+        <p class="lede">지금까지 AlexNet, VGG-16, GoogLeNet, ResNet-34 네 모델과 개념 쪽들이 있습니다. ML 과 DL 을 배우는 자리와 그 둘레의 커뮤니티로 키워 가고 있으며, 코드는 오픈 소스로 공개할 예정입니다.</p>
         <div class="cta">
-          <a class="btn" href="https://pipeplot.pages.dev" rel="noopener">Open pipeplot</a>
-          <a class="btn ghost" href="https://pipeplot.pages.dev/#models" rel="noopener">See the models</a>
+          <a class="btn" href="https://pipeplot.pages.dev" rel="noopener">pipeplot 열기</a>
+          <a class="btn ghost" href="https://pipeplot.pages.dev/#models" rel="noopener">모델 보기</a>
         </div>
       </div>
     </section>
@@ -79,32 +80,32 @@ import SiteFooter from '../../components/SiteFooter.astro';
     <section class="wing" id="agent-workflow-kit" aria-labelledby="awk-title">
       <div class="head">
         <h2 id="awk-title">agent-workflow-kit</h2>
-        <p>Open source under MIT. A workflow, a Markdown document store and backstops for repositories where Claude Code does the work</p>
+        <p>MIT 오픈 소스. Claude Code 가 일하는 저장소를 위한 workflow, Markdown 문서 저장소, backstop</p>
       </div>
       <div class="cols">
         <div class="text">
-          <p class="lede">Agent Workflow Kit gives a repository three things: a workflow that turns a request into an issue, a branch and a document, and runs many of them at once on git; a document store kept in Markdown and engineered so the agent's context stays small and true; and backstops that fire when a step was skipped.</p>
-          <p>This repo is the single source: each target repo gets git-tracked copies through install.mjs, so a fix made here reaches every repo on its next update instead of drifting per copy.</p>
+          <p class="lede">Agent Workflow Kit 은 저장소에 세 가지를 줍니다. 요청을 이슈와 branch 와 문서로 바꾸고 git 위에서 여러 개를 동시에 돌리는 workflow, 에이전트의 컨텍스트를 작고 정확하게 유지하도록 설계한 Markdown 문서 저장소, 그리고 단계를 건너뛰면 걸리는 backstop 입니다.</p>
+          <p>이 저장소가 단일 원본입니다. 대상 저장소마다 install.mjs 로 git 추적 사본을 받으므로, 여기서 고친 것이 다음 업데이트 때 모든 저장소에 닿고 사본마다 어긋나지 않습니다.</p>
           <dl class="facts">
-            <div><dt>Version</dt><dd>0.2.13<small>updated with the release notes</small></dd></div>
-            <div><dt>Skills</dt><dd>9<small>issue-start, post-pr-cleanup, ui-evidence, ko-writing and more</small></dd></div>
-            <div><dt>License</dt><dd>MIT<small>Node 20 or newer</small></dd></div>
+            <div><dt>버전</dt><dd>0.2.13<small>릴리스 노트와 함께 갱신</small></dd></div>
+            <div><dt>Skill</dt><dd>9개<small>issue-start, post-pr-cleanup, ui-evidence, ko-writing 등</small></dd></div>
+            <div><dt>라이선스</dt><dd>MIT<small>Node 20 이상</small></dd></div>
           </dl>
           <div class="cta">
-            <a class="btn" href="https://github.com/lhk0721/agent-workflow-kit" rel="noopener">View on GitHub</a>
+            <a class="btn" href="https://github.com/lhk0721/agent-workflow-kit" rel="noopener">GitHub 에서 보기</a>
           </div>
         </div>
         <div class="figs">
           <figure class="sheet">
-            <img src="/assets/awk-work-unit.png" width="1323" height="520" alt="Flow of one work unit: issue, branch and worktree, management document and pointer, then edits, review gate, commit, and PR with cleanup" />
-            <figcaption>Figure 1. One work unit, from issue to cleanup.</figcaption>
+            <img src="/assets/awk-work-unit.png" width="1323" height="520" alt="작업 단위 하나의 흐름: 이슈, branch 와 worktree, 관리 문서와 포인터, 그다음 수정, 리뷰 게이트, commit, PR 과 정리" />
+            <figcaption>그림 1. 작업 단위 하나, 이슈에서 정리까지.</figcaption>
           </figure>
         </div>
       </div>
     </section>
   </main>
 
-  <SiteFooter />
+  <SiteFooter lang="ko" />
 
   <script is:inline>
     // Reduced motion: show the still instead of the video

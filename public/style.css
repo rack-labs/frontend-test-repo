@@ -23,7 +23,7 @@
   --sheet-dim: #5b6470;
   --sheet-line: #e6e8eb;
   --display: 'Archivo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Malgun Gothic', monospace;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, 'Noto Sans KR', 'Malgun Gothic', monospace;
   --gutter: clamp(16px, 4vw, 56px);
   --wing: clamp(64px, 10vh, 140px);
   --radius: 6px;
@@ -66,6 +66,10 @@ img, video { display: block; max-width: 100%; height: auto; }
 .bar nav { display: flex; gap: clamp(16px, 3vw, 32px); overflow-x: auto; white-space: nowrap; }
 .bar nav a { color: var(--dim); padding: 6px 0; }
 .bar nav a:hover { color: var(--ink); }
+/* language switch at the right end; the section links sit just left of it */
+.bar nav:not(.lang) { margin-left: auto; }
+.bar .lang { gap: 12px; padding-left: 16px; border-left: 1px solid var(--line); }
+.bar .lang span { color: var(--ink); padding: 6px 0; }
 
 /* shared copy pieces */
 .kicker {
@@ -318,6 +322,8 @@ img, video { display: block; max-width: 100%; height: auto; }
   .bar { flex-wrap: wrap; height: auto; margin-bottom: 0; padding: 14px var(--gutter) 12px; row-gap: 10px; }
   [id] { scroll-margin-top: 120px; }
   .bar nav { width: 100%; flex-wrap: wrap; white-space: normal; overflow: visible; gap: 6px 18px; font-size: 12px; }
+  .bar .lang { width: auto; order: 1; margin-left: auto; padding: 0; border: 0; gap: 10px; }   /* beside the brand, the links below */
+  .bar nav:not(.lang) { order: 2; margin-left: 0; }
   .hero { padding-top: 24px; }
   .facts > div { grid-template-columns: 1fr; }
   .facts dd { text-align: left; }

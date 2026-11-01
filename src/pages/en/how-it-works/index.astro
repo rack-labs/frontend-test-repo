@@ -1,0 +1,123 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SiteBar from '../../../components/SiteBar.astro';
+import SiteFooter from '../../../components/SiteFooter.astro';
+// How the rig measures: five animated pages (public/how-it-works/*.html), each one made for
+// the review to show one part of the method. They are self-contained (three.js from
+// /vendor/three/), with their captions in Korean; the text here walks through each one in
+// English. Embedded with ?embed=1 they show only the drawing, one thin progress bar and the
+// caption, play on their own, loop, and pause while off screen. ?bg= is the section colour.
+// A page loads only when it comes near the screen.
+const steps = [
+  {
+    id: 'shutter', n: 1, title: 'Why a global shutter', sub: 'The same spinning blade, photographed two ways', page: 'shutter.html', ratio: 'tall',
+    text: [
+      'A rolling shutter exposes the sensor one row at a time, from the top row down. While the exposure line travels down the frame the blade keeps turning, so each row shows the blade at a different moment and a straight blade comes out bent. A fast bar or a knee at the bottom of a squat does the same thing.',
+      'A global shutter exposes every row at the same instant and only reads them out one by one afterwards. The frame is one moment. The three cameras on the rig are global-shutter sensors fired by one electrical pulse, which is why their three images can be matched point for point: they are of the same instant, within 0.12 ms.',
+    ],
+    look: ['The line across the sensor shows which rows are already exposed; above it the picture is fixed, below it the object still moves.', 'The row-timing chart under each sensor is the whole difference between the two.', 'The page scrolls: the sensor grid first, the propeller below it.'],
+  },
+  {
+    id: 'lens', n: 2, title: 'Lens calibration, the principle', sub: 'How a camera learns its own focal length, centre and distortion', page: 'lens-principle.html', ratio: 'wide',
+    text: [
+      'Before a pixel can be turned into a direction in space, the camera has to be described: where the optical centre sits, how long the focal length is and how the lens bends straight lines towards the edges. These numbers are the intrinsics, the matrix K and the distortion terms, and they are different for each of the three cameras.',
+      'The camera stays where it is and a calibration board is shown to it in about ten poses. The corners found in every shot pair a point on the board with a pixel. From those pairs a first estimate of K is made, then refined until the board points, projected through the model, land on the detected pixels. What remains is the distortion the lens adds; it is modelled and taken out. The result is one K file per camera that every later step reads.',
+    ],
+    look: ['Six stages in the order the rig runs them; the caption names each one as it plays.', 'The small window at the top right is what the camera sees at that moment.', 'Drag to turn the scene; the sequence keeps playing.'],
+  },
+  {
+    id: 'lens-steps', n: 3, title: 'Lens calibration, as the rig runs it', sub: 'Six steps of the kiosk procedure, in the rig’s own 3D viewer', page: 'lens-steps.html', ratio: 'wide',
+    text: [
+      'The same calibration, step by step as the rig OS performs it: the capture conditions are fixed first (exposure, gain and focus are locked), the board is captured in its poses, corners are detected, K is solved, and shots held out of the fit check the result before the K file is written.',
+      'The small window shows what the camera sees at each step: the board in its poses, the detected corners, the reprojected points with their residuals, and at the end the solved optical centre against the centre of the image.',
+    ],
+    look: ['The six steps in order, with the fourth shown twice: the first estimate of K, then K after the fit.', 'The hold-out step is the one that decides whether the file is accepted.'],
+  },
+  {
+    id: 'position', n: 4, title: 'Position calibration', sub: 'Where the three cameras are, in the rack’s own coordinates', page: 'ext-principle.html', ratio: 'wide',
+    text: [
+      'Lens calibration describes each camera on its own. Position calibration places the three of them in one frame of reference: the rack. A board is set at a known position on the rack and each camera observes it; from the board’s corners the camera’s rotation and position relative to the rack are computed, checked against the real geometry of the rack, repeated over many frames and combined, and written to a file.',
+      'From then on any point seen by two or three cameras can be given a position in centimetres from the rack’s origin. Because the cameras are bolted to the rack, this calibration holds from one session to the next.',
+    ],
+    look: ['Four stages: observe, compute, check, file.', 'The rack drawn here is the PVC prototype, at its real dimensions.', 'Nothing that was already in the scene moves; only the computed quantities appear.'],
+  },
+  {
+    id: 'measure', n: 5, title: 'Measurement', sub: 'From three images of one instant to joints, metrics and load', page: 'measure-principle.html', ratio: 'wide',
+    text: [
+      'For every triggered frame the joint detector finds the 2D joints in each of the three images. With K the lens distortion is taken out of those pixels, and each pixel becomes a ray leaving its camera. The rays for one joint from the three cameras meet at one point in space; that intersection is the joint’s 3D position, and it is found for all 33 joints, frame after frame through the set.',
+      'With the position calibration those points are expressed in rack coordinates, so depth, lean, left-right asymmetry and the path of the bar are read directly. From the joint positions over time and the known load on the bar, the load carried by each joint is computed per rep, and the reps themselves are counted from the motion.',
+    ],
+    look: ['Four stages: 2D joints, rays, intersection, rack coordinates with metrics, load and reps.', 'Camera 1 is mounted turned 90 degrees, so its small window stands upright.', 'The burst after the 33 joints is the same frame repeated through the movement.'],
+  },
+];
+---
+<Base
+  lang="en"
+  title="How it works — RackTracker"
+  description="How RackTracker measures a set: why the cameras use a global shutter, how each lens is calibrated, how the three cameras are placed in the rack's coordinates, and how three images of one instant become 33 joints, metrics and the load on each joint. Five interactive animations."
+  ogType="article"
+  ogTitle="How RackTracker works"
+  ogDescription="Global shutter, lens calibration, position calibration and measurement, in five interactive animations."
+  path="/en/how-it-works/"
+  alt="/how-it-works/"
+>
+  <SiteBar lang="en" current="/en/how-it-works/" alt="/how-it-works/" />
+
+  <main id="top">
+    <section class="wing first" id="overview" aria-labelledby="hiw-title">
+      <div class="head">
+        <h2 id="hiw-title">How it works</h2>
+        <p>Five animations, in the order the rig does things</p>
+      </div>
+      <div class="cols">
+        <div class="text">
+          <p class="lede">The rig turns three photographs of one instant into the 3D position of 33 joints, and from those into metrics and the load on each joint. Each animation below shows one part of that, as it was shown at the review. They play on their own and start over when they end.</p>
+          <p>The captions are in Korean; the text beside each animation tells the same story in English. The 3D scenes can be turned by dragging.</p>
+        </div>
+        <ol class="chapters">
+          {steps.map((s) => <li><a href={`#${s.id}`}>{s.title}</a> <small>{s.sub}</small></li>)}
+        </ol>
+      </div>
+    </section>
+
+    {steps.map((s) => (
+      <section class="wing hiw" id={s.id} aria-labelledby={`${s.id}-title`}>
+        <div class="head">
+          <h2 id={`${s.id}-title`}><span class="num">{s.n}</span>{s.title}</h2>
+          <p>{s.sub}</p>
+        </div>
+        <div class="cols">
+          <div class="text">
+            {s.text.map((t) => <p class="lede">{t}</p>)}
+          </div>
+          <dl class="facts look">
+            <div><dt>What to look for</dt><dd><ul>{s.look.map((l) => <li>{l}</li>)}</ul></dd></div>
+          </dl>
+        </div>
+        <div class="hw-stage">
+          <div class:list={['hw-frame', 'hiw-frame', s.ratio]} id={`frame-${s.id}`}>
+            <p class="placeholder">{s.title}</p>
+            <iframe title={s.title} data-src={`/how-it-works/${s.page}?embed=1&bg=eceef1`} loading="lazy"></iframe>
+          </div>
+        </div>
+      </section>
+    ))}
+  </main>
+
+  <SiteFooter lang="en" />
+
+  <script>
+    // Each page loads once its frame comes near the screen, and fades in when it has loaded.
+    const frames = [...document.querySelectorAll<HTMLElement>('.hiw-frame')];
+    const load = (f: HTMLElement) => {
+      const fr = f.querySelector('iframe')!;
+      if (fr.src) return;
+      fr.addEventListener('load', () => f.classList.add('ready'), { once: true });
+      fr.src = fr.dataset.src!;
+    };
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); load(e.target as HTMLElement); } }), { rootMargin: '400px 0px' });
+      frames.forEach(f => io.observe(f));
+    } else frames.forEach(load);
+  </script>
+</Base>

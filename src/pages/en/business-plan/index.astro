@@ -1,0 +1,237 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SiteBar from '../../../components/SiteBar.astro';
+import SiteFooter from '../../../components/SiteFooter.astro';
+---
+<Base
+  lang="en"
+  title="RackTracker business plan"
+  description="Rack Labs business plan for RackTracker, September 2026: the problem in gym coaching, the three-camera device, validation results, the business model, the roadmap and the team."
+  ogType="article"
+  ogTitle="RackTracker business plan"
+  ogDescription="Problem, product, validation, business model, roadmap and team. Rack Labs, September 2026."
+  path="/en/business-plan/"
+  alt="/business-plan/"
+  styles={['/style.css', '/doc.css']}
+>
+  <SiteBar lang="en" current="/en/business-plan/" alt="/business-plan/" />
+
+  <main class="doc-page">
+    <p class="doc-top">
+      <span>Rack Labs / Business plan</span>
+      <a href="/business-plan/" hreflang="ko" lang="ko">한국어 원문</a>
+    </p>
+
+    <article class="doc">
+      <p class="eyebrow">Business plan, September 2026</p>
+      <h1>RackTracker</h1>
+      <p class="sub">A device that mounts on a gym power rack, records free-weight lifts as 3D coordinates with three AR0234 global-shutter sensors, and returns biomechanical feedback after every set.</p>
+      <dl class="meta">
+        <dt>Author</dt><dd>Hunkun Lee, Rack Labs (랙랩스)</dd>
+        <dt>Written</dt><dd>28 September 2026</dd>
+        <dt>Stage</dt><dd>Prototype in development</dd>
+        <dt>Contact</dt><dd><a href="mailto:dlgusrb6546@racktracker.dev">dlgusrb6546@racktracker.dev</a>, <a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd>
+      </dl>
+      <p class="note">This document restates a September 2026 startup-program application as a business plan. Measured values are as of the writing date. Revenue and prices are estimates, and the assumptions are marked in the text. Patent claims and judgment thresholds are left out because the application has not been filed. This English edition was prepared in October 2026 from the Korean original.</p>
+
+      <h2 id="summary"><span class="num">1</span>Summary</h2>
+      <div class="summary">
+        <p><strong>RackTracker is a 3D motion-analysis device that attaches to a gym power rack.</strong> Three AR0234 global-shutter sensors fixed to the rack fire on one electrical signal, and a small computer beside the rack rebuilds joint positions in 3D at cm level as the set is captured. Every set is logged as center-of-mass shift, left-right asymmetry, trunk lean and squat depth, and handed back to the member and the trainer.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">70%</div><div class="label">Joints recovered with three cameras. Standard triangulation: 40%, on a public dataset</div></div>
+        <div class="stat"><div class="num">0.12 ms</div><div class="label">Shutter skew across the three cameras, measured with a logic analyzer</div></div>
+        <div class="stat"><div class="num">KRW 2.8M</div><div class="label">What a gym pays for the device after the government subsidy, on a KRW 7.0M package price</div></div>
+      </div>
+      <div class="tbl kv"><table>
+        <tr><th>Item</th><th>Detail</th></tr>
+        <tr><td data-th="Item">Problem</td><td data-th="Detail">Gym coaching has no way to measure the load on a joint, so it rests on intuition and hindsight. Trainers cannot prove their skill, and gyms and members cannot tell.</td></tr>
+        <tr><td data-th="Item">Solution</td><td data-th="Detail">Three cameras fixed to the rack and an edge computer standardise the capture, rebuild even occluded joints in 3D, and log biomechanical metrics every set.</td></tr>
+        <tr><td data-th="Item">Edge</td><td data-th="Detail">Three views captured at once with occluded views filtered out of the triangulation, a capture environment standardised by the rack, thresholds set per person from body proportions, and closed-network edge processing.</td></tr>
+        <tr><td data-th="Item">Business model</td><td data-th="Detail">The device is sold per power rack and the analysis software is billed monthly. Registering as a technology supplier in the Smart Store program lowers the gym's upfront cost.</td></tr>
+        <tr><td data-th="Item">Today</td><td data-th="Detail">Three-camera capture, calibration, 3D joint reconstruction and automatic set logging are built and running in-house. Next are validation against marker-based motion capture and an installable prototype.</td></tr>
+        <tr><td data-th="Item">Timeline</td><td data-th="Detail">Validation in Q4 2026, pilot in H1 2027, supplier registration in H2 2027, production unit by the end of 2027.</td></tr>
+      </table></div>
+
+      <h2 id="problem"><span class="num">2</span>Problem</h2>
+      <h3>2.1 Gym coaching with nothing to measure</h3>
+      <p>The gym market is oversupplied. After years of price wars, memberships in the KRW 30,000-a-month range became the norm, so gyms lean on personal training for much of their income. Trainers are paid on sales incentives with no base salary, and that structure selects for salesmanship over skill. Eighty-two percent of gyms close within five years, yet the trainers who leave regroup and open new ones. Facilities have gone upmarket, with machines costing tens of millions of won and hotel-grade interiors, while the way lifting is taught has stood still for half a century: experience passed on by word of mouth.</p>
+      <p>There is no legal barrier to entry, so people with no formal training work as freelancers, and the measure of a trainer is revenue, not coaching. In January 2026 a bill was introduced to amend the Sports Facilities Act so that only nationally certified instructors may teach. Coaching quality was recognised as a public-safety issue. But certification proves an instructor's history. It does not analyse how an individual member moves. The cost lands on consumers as prepaid high-priced training and injury risk that nobody is accountable for.</p>
+      <p>Underneath all of this is one cause: there is no way to measure the biomechanics of a lift. Trainers cannot prove their skill, and gyms and consumers cannot tell, so gyms hire whoever is cheapest and consumers pick whoever sounds best. After signing, there is still no way to check coaching quality or assign responsibility for an injury. A measurement tool gives trainers a signal to prove themselves with, gives gyms and consumers a basis to choose on, and gives everyone a record to judge by after the contract.</p>
+
+      <h3>2.2 Limits of existing solutions</h3>
+      <p>Demand for quantitative analysis and advances in deep learning have produced a wave of markerless pose-estimation services. The gap sits between the precise but unusable and the usable but imprecise.</p>
+      <div class="tbl kv"><table>
+        <tr><th>Existing solution</th><th>Limit</th></tr>
+        <tr><td data-th="Existing solution">Smartphone posture apps</td><td data-th="Limit">One camera, so depth is guessed from an average body. Front views blur fore-aft sway, side views blur left-right asymmetry, and joints hidden by the bar or the rack drop out. They do not analyse per-joint load or the center of mass.</td></tr>
+        <tr><td data-th="Existing solution">Home depth cameras</td><td data-th="Limit">One viewpoint, so occluded joints are lost.</td></tr>
+        <tr><td data-th="Existing solution">Research motion capture</td><td data-th="Limit">Accurate, but post-processed and computationally expensive. The capture environment and scale do not fit a gym.</td></tr>
+        <tr><td data-th="Existing solution">Bar-speed trackers (VBT)</td><td data-th="Limit">Bar velocity and path only. No joint angles or per-joint load, so you know the speed but not the form.</td></tr>
+        <tr><td data-th="Existing solution">Sensor-equipped machines</td><td data-th="Limit">Measure the torque the user produces. Not usable for free weights.</td></tr>
+      </table></div>
+      <p>Figure 1 shows what single-camera apps leave out: the skeleton jitters, depth is guessed from body proportions, and the output stops at pass-or-fail judgments and rep counts.</p>
+      <figure>
+        <img src="/assets/plan/limits.webp" width="1600" height="688" alt="Four screens from single-camera markerless apps: a jittering skeleton, depth guessed from body proportions, a pass-or-fail judgment and a rep counter" loading="lazy" decoding="async" />
+        <figcaption>Figure 1. Four limits of single-camera markerless apps.</figcaption>
+      </figure>
+
+      <h3>2.3 Why we started</h3>
+      <p>The founder is a developer who trains heavy. A spinal injury during a warm-up with a light weight showed that the cause was not the weight but the moment arm, which alignment and the direction of force decide. Personal training at KRW 60,000 an hour had come before the injury, and the coaching rested on know-how passed between trainers, not on physics. It was not a question of the trainer's ability. With no way to analyse how load travels to each joint, everyone falls back on intuition and hindsight.</p>
+      <p>Papers and videos did not settle it either. For the same mechanism there were contradictory claims, and no basis for judging which one fit a given skeleton. What was wanted was not a nonexistent correct form but a way to analyse one's own movement with physics and prevent injury. So the decision was made to build a device that triangulates the joints and the bar from cameras fixed to a power rack and records them as 3D coordinates.</p>
+
+      <h2 id="product"><span class="num">3</span>Product</h2>
+      <h3>3.1 Overview</h3>
+      <p>RackTracker records the joint positions of a free-weight lift as cm-level 3D coordinates, using three AR0234 global-shutter sensors with 120-degree low-distortion lenses fixed to a power rack. A global shutter exposes the whole frame at the same instant, so fast movement does not smear. The recorded coordinates are analysed with lifting biomechanics, and the feedback is returned after each set. As far as we have surveyed, no product records lifts automatically inside the gym and analyses the joints in depth.</p>
+      <p>One rack takes one set: three cameras, a compute unit, mounts and a tablet. It attaches to the rack the gym already owns, so no new equipment is needed. Software alone is not enough. The cameras, the trigger wiring and a coordinate system anchored to the rack have to be installed and maintained as one kit on every rack, and that procedure is built into the device.</p>
+      <p>Figure 2 shows the coordinate system with the rack at the origin, where per-joint load transfer, the center of mass against vertical resistance and the moment arms are computed. On the right is the same analysis applied to a real squat.</p>
+      <figure>
+        <img src="/assets/plan/product.webp" width="1600" height="721" alt="A 3D skeleton and barbell inside a wireframe power rack with camera positions marked, and beside it a photo of a squat at the bottom with joint angles and load markers drawn over the lifter" loading="lazy" decoding="async" />
+        <figcaption>Figure 2. Rack-anchored 3D coordinates and the analysis view.</figcaption>
+      </figure>
+
+      <h3>3.2 What is different</h3>
+      <h4>Three views at once, with occluded views filtered out</h4>
+      <p>Three position-calibrated cameras fire on one electrical signal. The joints found in each image are intersected from three directions, and when one direction is occluded the other two carry the point. It is the principle of land surveying. The measured shutter skew is 0.12 ms, too short for the body to move even a millimetre, so the three frames show the same pose.</p>
+      <h4>A capture environment standardised by the rack</h4>
+      <p>Calibration and alignment happen once, at installation. If the rack or a camera is touched or the setup changes, the device asks for recalibration. A member picks their name on the screen by the rack and lifts as usual. Because the conditions stay the same, a new session compares with the last one on the same footing.</p>
+      <h4>Thresholds set per person</h4>
+      <p>We do not apply a maker's threshold to everyone. The reference angle for trunk lean is set per member from the skeleton and the torso-length ratio found in the video. Longer thighs mean more forward lean in a squat, so one angle for everyone produces false warnings.</p>
+      <h4>Closed-network edge processing</h4>
+      <p>The small computer beside the rack processes the capture as it happens, and the result comes back in real time. Member video never goes to an outside server, which keeps security and leakage risk low.</p>
+
+      <h3>3.3 Validation results</h3>
+      <p>The values below were measured by the founder. Joint recovery and error were measured on the public CMU Panoptic dataset. Shutter skew was measured on the cameras' exposure signals with a logic analyzer. There is no figure yet against marker-based motion capture, the industry reference, and that comparison is the next step.</p>
+      <div class="tbl"><table>
+        <tr><th>Item</th><th class="r">Standard triangulation</th><th class="r">RackTracker</th><th>Note</th></tr>
+        <tr><td class="w" data-th="Item">Joints recovered, two cameras</td><td class="r" data-th="Standard triangulation">44%</td><td class="r" data-th="RackTracker">43%</td><td data-th="Note">Public dataset</td></tr>
+        <tr><td class="w" data-th="Item">Joints recovered, three cameras</td><td class="r" data-th="Standard triangulation">40%</td><td class="r" data-th="RackTracker">70%</td><td data-th="Note">The gain comes from filtering occluded views, not from the camera count</td></tr>
+        <tr><td class="w" data-th="Item">Joint position error</td><td class="r" data-th="Standard triangulation">~3 cm</td><td class="r" data-th="RackTracker">~3 cm</td><td data-th="Note">Same as with two cameras</td></tr>
+        <tr><td class="w" data-th="Item">Shutter skew, three cameras</td><td class="r" data-th="Standard triangulation">-</td><td class="r" data-th="RackTracker">0.12 ms</td><td data-th="Note">Logic analyzer. The 1.2 to 1.5 ms seen from the computer is USB transfer delay</td></tr>
+      </table></div>
+      <p class="small">The 30% not recovered is mostly legs, which leave the frame in this dataset. On the rack the cameras are placed so that the whole body stays in view.</p>
+      <p>Figure 3 shows joint recovery and error by camera count and placement on CMU Panoptic. Figure 4 shows the trigger board we designed and the Jetson edge rig. Over 900 trigger pulses, all three cameras exposed exactly once each, with no drops and no double exposures.</p>
+      <figure>
+        <img src="/assets/plan/panoptic.webp" width="1600" height="709" alt="CMU Panoptic validation: a 3D plot of camera positions, a heat map, and graphs of joint recovery and error by camera count" loading="lazy" decoding="async" />
+        <figcaption>Figure 3. Validation on the CMU Panoptic dataset.</figcaption>
+      </figure>
+      <figure>
+        <img src="/assets/plan/trigger.webp" width="1600" height="651" alt="Trigger circuit schematics, photos of the Jetson rig with cameras and the trigger board, and logic-analyzer traces of the three exposure signals" loading="lazy" decoding="async" />
+        <figcaption>Figure 4. Trigger board and the NVIDIA Jetson edge rig.</figcaption>
+      </figure>
+
+      <h3>3.4 Value for each customer</h3>
+      <div class="tbl kv"><table>
+        <tr><th>Customer</th><th>What they get</th></tr>
+        <tr><td data-th="Customer">Member</td><td data-th="What they get">The posture metrics known as injury risk factors, as numbers and visuals. Center-of-mass shift, left-right asymmetry, trunk lean and squat depth are logged every set, so even members without a trainer can track their own change.</td></tr>
+        <tr><td data-th="Customer">Trainer</td><td data-th="What they get">A way to prove coaching results. How a member's form changed over the weeks is on record, so skill can be shown, and chosen, on evidence.</td></tr>
+        <tr><td data-th="Customer">Gym</td><td data-th="What they get">One device per rack makes an analysing rack. The accumulating record is a basis to compete on safety and data instead of membership price, and to manage the spread in training quality between trainers.</td></tr>
+      </table></div>
+
+      <h2 id="business-model"><span class="num">4</span>Business model</h2>
+      <h3>4.1 Revenue</h3>
+      <p>Revenue is generated per power rack. The device is sold once, and the analysis software is billed monthly. The monthly fee is the center of the business. The device sale is the way in.</p>
+      <div class="tbl kv"><table>
+        <tr><th>Source</th><th>Detail</th></tr>
+        <tr><td data-th="Source">Device sales</td><td data-th="Detail">One rack takes three cameras, a compute unit, mounts and a tablet. Two tiers match what customers can pay: a standard tier on Jetson Orin Nano Super with AR0234 sensors for neighbourhood gyms, and a higher tier on Jetson Orin NX with a higher-grade rig for large centres and athlete facilities.</td></tr>
+        <tr><td data-th="Source">Subscription</td><td data-th="Detail">Per-member records, AI feedback after every set and a trainer dashboard, billed monthly. It scales with the number of racks, and once we move to ceiling rails the billing unit becomes the number of capture zones.</td></tr>
+        <tr><td data-th="Source">Accessories</td><td data-th="Detail">Calibration boards, custom cables and housings.</td></tr>
+        <tr><td data-th="Source">Operations</td><td data-th="Detail">Bundling member management, trainer assignment and progress reports lets a gym drop software it already pays for, which lowers the perceived cost. Once operations run through us, switching is hard.</td></tr>
+      </table></div>
+
+      <h3>4.2 Government subsidy</h3>
+      <p>Registering as a technology supplier in the Smart Store technology program, run by the Small Enterprise and Market Service (SEMAS), lets a gym choose our technology and receive national funding for it. Fitness centres are an eligible business type. For purchased general technology the program covers 70% of the supply price up to KRW 5.0M, so we set the package price for one rack rig and accessories at KRW 7.0M, where the cap is reached.</p>
+      <div class="tbl"><table>
+        <tr><th>Item</th><th class="r">Amount</th><th>Detail</th></tr>
+        <tr><td data-th="Item">Package price</td><td class="r" data-th="Amount">KRW 7.0M</td><td data-th="Detail">One rack rig and accessories</td></tr>
+        <tr><td data-th="Item">National subsidy</td><td class="r" data-th="Amount">KRW 4.9M</td><td data-th="Detail">70% of the price, within the KRW 5.0M cap</td></tr>
+        <tr><td data-th="Item">Gym's share</td><td class="r" data-th="Amount">KRW 2.1M</td><td data-th="Detail">30% of the price</td></tr>
+        <tr><td data-th="Item">VAT</td><td class="r" data-th="Amount">KRW 0.7M</td><td data-th="Detail">Paid by the gym</td></tr>
+        <tr><td data-th="Item"><strong>Gym's actual outlay</strong></td><td class="r" data-th="Amount"><strong>KRW 2.8M</strong></td><td data-th="Detail">Less than a KRW 5.0M domestic Smith machine, and 4% of the average KRW 70M equipment budget</td></tr>
+        <tr><td data-th="Item">Software subsidy</td><td class="r" data-th="Amount">KRW 300K a year</td><td data-th="Detail">Software type, fully funded, applied for separately from the purchase type</td></tr>
+      </table></div>
+      <p>The cap applies once per application, not per technology, so several units in one application still stop at KRW 5.0M. That is why the first deal is one rack. We enter where the subsidy counts most, and a gym that has seen the effect adds racks at its own expense. SEMAS pays the subsidy to us directly, so the collection risk is low. Where a lump sum is a burden, a rental plan spreads the device cost over the contract. We will also bid for military fitness facilities, public institutions, hospital rehabilitation centres and senior facilities.</p>
+
+      <h3>4.3 Cost</h3>
+      <p>Jetson modules are imported in volume, and housings move from 3D printing to injection moulding. Cables and camera module boards are custom made, and calibration boards are ordered from a metal shop using our drawings. Device sales recover the cost. Subscriptions carry the profit.</p>
+
+      <h3>4.4 Revenue estimate</h3>
+      <p>The figures below are estimates under two assumptions: a subscription of KRW 50,000 per rack per month, and 30 gyms with one rack each in the first year.</p>
+      <div class="tbl"><table>
+        <tr><th>Year</th><th class="r">Racks installed</th><th class="r">Device revenue</th><th class="r">Subscription revenue</th><th>Detail</th></tr>
+        <tr><td data-th="Year">Year 1</td><td class="r" data-th="Racks installed">30</td><td class="r" data-th="Device revenue">KRW 210M</td><td class="r" data-th="Subscription revenue">KRW 18M</td><td data-th="Detail">30 gyms, one rack each. Of the KRW 600K annual subscription, KRW 300K is covered by the software subsidy, so the gym pays KRW 25,000 a month</td></tr>
+        <tr><td data-th="Year">Year 2</td><td class="r" data-th="Racks installed">90</td><td class="r" data-th="Device revenue">KRW 420M</td><td class="r" data-th="Subscription revenue">KRW 54M</td><td data-th="Detail">30 more gyms, and existing customers add one rack each</td></tr>
+      </table></div>
+      <p>Device revenue ends with the year. Subscriptions carry over, so the starting line rises every year as customers accumulate.</p>
+
+      <h3>4.5 Barriers to entry</h3>
+      <p>Triangulation and pose estimation are public technology and give no rights on their own. The patents will therefore cover the combination and the context of use, led by a device configuration whose infringement can be seen in the installed form. Judgment thresholds and the know-how for placing cameras stay trade secrets, and the mount and housing shapes go to design registration. Claims are not included here because the application has not been filed.</p>
+      <p>Then there is the record. Analysis data accumulates, and moving to another device breaks it and forces the gym to rebuild its operations. Where patents cannot block, the data holds the customer.</p>
+
+      <h2 id="roadmap"><span class="num">5</span>Commercialisation</h2>
+      <p>The order is: finish the prototype and get its accuracy verified outside, run a pilot in a few gyms, build the production unit from what the pilot asks for, and sell through the government channel. Each stage has its exit criterion set in advance.</p>
+      <div class="tbl"><table>
+        <tr><th>#</th><th>Stage</th><th>Work</th><th>Criterion to move on</th></tr>
+        <tr><td data-th="#">1</td><td class="w" data-th="Stage">Finish the software, verify externally</td><td data-th="Work">Three-camera capture, calibration, 3D joint reconstruction and automatic set logging are done. After the remaining work, we capture the same lifts simultaneously in a marker-based motion-capture studio and compare the two.</td><td data-th="Criterion to move on">The motion-capture comparison. Without a figure against the industry reference, the numbers cannot be used in sales.</td></tr>
+        <tr><td data-th="#">2</td><td class="w" data-th="Stage">Installable prototype</td><td data-th="Work">Cameras are held by magic arms and a PVC mock-up today. Tidy the wiring and remake the rack mounts, the compute enclosure and the camera housings on a 3D printer.</td><td data-th="Criterion to move on">Can someone outside the company install it from the manual alone?</td></tr>
+        <tr><td data-th="#">3</td><td class="w" data-th="Stage">Pilot</td><td data-th="Work">Run in a few gyms and log failures, the data members actually use and software usage. Find where the assumed usage and the gym floor disagree. Equipment goes in free in exchange for consent to publish measurements and case studies.</td><td data-th="Criterion to move on">Change in member churn and personal-training renewals. That becomes the case for the next customer.</td></tr>
+        <tr><td data-th="#">4</td><td class="w" data-th="Stage">Production unit</td><td data-th="Work">Custom cables, compute and camera modules on boards fitted to the housing, and packaging to match. Two tiers, standard and higher. Calibration boards from a metal shop and Jetson in volume to bring the unit cost down.</td><td data-th="Criterion to move on">Cost and performance fixed for both tiers.</td></tr>
+        <tr><td data-th="#">5</td><td class="w" data-th="Stage">Sales channel</td><td data-th="Work">Register as a technology supplier in the Smart Store program. Gyms buy with the subsidy and we settle directly with SEMAS. The kiosk tablet and operations are bundled in one supply.</td><td data-th="Criterion to move on">Supplier registration complete.</td></tr>
+        <tr><td data-th="#">6</td><td class="w" data-th="Stage">Beyond the rack</td><td data-th="Work">Extend to bench press, Smith machine and deadlift zones, then to a ceiling-mounted rail: cameras on the rail and one central unit covering several zones instead of a device per machine.</td><td data-th="Criterion to move on">Start after installation and operation are stable in the pilot.</td></tr>
+      </table></div>
+      <p>With ceiling rails the product stops being an accessory on a machine and becomes a fixture in the gym, installed with the electrical work in new builds and renovations. The current USB-tethered camera setup cannot scale to that count, so the design has to change to two tiers: small nodes per zone for first-stage processing and a central unit for 3D reconstruction.</p>
+
+      <h3>5.1 Schedule</h3>
+      <div class="tbl kv"><table>
+        <tr><th>When</th><th>Goal</th></tr>
+        <tr><td data-th="When">Q4 2026</td><td data-th="Goal">Finish the software, motion-capture validation</td></tr>
+        <tr><td data-th="When">H1 2027</td><td data-th="Goal">Installable prototype, pilot starts</td></tr>
+        <tr><td data-th="When">H2 2027</td><td data-th="Goal">Apply for technology-supplier registration</td></tr>
+        <tr><td data-th="When">End of 2027</td><td data-th="Goal">Production unit</td></tr>
+        <tr><td data-th="When">2028</td><td data-th="Goal">More equipment types. Ceiling rails come after that</td></tr>
+      </table></div>
+
+      <h3>5.2 Overseas</h3>
+      <p>A product that needs installation cannot be spread across countries at once. After the installation and repair procedures are refined at home, Japan comes first, where equipment standards and gym layouts resemble Korea's, then the United States, the largest market. The US has deep demand from college athletics and performance centres that pay for analysis, but it needs new certification, so it comes later. Europe is last. The Korean filing comes first, then the PCT route within a year into Japan and the US, so that the rights are in place before the market entry.</p>
+
+      <h2 id="status"><span class="num">6</span>Status and open problems</h2>
+      <h3>6.1 Built so far</h3>
+      <p>Three cameras tied together by a hardware signal capture the same instant. The positions are calibrated, 3D joints are reconstructed, and sets are cut and logged automatically. All of it is built and running in-house. Camera positions were chosen by computing and comparing 34,560 placements, then measured on a PVC rack mock-up. There is a kiosk app that walks through installation, calibration and measurement, TensorRT inference running on the NVIDIA Jetson, and the service structure that returns coaching feedback when a set ends.</p>
+      <p>Figure 5 shows the simulation that compared the 34,560 placements and the PVC mock-up with three cameras mounted for the measurement. Figure 6 shows the kiosk guiding lens-distortion and camera-position calibration. The result is checked on screen before moving on to measurement.</p>
+      <figure>
+        <img src="/assets/plan/coverage.webp" width="1024" height="535" alt="A 3D coverage simulation of camera frustums around a wireframe rack, and a photo of the PVC power-rack mock-up with three cameras mounted" loading="lazy" decoding="async" />
+        <figcaption>Figure 5. Camera-placement sweep and the PVC rack mock-up.</figcaption>
+      </figure>
+      <figure>
+        <img src="/assets/plan/calibration.webp" width="1600" height="1057" alt="The kiosk calibration report with a 3D plot of the three camera poses and the error figures, beside photos of the PVC rig with the calibration board and the kiosk's camera view" loading="lazy" decoding="async" />
+        <figcaption>Figure 6. Kiosk during calibration.</figcaption>
+      </figure>
+
+      <h3>6.2 Open technical problems</h3>
+      <p>What could be built in-house has been built. The bottleneck now is not a lack of technology but a lack of grounds for deciding what to build next. Three problems remain.</p>
+      <ul>
+        <li><strong>Occlusion, a fork in the road.</strong> Whether to estimate joints with no observation from a body model, or to add a fourth camera and measure them. The first is cheap but unverified. The second is verified but raises the cost. The choice decides product tier and price at once, and it will be settled by a real placement-sweep experiment and motion-capture studio validation.</li>
+        <li><strong>Grounds for the target spec.</strong> We have not yet computed how a 3 cm joint error propagates to the distance between the center of mass and a joint, and on to the estimated joint load. That number is what decides how many centimetres are good enough to ship. Today the judgment constants are hand-set in code and marked as not a calibrated biomechanical model.</li>
+        <li><strong>Independent validation.</strong> The accuracy so far was measured by the founder, on a public dataset only. One run gave an encouraging 2.88 cm joint error, until it turned out to count only the well-tracked joints, and it was discarded. A figure against marker-based motion capture is the first gate to commercialisation.</li>
+      </ul>
+
+      <h3>6.3 Prototype tasks</h3>
+      <ul>
+        <li><strong>Component tiers.</strong> Compute will split into Orin Nano and Orin NX. Which functions the lower tier must carry for cost and performance to balance is undecided.</li>
+        <li><strong>Mounting.</strong> The mounts and housings that attach straight to a power rack are due for a 3D-printed redesign that satisfies camera angle, stiffness and vibration together.</li>
+        <li><strong>Where hardware meets software.</strong> Only after the third camera went in did it become clear that USB bandwidth runs out and frames get dropped. Ceiling rails will hit the same wall, so the order changes: compute the limits first, then decide the structure, then build.</li>
+      </ul>
+
+      <h2 id="team"><span class="num">7</span>Team</h2>
+      <div class="tbl kv"><table>
+        <tr><th>Item</th><th>Detail</th></tr>
+        <tr><td data-th="Item">Founder</td><td data-th="Detail">Hunkun Lee. Planning, circuits and measurement, kernel and edge runtime, the 3D reconstruction algorithm, the web service and the business design.</td></tr>
+        <tr><td data-th="Item">How we build</td><td data-th="Detail">AI agents work as team members. The working rules and hooks are separated into <a href="https://github.com/lhk0721/agent-workflow-kit" rel="noopener">agent-workflow-kit</a>, an AI-native development harness we built, and 216 pull requests were merged in that repository between March and September 2026.</td></tr>
+        <tr><td data-th="Item">Background</td><td data-th="Detail">Early completion of the NVIDIA-run AI core engineer course. Fifth of 53 teams in the preliminary round of the National Institute of Korean Language AI model competition, as a team. Undergraduate at Sangmyung University, majoring in economics and finance with a second major in human-AI engineering.</td></tr>
+        <tr><td data-th="Item">Public material</td><td data-th="Detail"><a href="https://github.com/lhk0721/agent-workflow-kit" rel="noopener">github.com/lhk0721/agent-workflow-kit</a> and <a href="https://github.com/lhk0721/uvc-lab" rel="noopener">github.com/lhk0721/uvc-lab</a>, the camera tooling split out of RackTracker. The product code is private and shared on request.</td></tr>
+      </table></div>
+      <p>Where this project is stuck is the same place lab technology gets stuck on its way to a product: the numbers come out, but the release criterion does not. 3D reconstruction, real-time edge processing and human movement analysis interlock in one device, so we are looking for a validation partner who can see all three, and for university research infrastructure.</p>
+    </article>
+  </main>
+
+  <SiteFooter lang="en" />
+</Base>
