@@ -74,7 +74,7 @@ const parts = [
 <Base
   lang="ko"
   title="RackTracker, Rack Labs"
-  description="RackTracker 는 파워랙을 모션캡처 스튜디오로 만듭니다. 랙에 고정한 동기 카메라 세 대와 엣지 컴퓨터가 반복마다 어느 관절이 하중을 받았고 어느 근육이 감당했는지 보여 줍니다. 리그 3D, 시연 영상, 심사 발표 자료, Project Report."
+  description="RackTracker 는 파워랙을 모션캡처 스튜디오로 만듭니다. 랙에 고정한 동기 카메라 세 대와 엣지 컴퓨터가 반복마다 어느 관절이 하중을 받았고 어느 근육이 감당했는지 보여 줍니다. 리그 3D, 시연 영상, 발표 자료, Project Report."
   ogType="website"
   ogTitle="RackTracker, Rack Labs"
   ogDescription="파워랙을 모션캡처 스튜디오로. 반복마다 어느 관절이 하중을 받았고 어느 근육이 감당했는지 봅니다."
@@ -270,12 +270,11 @@ const parts = [
 
     <section class="wing" id="slides" aria-labelledby="slides-title">
       <div class="head">
-        <h2 id="slides-title">심사 발표 자료</h2>
-        <p>졸업작품 심사에서 발표한 그대로, 11장 3분</p>
+        <h2 id="slides-title">발표 자료</h2>
       </div>
-      <div class="sheet deck">
+      <div class="deck">
         <div class="deck-frame" id="deck-frame">
-          <iframe src="/slides/?embed#/graduation-review/1" title="RackTracker 심사 발표 자료" loading="lazy" allow="fullscreen"></iframe>
+          <iframe src="/slides/?embed#/graduation-review/1" title="RackTracker 발표 자료" loading="lazy" allow="fullscreen"></iframe>
         </div>
         <div class="deck-bar">
           <span class="hint">자료를 한 번 누른 뒤 화살표 키로 넘기세요.</span>
@@ -289,10 +288,16 @@ const parts = [
         </div>
       </div>
       <script>
-        const deck = document.getElementById('deck-frame') as HTMLElement;
+        // Full screen is the slide show (F5 in PowerPoint): the deck page in the frame goes full
+        // screen itself and shows the slide alone (html.present in public/slides/index.html).
+        // The frame is same-origin, so this click counts as the gesture there too; focus moves
+        // into the frame so the keys turn the slides at once. Anything else opens a new tab.
+        const frame = document.querySelector('#deck-frame iframe') as HTMLIFrameElement;
         document.getElementById('deck-full')!.addEventListener('click', () => {
           const tab = () => window.open('/slides/#/graduation-review/1', '_blank');
-          if (deck.requestFullscreen) deck.requestFullscreen().catch(tab); else tab();
+          const root = frame.contentWindow?.location.pathname.startsWith('/slides/') && frame.contentDocument?.documentElement;
+          if (!root || !root.requestFullscreen) return tab();
+          root.requestFullscreen().then(() => frame.contentWindow!.focus(), tab);
         });
       </script>
     </section>
