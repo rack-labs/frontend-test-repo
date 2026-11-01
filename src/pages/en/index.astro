@@ -2,11 +2,11 @@
 import Base from '../../layouts/Base.astro';
 import SiteBar from '../../components/SiteBar.astro';
 import SiteFooter from '../../components/SiteFooter.astro';
-import { getHeadings } from '../../report/project-report.md';
+import { getHeadings } from '../../report/project-report-en.md';
 
 // The home page is the review in one scroll: the hero, the rig (three live 3D viewers from
 // public/hardware/), the demo video, the slide deck (built into public/slides/ by
-// scripts/slides/build.mjs) and the Project Report (/report/, from scripts/report/import.mjs).
+// scripts/slides/build.mjs) and the Project Report (/en/report/, the English edition of the manuscript that scripts/report/import.mjs brings in).
 // The deeper pages, How it works, Research and Open source, hang off the top bar.
 const chapters = getHeadings().filter((h) => h.depth === 2);
 
@@ -33,7 +33,7 @@ const parts = [
       ['Edge computer', 'Jetson Orin NX 16 GB, in one enclosure with the trigger board'],
       ['Display', 'tablet, USB tethered'],
     ],
-    links: [['/report/#4-리그-하드웨어', 'Report, chapter 4'], ['/how-it-works/', 'How it works']],
+    links: [['/en/report/#4-rig-hardware', 'Report, chapter 4'], ['/how-it-works/', 'How it works']],
   },
   {
     id: 'carrier', tab: 'Edge computer', title: 'Edge computer, 3D', alt: 'The Advantech carrier board with the Jetson Orin NX on it', kicker: 'Jetson Orin NX on an Advantech MIC-711D-OX',
@@ -44,7 +44,7 @@ const parts = [
       ['Power', '10 to 40 W, no fan'],
       ['I/O used', 'USB 3.2 Gen1 × 2, USB 2.0, GbE'],
     ],
-    links: [['https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/', 'NVIDIA Jetson Orin'], ['https://www.advantech.com/en/search?q=MIC-711D-OX', 'Advantech MIC-711D-OX'], ['/report/#4-2-연산-장비와-usb', 'Report, 4-2']],
+    links: [['https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/', 'NVIDIA Jetson Orin'], ['https://www.advantech.com/en/search?q=MIC-711D-OX', 'Advantech MIC-711D-OX'], ['/en/report/#4-2-edge-computer-and-usb', 'Report, 4-2']],
   },
   {
     id: 'camera', tab: 'Camera module', title: 'Camera module, 3D', alt: 'The camera module board with the AR0234 sensor', kicker: 'DECXIN-3081V1 with the onsemi AR0234 sensor',
@@ -55,7 +55,7 @@ const parts = [
       ['Lens', 'M12, 4.1 mm, F2.0, about 120°'],
       ['Trigger', 'TRG pin, one frame per rising edge'],
     ],
-    links: [['https://www.onsemi.com/products/sensors/image-sensors/ar0234cs', 'onsemi AR0234CS'], ['/report/#4-1-카메라와-동기-트리거', 'Report, 4-1'], ['/how-it-works/#shutter', 'Shutter, how it works']],
+    links: [['https://www.onsemi.com/products/sensors/image-sensors/ar0234cs', 'onsemi AR0234CS'], ['/en/report/#4-1-cameras-and-the-sync-trigger', 'Report, 4-1'], ['/how-it-works/#shutter', 'Shutter, how it works']],
   },
 ];
 ---
@@ -280,17 +280,17 @@ const parts = [
     <section class="wing" id="report" aria-labelledby="report-title">
       <div class="head">
         <h2 id="report-title">Project Report</h2>
-        <p>The full write-up for the review, in Korean: nine chapters, 29 figures, 7 tables</p>
+        <p>The full write-up for the review: nine chapters, 29 figures, 7 tables</p>
       </div>
       <div class="cols">
         <div class="text">
           <p class="lede">Why the rig exists, what it is made of, how the rig OS, the camera calibration and the 3D measurement work, how the load on each joint is computed, and how all of it was validated.</p>
           <ol class="chapters">
-            {chapters.map((c) => <li><a href={`/report/#${c.slug}`}>{c.text}</a></li>)}
+            {chapters.map((c) => <li><a href={`/en/report/#${c.slug}`}>{c.text}</a></li>)}
           </ol>
           <div class="cta">
-            <a class="btn" href="/report/">Read it online</a>
-            <a class="btn ghost" href={PDF.href} download>Download the PDF ({PDF.size}, {PDF.pages} pages)</a>
+            <a class="btn" href="/en/report/">Read it online</a>
+            <a class="btn ghost" href={PDF.href} download>Download the PDF (Korean, {PDF.size}, {PDF.pages} pages)</a>
           </div>
         </div>
         <div class="figs">

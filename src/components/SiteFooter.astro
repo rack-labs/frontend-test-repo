@@ -29,7 +29,7 @@ const bp = en ? '/en/business-plan/' : '/business-plan/';
     <div><dt>{en ? 'Phone' : '전화'}</dt><dd><a href={`tel:${tel}`}>{en ? '+82 10-2565-8547' : '010-2565-8547'}</a></dd></div>
     <div><dt>GitHub</dt><dd><a href="https://github.com/lhk0721" rel="noopener">github.com/lhk0721</a></dd></div>
     {en
-      ? <div><dt>Documents</dt><dd><a href="/report/" hreflang="ko">Project report</a> <span class="alt">(<a href="/report/RackTracker_Project_Report.pdf" download>PDF</a>)</span>, <a href="/slides/#/graduation-review/1" hreflang="ko">Slides</a>, <a href={bp}>Business plan</a> <span class="alt">(<a href="/business-plan/" hreflang="ko" lang="ko">한국어 원문</a>)</span></dd></div>
+      ? <div><dt>Documents</dt><dd><a href="/en/report/">Project report</a> <span class="alt">(<a href="/report/RackTracker_Project_Report.pdf" download>PDF</a>)</span>, <a href="/slides/#/graduation-review/1" hreflang="ko">Slides</a>, <a href={bp}>Business plan</a> <span class="alt">(<a href="/business-plan/" hreflang="ko" lang="ko">한국어 원문</a>)</span></dd></div>
       : <div><dt>문서</dt><dd><a href="/report/">Project Report</a> <span class="alt">(<a href="/report/RackTracker_Project_Report.pdf" download>PDF</a>)</span>, <a href="/slides/#/graduation-review/1">발표 자료</a>, <a href={bp}>사업계획서</a> <span class="alt">(<a href="/en/business-plan/" hreflang="en" lang="en">English</a>)</span></dd></div>}
   </dl>
   {home && (en
