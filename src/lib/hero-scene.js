@@ -5,7 +5,9 @@
 // animation takes over in the same space: three rays leave the cameras through
 // the detected left knee, the point nearest the three rays is the 3D joint,
 // the same is done for all 33 joints, then for every frame of a squat, and the
-// floor frame is moved to the rack frame. Data are those of rack-tracker (cameras K/R/t from the 28 August 2026
+// floor frame is moved to the rack frame. The person is rack-tracker's MHR body
+// model fitted to the example pose (scripts/hero-mesh/), drawn translucent with
+// the model's own skeleton inside, and the measured joints on top. Data are those of rack-tracker (cameras K/R/t from the 28 August 2026
 // PVC rig calibration, example pose); every label, caption, dimension and the
 // image inset are left out.
 //
@@ -61,7 +63,7 @@ class Segs {
     return this;
   }
 }
-const disposeTree = root => root.traverse(o => { if (o.isInstancedMesh) o.dispose(); if (o.geometry && !o.geometry.userData.keep) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+const disposeTree = root => root.traverse(o => { if (o.isInstancedMesh) o.dispose(); if (o.isSkinnedMesh) o.skeleton.dispose(); if (o.geometry && !o.geometry.userData.keep) o.geometry.dispose(); if (o.material) o.material.dispose(); });
 
 /* ── data (cm, floor frame, y up). Camera K/R/t as stored then (y down), flipped on read.
    Reference camera C3. Distortion = C1's lens calibration, lent to all three (example).
@@ -146,7 +148,7 @@ const BONES_FACE = [[0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 
 const BONES_HAND = [[15, 17], [15, 19], [15, 21], [17, 19], [16, 18], [16, 20], [16, 22], [18, 20]];
 const BONES = BONES_BODY.concat(BONES_FACE, BONES_HAND);
 const LEN = { shin: 40, thigh: 44, trunk: 50, neck: 11 };
-const ANG = { stand: [3, 3, 0], bottom: [32, 55, 40] };
+const ANG = { stand: [3, 3, 0], bottom: [36, 74, 40] };                        // shin, thigh, trunk from the vertical: a deep squat, hip just above the knee
 const LAT = { ankle: 14, knee: 15, hip: 11, sh: 19, elbow: 31, wrist: 28, ear: 7.5, eyeIn: 3, eye: 4.5, eyeOut: 6, mouth: 2.5, pinky: 30, index: 29, thumb: 26 };
 function poseAt(k) {
   const [ts, tt, tb] = ANG.stand.map((a, i) => lerp(a, ANG.bottom[i], k) * Math.PI / 180);
@@ -165,6 +167,91 @@ function poseAt(k) {
     L(hip, LAT.hip), R(hip, LAT.hip), L(knee, LAT.knee), R(knee, LAT.knee), L(ankle, LAT.ankle), R(ankle, LAT.ankle), L(heel, LAT.ankle), R(heel, LAT.ankle), L(toe, LAT.ankle), R(toe, LAT.ankle)];
 }
 const headOf = P => mul(add(add(P[7], P[8]), add(P[2], P[5])), 0.25);
+const pairsOf = (pts, bones) => bones.map(([i, j]) => [pts[i], pts[j]]);
+
+/* ── the body as a mesh: rack-tracker's MHR body model fitted to this person's 33 joints at
+   33 phases of the squat (scripts/hero-mesh/ makes the file: rest vertices, four skin weights a
+   vertex, the 127 joint states of every phase). Skinned on the GPU here (SkinnedMesh) and
+   blended between the two nearest phases, so any squat depth is one call. Fetched once when the
+   scene mounts; until it is here, and without it, the body is the faint stick figure ── */
+const MESH_URL = '/assets/hero-mesh/squat-20261102.bin';
+const MESH_COL = { skin: '#8d99a8', opacity: 0.45, bone: '#2c7272' };         // the product's replay draws the mesh at 0.45 too
+let MESH = null, meshLoad = null, REV = 0;                                      // REV changes when the mesh arrives: fades re-collect their materials
+function loadMesh() {
+  if (meshLoad || typeof fetch !== 'function') return;
+  if (typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData) return;
+  meshLoad = fetch(MESH_URL).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then(buf => {
+    const hl = new DataView(buf).getUint32(0, true);
+    const h = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
+    const sec = (name, T) => { const [off, n] = h.sections[name]; return new T(buf, off, n); };
+    const rest = sec('rest', Int16Array), pos = new Float32Array(rest.length);
+    for (let i = 0; i < rest.length; i++) pos[i] = rest[i] * 0.1;             // mm → cm
+    const wq = sec('skinWeight', Uint8Array), w = new Float32Array(wq.length);
+    for (let i = 0; i < w.length; i += 4) { const s = (wq[i] + wq[i + 1] + wq[i + 2] + wq[i + 3]) || 1; for (let k = 0; k < 4; k++) w[i + k] = wq[i + k] / s; }
+    const geo = new THREE.BufferGeometry(); geo.userData.keep = true;
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('skinIndex', new THREE.BufferAttribute(new Uint16Array(sec('skinIndex', Uint8Array)), 4));
+    geo.setAttribute('skinWeight', new THREE.BufferAttribute(w, 4));
+    geo.setIndex(new THREE.BufferAttribute(sec('faces', Uint16Array), 1));
+    geo.computeVertexNormals();
+    MESH = { J: h.joints, phases: h.phases, geo, ibp: sec('ibp', Float32Array), states: sec('states', Float32Array), bodyIds: h.bodyIds, bodyParents: h.bodyParents };
+    REV++;
+  }).catch(e => { console.warn('[hero] body mesh not loaded:', e); });
+}
+const _bt = new THREE.Vector3(), _bqa = new THREE.Quaternion(), _bqb = new THREE.Quaternion(), _bs = new THREE.Vector3();
+const stateMatrix = (st, o, m) => { _bt.set(st[o], st[o + 1], st[o + 2]); _bqa.set(st[o + 3], st[o + 4], st[o + 5], st[o + 6]); _bs.setScalar(st[o + 7]); return m.compose(_bt, _bqa, _bs); };
+class Body {
+  constructor(parent, color) {
+    this.g = new THREE.Group(); parent.add(this.g);
+    this.k = 1; this.mesh = null;
+    const c = new THREE.Color(color);
+    this.stick = new Segs(this.g, c, { opacity: 0.22, r: 1.3 });
+    this.head = new THREE.Mesh(new THREE.SphereGeometry(7.5, 14, 14), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.22 })); this.g.add(this.head);
+    this.setPhase(1);
+  }
+  /* k: 0 standing .. 1 bottom of the squat */
+  setPhase(k) { this.k = k; this.sync(); }
+  sync() {
+    if (MESH && !this.mesh) this.build();
+    if (this.mesh) { this.pose(this.k); return; }
+    const P = poseAt(this.k).map(r2f);
+    this.stick.update(pairsOf(P.map(p => new THREE.Vector3(...p)), BONES_BODY)); this.head.position.set(...headOf(P));
+  }
+  build() {
+    const D = MESH;
+    this.g.remove(this.stick.g, this.head); disposeTree(this.stick.g); disposeTree(this.head);
+    const bones = [], inv = [];
+    for (let j = 0; j < D.J; j++) { const b = new THREE.Bone(); b.matrixAutoUpdate = false; bones.push(b); inv.push(stateMatrix(D.ibp, j * 8, new THREE.Matrix4())); }
+    const mat = new THREE.MeshLambertMaterial({ color: MESH_COL.skin, transparent: true, opacity: MESH_COL.opacity });
+    mat.userData.base = MESH_COL.opacity;
+    this.mesh = new THREE.SkinnedMesh(D.geo, mat); this.mesh.frustumCulled = false;
+    bones.forEach(b => this.mesh.add(b));
+    this.mesh.bind(new THREE.Skeleton(bones, inv), new THREE.Matrix4());        // explicit bind matrix: without it bind() recomputes the inverses from the unposed bones
+    this.bones = bones; this.g.add(this.mesh);
+    /* the model's own body joints and bones, in their own colour, inside the translucent mesh */
+    const bc = new THREE.Color(MESH_COL.bone);
+    this.rig = new Segs(this.g, bc, { opacity: 0.95, r: 0.38 });
+    this.dots = new THREE.InstancedMesh(new THREE.SphereGeometry(1.05, 10, 10), new THREE.MeshBasicMaterial({ color: bc }), D.bodyIds.length);
+    this.g.add(this.dots);
+    this.pts = D.bodyIds.map(() => new THREE.Vector3());
+    REV++;
+  }
+  pose(k) {
+    const D = MESH, ph = D.phases, st = D.states, J = D.J;
+    let i = 0; while (i + 2 < ph.length && ph[i + 1] <= k) i++;
+    const u = clamp01((k - ph[i]) / (ph[i + 1] - ph[i])), A = i * J * 8, B = (i + 1) * J * 8;
+    for (let j = 0; j < J; j++) {
+      const a = A + j * 8, b = B + j * 8;
+      _bt.set(lerp(st[a], st[b], u), lerp(st[a + 1], st[b + 1], u), lerp(st[a + 2], st[b + 2], u));
+      _bqa.set(st[a + 3], st[a + 4], st[a + 5], st[a + 6]); _bqb.set(st[b + 3], st[b + 4], st[b + 5], st[b + 6]); _bqa.slerp(_bqb, u);
+      _bs.setScalar(lerp(st[a + 7], st[b + 7], u));
+      const bone = this.bones[j]; bone.matrix.compose(_bt, _bqa, _bs); bone.matrixWorldNeedsUpdate = true;
+    }
+    D.bodyIds.forEach((j, q) => { const e = this.bones[j].matrix.elements; this.pts[q].set(e[12], e[13], e[14]); _m4.makeTranslation(e[12], e[13], e[14]); this.dots.setMatrixAt(q, _m4); });
+    this.dots.instanceMatrix.needsUpdate = true;
+    this.rig.update(D.bodyParents.map((p, q) => p >= 0 ? [this.pts[q], this.pts[p]] : null).filter(Boolean));
+  }
+}
 
 /* ── one frame: 2D detections (with error) → normalised coordinates → points on the image
    planes → rays → triangulation (the point nearest all rays). f numbers the frame, so the
@@ -419,14 +506,16 @@ function sceneBuilder() {
   const mats = obj => { const o = []; obj.traverse(x => { if (x.material) { const m = x.material; if (m.userData.base === undefined) m.userData.base = m.opacity; m.transparent = true; o.push(m); } }); return o; };
   const b = {
     G, anims, V,
+    node() { return cur; },                                                     // the group new objects go into
+    /* the materials are collected again when the body mesh arrives inside a fading group (REV) */
     fade(obj, reveal, { out = false } = {}) {
-      const ms = mats(obj);
-      anims.push(t => { let k = prog(t, reveal); if (out) k = 1 - k; obj.visible = k > 0.001; ms.forEach(m => { m.opacity = m.userData.base * k; }); });
+      let ms = [], rev = -1;
+      anims.push(t => { if (rev !== REV) { ms = mats(obj); rev = REV; } let k = prog(t, reveal); if (out) k = 1 - k; obj.visible = k > 0.001; ms.forEach(m => { m.opacity = m.userData.base * k; }); });
     },
     /* in, hold, out: [start, in, hold, out] */
     pulse(obj, [s, din, hold, dout]) {
-      const ms = mats(obj);
-      anims.push(t => { const k = prog(t, [s, din]) * (1 - prog(t, [s + din + hold, dout])); obj.visible = k > 0.001; ms.forEach(m => { m.opacity = m.userData.base * k; }); });
+      let ms = [], rev = -1;
+      anims.push(t => { if (rev !== REV) { ms = mats(obj); rev = REV; } const k = prog(t, [s, din]) * (1 - prog(t, [s + din + hold, dout])); obj.visible = k > 0.001; ms.forEach(m => { m.opacity = m.userData.base * k; }); });
     },
     grouped(fn, reveal = null) {
       const g = new THREE.Group(), prev = cur;
@@ -518,11 +607,13 @@ function sceneBuilder() {
    what this beat produces carries a reveal */
 function buildScene(bt) {
   const b = sceneBuilder(), S = bt.stage, K = bt.key, Fg = FIG, fat = [];
-  const pairsOf = (pts, bones) => bones.map(([i, j]) => [pts[i], pts[j]]);
-  /* the measurement's opening state: rack, the person before measuring (faint) */
+  /* the measurement's opening state: rack, the person at the bottom of the squat (the body mesh,
+     checked on every draw so it appears as soon as its file is here) */
   const base = () => {
     b.rack({ origin: S === 4 });
-    return { body: b.lines(pairsOf(Fg.P, BONES_BODY), 'person', { opacity: 0.22, r: 1.3 }), head: b.dot(headOf(Fg.P), 'person', 7.5, { opacity: 0.22 }) };
+    const body = new Body(b.node(), PAL.person);
+    b.anims.push(() => body.sync());
+    return body;
   };
   CAMS.forEach(c => b.camera(c));
 
@@ -575,9 +666,10 @@ function buildScene(bt) {
     }
   }
 
-  /* 3 frame after frame: at each frame the detections on the image planes change, the three
-     rays reach all 33 joints at once and the skeleton takes that frame's pose; the rays fade
-     before the next frame. The faint body keeps moving between frames */
+  /* 3 frame after frame: at each frame the body takes that frame's pose, the detections on the
+     image planes change, the three rays reach all 33 joints at once and the skeleton takes the
+     pose — all on the same instant, so body and skeleton never drift apart; the rays fade before
+     the next frame. Between frames nothing moves: a frame is a snapshot */
   if (K === 'burst') {
     b.fade(b.grouped(featOnPlanes), [0, 0.3], { out: true });
     const V = b.V, n = BURST_AT.length, C3 = CAMS.map(c => V(c.C));
@@ -590,13 +682,12 @@ function buildScene(bt) {
     const dots = Fg.T.map((p, j) => b.dot(p, 'joint', j === FEAT ? 1.9 : 1.3));
     const bones = b.lines(pairsOf(Fg.T, BONES), 'joint', { r: 0.4 });
     b.anims.push(t => {
-      const P = poseAt(burstK(t)).map(r2f);
-      person.body.update(pairsOf(P.map(V), BONES_BODY)); person.head.position.copy(V(headOf(P)));
       let f = -1; while (f + 1 < n && t >= BURST_AT[f + 1]) f++;
+      person.setPhase(f < 0 ? 1 : burstK(BURST_AT[f]));                        // the body is the frame being measured
       flat.forEach(fl => { fl.rays.g.visible = false; });
       if (f < 0) return;
       const at = BURST_AT[f], per = f + 1 < n ? BURST_AT[f + 1] - at : BURST.min, a = clamp01((t - at) / BURST.rayIn);
-      const cur = F3[f], sk = a < 1 ? F3[Math.max(0, f - 1)] : cur;
+      const cur = F3[f];
       const op = 0.7 * (a < 1 ? 1 : 1 - easeOut(clamp01((t - at - BURST.rayIn) / Math.max(0.06, 0.75 * per - BURST.rayIn))));
       flat.forEach((fl, ci) => {
         fl.dots.forEach((m, j) => m.position.copy(cur.O[ci][j]));
@@ -605,8 +696,8 @@ function buildScene(bt) {
         fl.rays.mat.opacity = op; fl.rays.g.visible = op > 0.01;
       });
       const pop = a < 1 ? 1 : 1 + 0.45 * (1 - clamp01((t - at - BURST.rayIn) / 0.14));
-      dots.forEach((m, j) => { m.position.copy(sk.T[j]); m.scale.setScalar(pop); });
-      bones.update(pairsOf(sk.T, BONES));
+      dots.forEach((m, j) => { m.position.copy(cur.T[j]); m.scale.setScalar(pop); });
+      bones.update(pairsOf(cur.T, BONES));
     });
   }
 
@@ -648,6 +739,7 @@ function floorGrid(page) {
            same and the canvas only shows more around it. Default: the whole canvas, centred
    Returns { play() from the start, setActive(bool) to stop drawing while off screen, dispose() } */
 export function mountHeroScene(host, { still = false, onEnd = null, onFail = null, frame = null } = {}) {
+  loadMesh();                                                                   // the body mesh, needed from ~10 s in
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   const page = getComputedStyle(host).getPropertyValue('--bg').trim() || PAL.bg;
   renderer.setClearColor(page, 1);
@@ -793,8 +885,17 @@ export function mountHeroScene(host, { still = false, onEnd = null, onFail = nul
     dispose() { active = false; ro.disconnect(); if (S) disposeTree(S.group); renderer.dispose(); el.remove(); },
     /* for checks and the poster still: stop at T seconds and return the frame as a PNG data URL */
     seek(t) { playing = false; T = t; draw(performance.now()); return el.toDataURL('image/png'); },
+    /* resolves once the body mesh has arrived (or failed to): checks wait on it before seeking */
+    ready() { return meshLoad || Promise.resolve(); },
   };
 }
 
 /* geometry for tuning the camera keys (node or console) */
 export const __geom = { cams: CAMS.map(c => c.C), rackO: RACK_O, knee: FIG.T[FEAT], head: headOf(FIG.T), total: TOTAL };
+/* the person and the cameras for scripts/hero-mesh/pose.mjs: joints (cm, floor frame, y up) at
+   a squat phase, and the cameras as R·t·K in that frame with the lens coefficients in OpenCV order */
+export const __hero = {
+  joints: k => poseAt(k).map(r2f),
+  cameras: RAW.map(c => ({ R: mm(c.R, F), t: c.t, K: c.K })),
+  dist: [COEF.k1, COEF.k2, COEF.p1, COEF.p2, COEF.k3], image: [IMG_W, IMG_H],
+};
