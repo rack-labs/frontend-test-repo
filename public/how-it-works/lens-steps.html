@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html lang="ko"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><script>/* embed 와 바탕색을 그리기 전에 붙인다. JS 가 돈 뒤에 붙이면 원래 버튼이 한순간 보인다 */(() => { const q = new URLSearchParams(location.search); if (q.get('embed') !== '1') return; document.body.classList.add('embed'); const bg = q.get('bg') || ''; if (/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(bg)) document.documentElement.style.setProperty('--bg', '#' + bg); })();</script>
 <title>렌즈 내재변수 3D</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -326,6 +326,7 @@ function createViewer(host, { reserve = () => ({ L: 0, R: 0 }) } = {}) {
   };
   const draw = () => {
     renderer.render(scene, cam);
+    if (!window.__hwReady) { window.__hwReady = true; requestAnimationFrame(() => { if (parent !== window) { try { parent.postMessage({ hw: 'ready', page: location.pathname }, '*'); } catch (_) { /* no parent */ } } }); }   // 첫 프레임을 그린 뒤 끼워 넣는 쪽(viewer-tabs.js)에 알린다
     tickEls.forEach(t => place(t.el, t.at()));
     layoutLabels(renderer.domElement.clientWidth, renderer.domElement.clientHeight);
     if (picked) place(tip, picked.p, '12px', '-100%');
@@ -744,7 +745,11 @@ if (EMBED) {
   };
   const run = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } };
   player.hidden = false; show(); run();
-  if ('IntersectionObserver' in window) new IntersectionObserver(es => { on = es.some(e => e.isIntersecting); if (on) run(); }, { threshold: 0.05 }).observe(document.body);
+  /* 화면 밖이거나 끼워 넣는 쪽(viewer-tabs.js)이 탭 뒤에 숨겼을 때 멈춘다 */
+  let held = false, seen = true;
+  const sync = () => { on = seen && !held; if (on) run(); };
+  addEventListener('message', e => { const m = e.data; if (!m || !m.hw) return; if (m.hw === 'pause' || m.hw === 'resume') { held = m.hw === 'pause'; sync(); } });
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { seen = es.some(e => e.isIntersecting); sync(); }, { threshold: 0.05 }).observe(document.body);
 }
 </script>
 
