@@ -147,9 +147,14 @@ const BONES_BODY = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], 
 const BONES_FACE = [[0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10]];
 const BONES_HAND = [[15, 17], [15, 19], [15, 21], [17, 19], [16, 18], [16, 20], [16, 22], [18, 20]];
 const BONES = BONES_BODY.concat(BONES_FACE, BONES_HAND);
-const LEN = { shin: 40, thigh: 44, trunk: 50, neck: 11 };
-const ANG = { stand: [3, 3, 0], bottom: [36, 74, 40] };                        // shin, thigh, trunk from the vertical: a deep squat, hip just above the knee
-const LAT = { ankle: 14, knee: 15, hip: 11, sh: 19, elbow: 31, wrist: 28, ear: 7.5, eyeIn: 3, eye: 4.5, eyeOut: 6, mouth: 2.5, pinky: 30, index: 29, thumb: 26 };
+/* lengths and widths are one team member's, triangulated in a real set (scripts/hero-mesh/member.json).
+   SIZE scales the whole figure so the fitted mesh stands that member's height: against MediaPipe
+   landmarks the bone scales come out short, and the head, which has no scale of its own, then looks
+   big (rack-tracker #655). The bottom is deeper than the member's real set (hip 1–2 cm under the knee) */
+const SIZE = 1.01;
+const LEN = { shin: 37.0, thigh: 37.9, trunk: 51.9, neck: 13 };
+const ANG = { stand: [3, 3, 0], bottom: [42, 92, 32] };                        // shin, thigh, trunk from the vertical
+const LAT = { ankle: 12, knee: 12.5, hip: 8.4, sh: 16.6, elbow: 27, wrist: 24.5, ear: 8.9, eyeIn: 3, eye: 4.5, eyeOut: 6, mouth: 2.5, pinky: 26, index: 25, thumb: 22.5 };
 function poseAt(k) {
   const [ts, tt, tb] = ANG.stand.map((a, i) => lerp(a, ANG.bottom[i], k) * Math.PI / 180);
   const ankle = [0, 8, 0];
@@ -164,7 +169,7 @@ function poseAt(k) {
   const L = (p, x) => [-x, p[1], p[2]], R = (p, x) => [x, p[1], p[2]];
   return [nose, L(eyeIn, LAT.eyeIn), L(eye, LAT.eye), L(eyeOut, LAT.eyeOut), R(eyeIn, LAT.eyeIn), R(eye, LAT.eye), R(eyeOut, LAT.eyeOut), L(ear, LAT.ear), R(ear, LAT.ear), L(mouth, LAT.mouth), R(mouth, LAT.mouth),
     L(sh, LAT.sh), R(sh, LAT.sh), L(elbow, LAT.elbow), R(elbow, LAT.elbow), L(wrist, LAT.wrist), R(wrist, LAT.wrist), L(pinky, LAT.pinky), R(pinky, LAT.pinky), L(index, LAT.index), R(index, LAT.index), L(thumb, LAT.thumb), R(thumb, LAT.thumb),
-    L(hip, LAT.hip), R(hip, LAT.hip), L(knee, LAT.knee), R(knee, LAT.knee), L(ankle, LAT.ankle), R(ankle, LAT.ankle), L(heel, LAT.ankle), R(heel, LAT.ankle), L(toe, LAT.ankle), R(toe, LAT.ankle)];
+    L(hip, LAT.hip), R(hip, LAT.hip), L(knee, LAT.knee), R(knee, LAT.knee), L(ankle, LAT.ankle), R(ankle, LAT.ankle), L(heel, LAT.ankle), R(heel, LAT.ankle), L(toe, LAT.ankle), R(toe, LAT.ankle)].map(p => mul(p, SIZE));
 }
 const headOf = P => mul(add(add(P[7], P[8]), add(P[2], P[5])), 0.25);
 const pairsOf = (pts, bones) => bones.map(([i, j]) => [pts[i], pts[j]]);
@@ -174,7 +179,7 @@ const pairsOf = (pts, bones) => bones.map(([i, j]) => [pts[i], pts[j]]);
    vertex, the 127 joint states of every phase). Skinned on the GPU here (SkinnedMesh) and
    blended between the two nearest phases, so any squat depth is one call. Fetched once when the
    scene mounts; until it is here, and without it, the body is the faint stick figure ── */
-const MESH_URL = '/assets/hero-mesh/squat-20261102.bin';
+const MESH_URL = '/assets/hero-mesh/squat-20261102b.bin';
 const MESH_COL = { skin: '#8d99a8', opacity: 0.45, bone: '#2c7272' };         // the product's replay draws the mesh at 0.45 too
 let MESH = null, meshLoad = null, REV = 0;                                      // REV changes when the mesh arrives: fades re-collect their materials
 function loadMesh() {

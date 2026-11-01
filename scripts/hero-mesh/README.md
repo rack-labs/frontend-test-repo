@@ -14,24 +14,41 @@ the two nearest phases, so the body can take any squat depth and snaps to the
 pose of each measured frame in the burst beat. The file is fetched once the
 scene mounts (~600 KiB); until it is here the body is the old stick figure.
 
+The body is one team member's. `member.json` holds the MHR identity (45 shape
+values) the product fitted from that member's InBody record, and the bone
+lengths triangulated in one of their sets; `hero-scene.js` builds the stick
+figure from those lengths and `fit.py --identity member.json` passes the shape
+to the fit. With the average body (identity 0) the figure looked heavy.
+
+Height: against MediaPipe landmarks the bone scales come out short, so the
+mesh stands 7–11 cm under the member's height and the head, which has no scale
+of its own, looks big (rack-tracker #655). Here `SIZE` in `hero-scene.js`
+scales the whole stick figure until the standing mesh is the member's height;
+`fit.py` prints that height (`body: standingHeightCm`), so one refit tells
+whether `SIZE` needs another step (1.055 gave 177.5 cm, 1.01 gives 170.4 cm).
+
 Output: `public/assets/hero-mesh/squat-YYYYMMDD.bin` (the name is in
-`MESH_URL` in `hero-scene.js`; a new file gets a new date so caches do not
+`MESH_URL` in `hero-scene.js`; a new file gets a new name so caches do not
 serve the old one). Layout and section list: the docstring of `fit.py`.
 Correctives (pose-dependent blendshapes) are not in the file; the fit script
-prints how far the skinned mesh is from the full model (mean 0.33 cm on
+prints how far the skinned mesh is from the full model (mean 0.34 cm on
 2 November 2026).
 
-Rebuild after changing the person (`LEN`, `ANG`, `LAT`, `poseAt`) or the
-cameras in `hero-scene.js`:
+Rebuild after changing the person (`SIZE`, `LEN`, `ANG`, `LAT`, `poseAt`,
+`member.json`) or the cameras in `hero-scene.js`:
 
     cd scripts/hero-mesh
     node pose.mjs --phases 33
-    <rack-tracker>/backend/.venv/Scripts/python fit.py --backend <rack-tracker>/backend --out ../../public/assets/hero-mesh/squat-YYYYMMDD.bin
+    MHR_CUDA_GRAPH=0 <rack-tracker>/backend/.venv/Scripts/python fit.py --backend <rack-tracker>/backend --out ../../public/assets/hero-mesh/squat-YYYYMMDD.bin
 
 `fit.py` needs the backend venv (torch + CUDA) and `mhr/assets/mhr_model.pt`
-beside `backend/`; the fit takes about 40 s on a laptop GPU. Then change
-`MESH_URL` and check with `#hero=check` (`scripts/hero-scene/README.md`).
+beside `backend/`; the fit takes about 100 s on a laptop GPU. With an identity
+the fitter's CUDA-graph path fails during capture, hence `MHR_CUDA_GRAPH=0`.
+Then change `MESH_URL` and check with `#hero=check`
+(`scripts/hero-scene/README.md`).
 
-Fit on 2 November 2026: 3D error mean 1.84 cm, max 5.6 cm (worst joints the
-shoulders, ears and toes, where the stick figure and the model's landmarks
-disagree); reprojection residual 9.1 px.
+Fit on 2 November 2026 (`squat-20261102b.bin`): 3D error mean 1.82 cm, max
+4.8 cm (worst joints the toes, ears and shoulders, where the stick figure and
+the model's landmarks disagree); reprojection residual 9.0 px; standing mesh
+170.4 cm, shoulder joint span 25.1 cm; at the bottom the hip is 1.2 cm under
+the knee (the member's real set: 10.9 cm above).
