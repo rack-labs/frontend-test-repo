@@ -391,10 +391,10 @@ img, video { display: block; max-width: 100%; height: auto; }
 .links a { color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: 1px; }
 .links a:hover { color: var(--tint); border-color: var(--tint); }
 
-/* demo: the player on a sheet, kept to about half the viewport height so it does not take over
-   the landing page (the player's own full-screen button is there for a closer look); the caption
-   (length, narration) stays in the markup but is not shown */
-.demo { padding: 10px; max-width: min(800px, calc(52vh * 16 / 9 + 20px)); }
+/* demo: the bare player (no sheet frame), centred, at most about two-thirds of the viewport height
+   so it does not take over the landing page (the player's own full-screen button is there for a
+   closer look); the caption (length, narration) stays in the markup but is not shown */
+.demo { max-width: min(1080px, calc(64vh * 16 / 9)); margin-inline: auto; padding: 0; background: none; box-shadow: none; }
 .demo video { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; background: #000; }
 .demo figcaption { display: none; }
 
