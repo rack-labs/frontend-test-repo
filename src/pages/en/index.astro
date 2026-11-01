@@ -72,7 +72,7 @@ const parts = [
 <Base
   lang="en"
   title="RackTracker by Rack Labs"
-  description="RackTracker turns the power rack into a motion-capture studio: three synchronized cameras and an edge computer mounted on the rack show, for every rep, which joints took the load and which muscles carried it. The rig in 3D, the demo video, the review slides and the project report."
+  description="RackTracker turns the power rack into a motion-capture studio: three synchronized cameras and an edge computer mounted on the rack show, for every rep, which joints took the load and which muscles carried it. The rig in 3D, the demo video, the slides and the project report."
   ogType="website"
   ogTitle="RackTracker by Rack Labs"
   ogDescription="Turn the power rack into a motion-capture studio. For every rep, see which joints took the load and which muscles carried it."
@@ -268,12 +268,11 @@ const parts = [
 
     <section class="wing" id="slides" aria-labelledby="slides-title">
       <div class="head">
-        <h2 id="slides-title">Review deck</h2>
-        <p>Eleven slides, three minutes, as presented at the graduation review (Korean)</p>
+        <h2 id="slides-title">Slides</h2>
       </div>
-      <div class="sheet deck">
+      <div class="deck">
         <div class="deck-frame" id="deck-frame">
-          <iframe src="/slides/?embed#/graduation-review/1" title="RackTracker review deck" loading="lazy" allow="fullscreen"></iframe>
+          <iframe src="/slides/?embed#/graduation-review/1" title="RackTracker slides" loading="lazy" allow="fullscreen"></iframe>
         </div>
         <div class="deck-bar">
           <span class="hint">Click the deck, then step through it with the arrow keys.</span>
@@ -287,10 +286,16 @@ const parts = [
         </div>
       </div>
       <script>
-        const deck = document.getElementById('deck-frame') as HTMLElement;
+        // Full screen is the slide show (F5 in PowerPoint): the deck page in the frame goes full
+        // screen itself and shows the slide alone (html.present in public/slides/index.html).
+        // The frame is same-origin, so this click counts as the gesture there too; focus moves
+        // into the frame so the keys turn the slides at once. Anything else opens a new tab.
+        const frame = document.querySelector('#deck-frame iframe') as HTMLIFrameElement;
         document.getElementById('deck-full')!.addEventListener('click', () => {
           const tab = () => window.open('/slides/#/graduation-review/1', '_blank');
-          if (deck.requestFullscreen) deck.requestFullscreen().catch(tab); else tab();
+          const root = frame.contentWindow?.location.pathname.startsWith('/slides/') && frame.contentDocument?.documentElement;
+          if (!root || !root.requestFullscreen) return tab();
+          root.requestFullscreen().then(() => frame.contentWindow!.focus(), tab);
         });
       </script>
     </section>
