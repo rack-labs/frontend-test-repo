@@ -76,8 +76,9 @@ const underSlides = {
 
       /* a touch screen (?embed or the slide show): the arrow buttons go (scaled to a phone they
          are 12px, a finger's edge), the slide takes the full width, and it turns with a swipe
-         (script below); the window pans up and down and pinches as before. On the first slide two
-         arrows blink at the edges to say so, until the first touch (html.hint) */
+         (script below); the window pans up and down and pinches as before. On the first slide one
+         arrow blinks at the right edge to say so (nothing lies before that slide), until the
+         first touch (html.hint) */
       @media (hover: none) and (pointer: coarse) {
         html.embed { font-size: min(1.25vw, 2.2222vh); }
         html.embed [class*="_navBtn_"] { display: none !important }
@@ -86,7 +87,7 @@ const underSlides = {
       }
       .turn { display: none; }
       html.hint .turn {
-        display: flex; position: fixed; inset: 0; z-index: 9; justify-content: space-between; align-items: center;
+        display: flex; position: fixed; inset: 0; z-index: 9; justify-content: flex-end; align-items: center;
         padding: 0 3vw; pointer-events: none;
       }
       .turn span {
@@ -130,7 +131,7 @@ const underSlides = {
       // A touch screen turns the slides with a swipe: a finger that moves sideways by more than a
       // thumb's width and more sideways than up or down (css above hides the arrow buttons there).
       // Only in ?embed and the slide show; the plain page keeps its buttons. On the first slide the
-      // blinking arrows stay until the first touch or key.
+      // blinking arrow stays until the first touch or key.
       (() => {
         const html = document.documentElement;
         if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
@@ -142,7 +143,7 @@ const underSlides = {
         document.addEventListener('DOMContentLoaded', () => {
           const el = document.createElement('div');
           el.className = 'turn'; el.setAttribute('aria-hidden', 'true');
-          el.innerHTML = '<span>\\u2039</span><span>\\u203a</span>';
+          el.innerHTML = '<span>\\u203a</span>';
           document.body.append(el); hint();
         });
         window.addEventListener('keydown', saw);
