@@ -7,7 +7,9 @@
 // the same is done for all 33 joints, then for every frame of a squat, and the
 // floor frame is moved to the rack frame. The person is rack-tracker's MHR body
 // model fitted to the example pose (scripts/hero-mesh/), drawn translucent with
-// the model's own skeleton inside, and the measured joints on top. Data are those of rack-tracker (cameras K/R/t from the 28 August 2026
+// the model's own skeleton inside, and the measured joints on top. What the
+// cameras measure is that model's own joints, so the skeleton and the measured
+// joints meet wherever the two name the same joint. Data are those of rack-tracker (cameras K/R/t from the 28 August 2026
 // PVC rig calibration, example pose); every label, caption, dimension and the
 // image inset are left out.
 //
@@ -19,6 +21,7 @@ import * as THREE from 'three';
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
+import PERSON from './hero-person.js';
 
 /* ── palette for the light page. The canvas clears to the page colour, read from --bg where it
    mounts (style.css), and bg here is only the fallback ── */
@@ -141,8 +144,9 @@ const EX = [Math.cos(yaw), 0, Math.sin(yaw)], EY = [0, 1, 0], EZ = [-Math.sin(ya
 const r2f = p => [RACK_POSE.c[0] + p[0] * EX[0] + p[2] * EZ[0], p[1], RACK_POSE.c[2] + p[0] * EX[2] + p[2] * EZ[2]];
 const RACK_O = r2f([0, 0, 0]);
 
-/* ── the person: 33 MediaPipe joints, built in the rack frame from bone lengths and joint
-   angles, facing the cameras (−z), held at the bottom of a squat ── */
+/* ── the person as designed: 33 MediaPipe joints, built in the rack frame from bone lengths and
+   joint angles, facing the cameras (−z). This is what the MHR model is fitted to
+   (scripts/hero-mesh/pose.mjs); the scene measures the fitted model (personAt below) ── */
 const BONES_BODY = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28], [27, 29], [29, 31], [27, 31], [28, 30], [30, 32], [28, 32]];
 const BONES_FACE = [[0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10]];
 const BONES_HAND = [[15, 17], [15, 19], [15, 21], [17, 19], [16, 18], [16, 20], [16, 22], [18, 20]];
@@ -155,7 +159,7 @@ const SIZE = 1.01;
 const LEN = { shin: 37.0, thigh: 37.9, trunk: 51.9, neck: 13 };
 const ANG = { stand: [3, 3, 0], bottom: [42, 92, 32] };                        // shin, thigh, trunk from the vertical
 const LAT = { ankle: 12, knee: 12.5, hip: 8.4, sh: 16.6, elbow: 27, wrist: 24.5, ear: 8.9, eyeIn: 3, eye: 4.5, eyeOut: 6, mouth: 2.5, pinky: 26, index: 25, thumb: 22.5 };
-function poseAt(k) {
+function stickAt(k) {
   const [ts, tt, tb] = ANG.stand.map((a, i) => lerp(a, ANG.bottom[i], k) * Math.PI / 180);
   const ankle = [0, 8, 0];
   const knee = [0, ankle[1] + LEN.shin * Math.cos(ts), -LEN.shin * Math.sin(ts)];
@@ -171,6 +175,16 @@ function poseAt(k) {
     L(sh, LAT.sh), R(sh, LAT.sh), L(elbow, LAT.elbow), R(elbow, LAT.elbow), L(wrist, LAT.wrist), R(wrist, LAT.wrist), L(pinky, LAT.pinky), R(pinky, LAT.pinky), L(index, LAT.index), R(index, LAT.index), L(thumb, LAT.thumb), R(thumb, LAT.thumb),
     L(hip, LAT.hip), R(hip, LAT.hip), L(knee, LAT.knee), R(knee, LAT.knee), L(ankle, LAT.ankle), R(ankle, LAT.ankle), L(heel, LAT.ankle), R(heel, LAT.ankle), L(toe, LAT.ankle), R(toe, LAT.ankle)].map(p => mul(p, SIZE));
 }
+/* the person the scene measures: the fitted model's own 33 joints (hero-person.js, written with the
+   mesh by scripts/hero-mesh/fit.py; cm, floor frame), blended between the two nearest squat phases
+   the way the mesh blends its joint states. Measuring the stick figure instead left the measured
+   joints 1–3 cm off the model's skeleton, the fit's own error */
+function personAt(k) {
+  const ph = PERSON.phases, J = PERSON.joints;
+  let i = 0; while (i + 2 < ph.length && ph[i + 1] <= k) i++;
+  const u = clamp01((k - ph[i]) / (ph[i + 1] - ph[i]));
+  return J[i].map((a, j) => { const b = J[i + 1][j]; return [lerp(a[0], b[0], u), lerp(a[1], b[1], u), lerp(a[2], b[2], u)]; });
+}
 const headOf = P => mul(add(add(P[7], P[8]), add(P[2], P[5])), 0.25);
 const pairsOf = (pts, bones) => bones.map(([i, j]) => [pts[i], pts[j]]);
 
@@ -179,7 +193,7 @@ const pairsOf = (pts, bones) => bones.map(([i, j]) => [pts[i], pts[j]]);
    vertex, the 127 joint states of every phase). Skinned on the GPU here (SkinnedMesh) and
    blended between the two nearest phases, so any squat depth is one call. Fetched once when the
    scene mounts; until it is here, and without it, the body is the faint stick figure ── */
-const MESH_URL = '/assets/hero-mesh/squat-20261102b.bin';
+const MESH_URL = '/assets/hero-mesh/' + PERSON.mesh;                           // the person and the mesh come from one fit
 const MESH_COL = { skin: '#8d99a8', opacity: 0.45, bone: '#2c7272' };         // the product's replay draws the mesh at 0.45 too
 let MESH = null, meshLoad = null, REV = 0;                                      // REV changes when the mesh arrives: fades re-collect their materials
 function loadMesh() {
@@ -199,7 +213,8 @@ function loadMesh() {
     geo.setAttribute('skinWeight', new THREE.BufferAttribute(w, 4));
     geo.setIndex(new THREE.BufferAttribute(sec('faces', Uint16Array), 1));
     geo.computeVertexNormals();
-    MESH = { J: h.joints, phases: h.phases, geo, ibp: sec('ibp', Float32Array), states: sec('states', Float32Array), bodyIds: h.bodyIds, bodyParents: h.bodyParents };
+    MESH = { J: h.joints, phases: h.phases, geo, ibp: sec('ibp', Float32Array), states: sec('states', Float32Array), bodyIds: h.bodyIds, bodyParents: h.bodyParents,
+      bodyOffsets: h.bodyOffsets || h.bodyIds.map(() => [0, 0, 0]) };
     REV++;
   }).catch(e => { console.warn('[hero] body mesh not loaded:', e); });
 }
@@ -219,7 +234,7 @@ class Body {
   sync() {
     if (MESH && !this.mesh) this.build();
     if (this.mesh) { this.pose(this.k); return; }
-    const P = poseAt(this.k).map(r2f);
+    const P = personAt(this.k);
     this.stick.update(pairsOf(P.map(p => new THREE.Vector3(...p)), BONES_BODY)); this.head.position.set(...headOf(P));
   }
   build() {
@@ -233,7 +248,10 @@ class Body {
     bones.forEach(b => this.mesh.add(b));
     this.mesh.bind(new THREE.Skeleton(bones, inv), new THREE.Matrix4());        // explicit bind matrix: without it bind() recomputes the inverses from the unposed bones
     this.bones = bones; this.g.add(this.mesh);
-    /* the model's own body joints and bones, in their own colour, inside the translucent mesh */
+    /* the model's own body joints and bones, in their own colour, inside the translucent mesh. A joint
+       that names the same joint as a measured one (shoulder, elbow, wrist, hip, knee, ankle) is drawn
+       where the product puts that measured joint on the model: the joint centre plus a fixed offset in
+       the joint's frame (bodyOffsets; the shoulder landmark sits ~7 cm off the shoulder centre) */
     const bc = new THREE.Color(MESH_COL.bone);
     this.rig = new Segs(this.g, bc, { opacity: 0.95, r: 0.38 });
     this.dots = new THREE.InstancedMesh(new THREE.SphereGeometry(1.05, 10, 10), new THREE.MeshBasicMaterial({ color: bc }), D.bodyIds.length);
@@ -252,7 +270,7 @@ class Body {
       _bs.setScalar(lerp(st[a + 7], st[b + 7], u));
       const bone = this.bones[j]; bone.matrix.compose(_bt, _bqa, _bs); bone.matrixWorldNeedsUpdate = true;
     }
-    D.bodyIds.forEach((j, q) => { const e = this.bones[j].matrix.elements; this.pts[q].set(e[12], e[13], e[14]); _m4.makeTranslation(e[12], e[13], e[14]); this.dots.setMatrixAt(q, _m4); });
+    D.bodyIds.forEach((j, q) => { const p = this.pts[q].fromArray(D.bodyOffsets[q]).applyMatrix4(this.bones[j].matrix); _m4.makeTranslation(p.x, p.y, p.z); this.dots.setMatrixAt(q, _m4); });
     this.dots.instanceMatrix.needsUpdate = true;
     this.rig.update(D.bodyParents.map((p, q) => p >= 0 ? [this.pts[q], this.pts[p]] : null).filter(Boolean));
   }
@@ -273,7 +291,7 @@ const frameOf = (P, f = 0) => {
   const T = P.map((_, j) => triangulate(CAMS.map(c => ({ C: c.C, d: unit(sub(O[c.i][j].pt, c.C)) }))));
   return { P, O, T };
 };
-const FIG = frameOf(poseAt(1).map(r2f));
+const FIG = frameOf(personAt(1));
 
 /* ── frame after frame (the 'burst' beat): the same for every frame of the set. Frames come
    0.36 s apart at first and close up to 1/30 s (30 Hz) about 2 s in, while the body squats
@@ -284,7 +302,7 @@ const BURST = { dur: 6.0, t0: 0.35, first: 0.36, min: 1 / 30, decay: 0.8, hold: 
 const BURST_AT = [];
 for (let t = BURST.t0, i = 0; t < BURST.dur - BURST.hold; i++) { BURST_AT.push(t); t += Math.max(BURST.min, BURST.first * BURST.decay ** i); }
 const burstK = t => (1 - Math.cos(Math.PI * (1 + 2 * BURST.reps * clamp01((t - BURST.t0) / (BURST_AT[BURST_AT.length - 1] - BURST.t0))))) / 2;
-const BURST_FR = BURST_AT.map((t, i) => i === 0 || i === BURST_AT.length - 1 ? FIG : frameOf(poseAt(burstK(t)).map(r2f), i));
+const BURST_FR = BURST_AT.map((t, i) => i === 0 || i === BURST_AT.length - 1 ? FIG : frameOf(personAt(burstK(t)), i));
 
 /* ── the rig as built (the rig layout render): rack members, the cameras in their housings on the
    storage posts, C3 on a magic arm, the tablet, the compute enclosure (Jetson Orin NX and the
@@ -901,10 +919,11 @@ export function mountHeroScene(host, { still = false, onEnd = null, onFail = nul
 
 /* geometry for tuning the camera keys (node or console) */
 export const __geom = { cams: CAMS.map(c => c.C), rackO: RACK_O, knee: FIG.T[FEAT], head: headOf(FIG.T), total: TOTAL };
-/* the person and the cameras for scripts/hero-mesh/pose.mjs: joints (cm, floor frame, y up) at
-   a squat phase, and the cameras as R·t·K in that frame with the lens coefficients in OpenCV order */
+/* the person as designed and the cameras for scripts/hero-mesh/pose.mjs (what the model is fitted to):
+   joints (cm, floor frame, y up) at a squat phase, and the cameras as R·t·K in that frame with the
+   lens coefficients in OpenCV order */
 export const __hero = {
-  joints: k => poseAt(k).map(r2f),
+  joints: k => stickAt(k).map(r2f),
   cameras: RAW.map(c => ({ R: mm(c.R, F), t: c.t, K: c.K })),
   dist: [COEF.k1, COEF.k2, COEF.p1, COEF.p2, COEF.k3], image: [IMG_W, IMG_H],
 };

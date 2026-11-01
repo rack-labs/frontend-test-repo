@@ -11,7 +11,17 @@ one file the hero scene skins on the GPU:
   ibp         f32    [J,8]      inverse bind pose a joint: t(3) q(xyzw) s
   states      f32    [P,J,8]    skeleton state a phase and joint, same layout (cm)
   header: vertices, faces, joints, phases [P], bodyIds [29] (joints drawn as the model's skeleton),
-          bodyParents [29] (index into bodyIds, −1 = root), bodyNames, fit {...}
+          bodyParents [29] (index into bodyIds, −1 = root), bodyNames, bodyOffsets [29,3], fit {...}
+
+bodyOffsets is the product's LANDMARK_OFFSET_CM moved onto the 29 body joints: a MediaPipe joint
+that has an MHR joint (shoulder, elbow, wrist, hip, knee, ankle) is that joint's centre plus a fixed
+offset in the joint's own frame (the shoulder landmark sits about 7 cm off the shoulder joint
+centre); the other body joints get 0. The hero draws those joints of the model's skeleton at centre
++ offset, so they land where the measured joints are.
+
+It also writes the hero person (--person): the fitted model's 33 joints in MediaPipe order at
+every phase, and the name of this mesh file. The hero measures that person, so the measured joints
+and the model's skeleton come from the same body and meet up to the detection error.
 
 Run with rack-tracker's backend venv (torch + CUDA, mhr/assets/mhr_model.pt):
   <rack-tracker>/backend/.venv/Scripts/python fit.py --backend <rack-tracker>/backend --out ../../public/assets/hero-mesh/squat-YYYYMMDD.bin
@@ -26,6 +36,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--backend", required=True)
 ap.add_argument("--pose", default="data/pose.json")
 ap.add_argument("--out", required=True)
+ap.add_argument("--person", default="../../src/lib/hero-person.js", help="the hero person module (fitted joints a phase + mesh file name)")
 ap.add_argument("--device", default="cuda")
 ap.add_argument("--lambda-t", type=float, default=None, help="angle smoothing across phases (default: the product's)")
 ap.add_argument("--identity", default="member.json", help="JSON with the 45 MHR shape values ('identity'); '' = the average body")
@@ -36,6 +47,7 @@ import torch
 from service.mhr_model import MhrModel
 from service.mhr_fitter import MhrFitter, MhrFitConfig, POSE_LANDMARK_NAMES
 from service.mhr_postprocess import MHR_BODY_JOINTS, body_joint_ids
+from service.mhr_topology import MHR_JOINT_FOR_LANDMARK
 from service.batch_triangulation_torch import _project
 
 src = json.loads(Path(ns.pose).read_text(encoding="utf-8"))
@@ -117,14 +129,19 @@ assert m.n_joints < 256 and m.n_vertices < 65536
 if dropped:
     print(f"warning: a fifth weight was dropped, largest {dropped:.3f}")
 ids, parents = body_joint_ids(m)
-rest_mm = np.clip(np.round(rest[0].cpu().numpy() * 10.0), -32767, 32767).astype(np.int16)
+# the product's landmark offsets, keyed by the MHR joint they hang from (the model's own table, so it follows rack-tracker)
+lm_off = {MHR_JOINT_FOR_LANDMARK[n]: [round(float(v), 3) for v in row]
+          for n, row in zip(m.joint_landmark_names, m._lm_joint_offsets.cpu().tolist())}
+body_offsets = [lm_off.get(n, [0.0, 0.0, 0.0]) for n in MHR_BODY_JOINTS]
+print("body joints drawn at centre + offset: " + ", ".join(n for n in MHR_BODY_JOINTS if n in lm_off))
+rest_mm =np.clip(np.round(rest[0].cpu().numpy() * 10.0), -32767, 32767).astype(np.int16)
 ibp = m._inverse_bind_pose.cpu().numpy().astype(np.float32)
 
 sections = [("rest", rest_mm), ("faces", m.faces.astype(np.uint16)), ("skinIndex", skin_index), ("skinWeight", skin_weight),
             ("ibp", ibp), ("states", states)]
 header = {"vertices": int(m.n_vertices), "faces": int(m.faces.shape[0]), "joints": int(m.n_joints),
           "phases": [round(float(k), 6) for k in src["phases"]], "bodyIds": [int(i) for i in ids], "bodyParents": [int(p) for p in parents],
-          "bodyNames": list(MHR_BODY_JOINTS), "units": "cm; rest mm",
+          "bodyNames": list(MHR_BODY_JOINTS), "bodyOffsets": body_offsets, "units": "cm; rest mm",
           "fit": {"residualPx": res.stats.get("resid_px_mean"), "error3dCm": round(float(err.mean()), 3),
                   "correctivesLeftOutCm": round(float(d_cor.mean()), 3), "lambdaT": cfg.lambda_t,
                   "identity": ns.identity or "average", "boneScale": [round(float(v), 4) for v in res.bone_scale[:18]]},
@@ -150,3 +167,11 @@ for (name, _), blob in zip(sections, blobs):
 Path(ns.out).parent.mkdir(parents=True, exist_ok=True)
 Path(ns.out).write_bytes(bytes(out))
 print(f"→ {ns.out}: {len(out) / 1024:.0f} KiB (" + ", ".join(f"{n} {len(b) / 1024:.0f}" for (n, _), b in zip(sections, blobs)) + ")")
+
+person = {"mesh": Path(ns.out).name, "phases": header["phases"],
+          "joints": np.round(res.landmarks, 2).tolist()}
+Path(ns.person).write_text(
+    "// Made by scripts/hero-mesh/fit.py; do not edit. The hero person: the fitted MHR model's 33 joints in\n"
+    "// MediaPipe order (cm, floor frame, y up) at each squat phase, and the mesh file of the same fit.\n"
+    "export default " + json.dumps(person, separators=(",", ":")) + ";\n", encoding="utf-8")
+print(f"→ {ns.person}: {Path(ns.person).stat().st_size / 1024:.0f} KiB")
