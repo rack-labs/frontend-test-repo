@@ -12,44 +12,43 @@ import SiteFooter from '../../../components/SiteFooter.astro';
 // when its stack comes near the screen.
 const steps = [
   {
-    id: 'shutter', n: 1, title: 'Why a global shutter', sub: 'The same spinning blade, photographed two ways', ratio: 'tall',
-    pages: [{ id: 'shutter', page: 'shutter.html', title: 'Why a global shutter' }],
+    id: 'shutter', n: 1, title: 'Global shutter', sub: 'Rolling shutter against global shutter', ratio: 'tall',
+    pages: [{ id: 'shutter', page: 'shutter.html', title: 'Global shutter' }],
     text: [
-      'A rolling shutter exposes the sensor one row at a time, from the top row down. While the exposure line travels down the frame the blade keeps turning, so each row shows the blade at a different moment and a straight blade comes out bent. A fast bar or a knee at the bottom of a squat does the same thing.',
-      'A global shutter exposes every row at the same instant and only reads them out one by one afterwards. The frame is one moment. The three cameras on the rig are global-shutter sensors fired by one electrical pulse, which is why their three images can be matched point for point: they are of the same instant, within 0.12 ms.',
+      'A rolling shutter exposes the sensor one row at a time, from the top row down. While the exposure line travels down the frame the blade keeps turning, so each row shows the blade at a different moment and a straight blade comes out bent. A fast bar or a knee does the same thing.',
+      'A global shutter exposes every row at the same instant. The frame is one moment. The three cameras on the rig fire on one trigger within 0.12 ms, so the three images are three views of the same instant.',
     ],
-    look: ['The line across the sensor shows which rows are already exposed; above it the picture is fixed, below it the object still moves.', 'The row-timing chart under each sensor is the whole difference between the two.', 'The sensor grid first, the propeller below it.'],
+    look: ['The line across the sensor divides the rows already exposed from those still moving.', 'The chart under each sensor is the exposure time of every row.'],
   },
   {
-    id: 'lens', n: 2, title: 'Lens calibration', sub: 'How a camera learns its own focal length, centre and distortion', ratio: 'wide',
+    id: 'lens', n: 2, title: 'Lens calibration', sub: 'Focal length, optical centre and distortion, per camera', ratio: 'wide',
     pages: [
       { id: 'lens', tab: 'The principle', page: 'lens-principle.html', title: 'Lens calibration, the principle' },
       { id: 'lens-steps', tab: 'As the rig runs it', page: 'lens-steps.html', title: 'Lens calibration, as the rig runs it' },
     ],
     text: [
       'Before a pixel can be turned into a direction in space, the camera has to be described: where the optical centre sits, how long the focal length is and how the lens bends straight lines towards the edges. These numbers are the intrinsics, the matrix K and the distortion terms, and they are different for each of the three cameras.',
-      'The camera stays where it is and a calibration board is shown to it in about ten poses. The corners found in every shot pair a point on the board with a pixel. From those pairs a first estimate of K is made, then refined until the board points, projected through the model, land on the detected pixels. What remains is the distortion the lens adds; it is modelled and taken out. The result is one K file per camera that every later step reads.',
-      'The second tab, As the rig runs it, shows the same calibration step by step as the rig OS performs it: the capture conditions are fixed first (exposure, gain and focus are locked), the board is captured in its poses, corners are detected, K is solved, and shots held out of the fit check the result before the K file is written. The hold-out step decides whether the file is accepted.',
+      'The camera stays where it is and a calibration board is shown to it in about ten poses. The corners found in every shot pair a point on the board with a pixel, and from those pairs K and the distortion terms are solved. The result is one K file per camera that every later step reads.',
     ],
-    look: ['Six stages in the order the rig runs them; the caption names each one as it plays.', 'The small window at the top right is what the camera sees at that moment. As the rig runs it, that is the board in its poses, the detected corners, then the reprojected points with their residuals.', 'Drag to turn the scene; the sequence keeps playing.'],
+    look: ['The small window at the top right is what the camera sees.', 'As the rig runs it has six stages; the K file is written only after shots held out of the fit pass the check.'],
   },
   {
-    id: 'position', n: 3, title: 'Position calibration', sub: 'Where the three cameras are, in the rack’s own coordinates', ratio: 'wide',
+    id: 'position', n: 3, title: 'Position calibration', sub: 'Position and orientation of the three cameras, relative to the rack', ratio: 'wide',
     pages: [{ id: 'position', page: 'ext-principle.html', title: 'Position calibration' }],
     text: [
-      'Lens calibration describes each camera on its own. Position calibration places the three of them in one frame of reference: the rack. A board is set at a known position on the rack and each camera observes it; from the board’s corners the camera’s rotation and position relative to the rack are computed, checked against the real geometry of the rack, repeated over many frames and combined, and written to a file.',
-      'From then on any point seen by two or three cameras can be given a position in centimetres from the rack’s origin. Because the cameras are bolted to the rack, this calibration holds from one session to the next.',
+      'Lens calibration describes each camera on its own; position calibration places the three in one frame of reference, the rack. A board is set at a known position on the rack and each camera observes it, and from the board’s corners each camera’s rotation and position are solved relative to the rack. The result is checked against the rack’s real dimensions and written to a file.',
+      'From then on every point the cameras see gets a position in centimetres from the rack’s origin. Because the cameras are fixed to the rack, the calibration carries over to the next session.',
     ],
-    look: ['Four stages: observe, compute, check, file.', 'The rack drawn here is the PVC prototype, at its real dimensions.', 'Nothing that was already in the scene moves; only the computed quantities appear.'],
+    look: ['Four stages: floor, rack origin, camera to camera, file.', 'The rack is the PVC mock-up at its real dimensions.', 'What moves into view is what was computed.'],
   },
   {
     id: 'measure', n: 4, title: 'Measurement', sub: 'From three images of one instant to joints, metrics and load', ratio: 'wide',
     pages: [{ id: 'measure', page: 'measure-principle.html', title: 'Measurement' }],
     text: [
-      'For every triggered frame the joint detector finds the 2D joints in each of the three images. With K the lens distortion is taken out of those pixels, and each pixel becomes a ray leaving its camera. The rays for one joint from the three cameras meet at one point in space; that intersection is the joint’s 3D position, and it is found for all 33 joints, frame after frame through the set.',
-      'With the position calibration those points are expressed in rack coordinates, so depth, lean, left-right asymmetry and the path of the bar are read directly. From the joint positions over time and the known load on the bar, the load carried by each joint is computed per rep, and the reps themselves are counted from the motion.',
+      'For every triggered frame the joint detector finds the 2D joints in each of the three images. With K the lens distortion is taken out of those pixels, and each pixel becomes a ray leaving its camera. The rays for one joint from the three cameras meet at one point in space; that intersection is the joint’s 3D position. All 33 joints are found this way, frame after frame through the set.',
+      'Thanks to the position calibration those points are in rack coordinates, so depth, lean, left-right asymmetry and the path of the bar are read directly. From the change in joint positions and the load on the bar, the load on each joint is computed per rep, and the reps are counted from the motion.',
     ],
-    look: ['Four stages: 2D joints, rays, intersection, rack coordinates with metrics, load and reps.', 'Camera 1 is mounted turned 90 degrees, so its small window stands upright.', 'The burst after the 33 joints is the same frame repeated through the movement.'],
+    look: ['Four stages: 2D joints, rays, intersection, rack coordinates and metrics.', 'Camera 1 is mounted upright, so its small window is upright too.', 'The closing burst is the same computation repeated frame after frame.'],
   },
 ];
 ---
@@ -69,11 +68,10 @@ const steps = [
     <section class="wing first" id="overview" aria-labelledby="hiw-title">
       <div class="head">
         <h2 id="hiw-title">How it works</h2>
-        <p>Five animations in four chapters, in the order the rig does things</p>
+        <p>In the order the rig measures a set</p>
       </div>
       <div class="text">
-        <p class="lede">The rig turns three photographs of one instant into the 3D position of 33 joints, and from those into metrics and the load on each joint. Each animation below shows one part of that, as it was shown at the review. They play on their own and start over when they end.</p>
-        <p>The captions are in Korean; the text beside each animation tells the same story in English. The 3D scenes can be turned by dragging.</p>
+        <p class="lede">The rig turns three photographs of one instant into the 3D position of 33 joints, and from those into metrics and the load on each joint. The captions are in Korean; the text beside each animation tells the same in English. The 3D scenes can be turned by dragging.</p>
       </div>
     </section>
 

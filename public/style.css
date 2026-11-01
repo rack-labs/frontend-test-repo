@@ -421,6 +421,7 @@ main { --measure: 1600px; }
 .hw-panel .kicker { margin-bottom: 10px; }
 .hw-panel > p:not(.kicker):not(.links) { margin: 0; max-width: 54ch; color: var(--dim); font-size: var(--fs-md); }
 .spec { margin: 20px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.hw-panel > .spec:first-child { margin-top: 0; border-top: 0; }   /* a panel with no kicker or lede: the panel rule is the table's top rule */
 .spec > div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.5; }
 .spec dt { margin: 0; color: var(--muted); font: var(--fs-xs)/1.7 var(--mono); }
 .spec dd { margin: 0; color: var(--ink); }

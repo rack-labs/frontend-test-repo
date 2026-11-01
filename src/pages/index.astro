@@ -28,19 +28,18 @@ const PDF = { href: '/report/RackTracker_Project_Report.pdf', size: '8 MB', page
 
 const parts = [
   {
-    id: 'rig', tab: '리그 배치', title: '리그 배치 3D', alt: '리그 배치 도면: 랙, 카메라 세 대, 태블릿, 연산 장비함', kicker: '제작한 리그 그대로',
-    lede: '파워랙 모형의 뒤쪽 기둥 두 개에 카메라 세 대, 오른쪽 기둥에 태블릿, 왼쪽 기둥에 연산 장비함을 달았습니다. 카메라 자세는 2026년 8월 28일 위치 보정에서 얻은 실제 값이라, 뷰어가 보여 주는 방향이 카메라가 실제로 보는 방향입니다.',
+    id: 'rig', tab: '리그 배치', title: '리그 배치 3D', alt: '리그 배치 도면: 랙, 카메라 세 대, 태블릿, 장비함',
     spec: [
       ['랙', '118 × 106 × 241 cm, PVC 모형'],
       ['카메라', '뒤쪽 기둥에 3대, 90° 돌려 세로로'],
-      ['연산', 'Jetson Orin NX 16 GB, 트리거 보드와 한 함에'],
+      ['엣지 컴퓨터', 'Jetson Orin NX 16 GB, 트리거 보드와 한 함에'],
       ['화면', '태블릿, USB 테더링'],
     ],
     links: [['/report/#4-리그-하드웨어', '보고서 4장'], ['/how-it-works/', '산출 원리']],
   },
   {
-    id: 'carrier', tab: '연산 장비', title: '연산 캐리어 3D', alt: 'Jetson Orin NX 를 얹은 Advantech 캐리어 보드', kicker: 'Advantech MIC-711D-OX 위의 Jetson Orin NX',
-    lede: '랙 옆에 두는 컴퓨터입니다. NVIDIA Jetson Orin NX 모듈이 Advantech 캐리어 보드에 얹혀 팬 없는 알루미늄 케이스에 들어 있습니다. 보드는 리그에 달린 실물을 사진으로 떠서 그렸고, 1 mm 보다 큰 부품은 제자리에 다 있습니다. 관절 검출, 삼각측량, 그 뒤의 계산이 모두 여기서 돕니다.',
+    id: 'carrier', tab: '엣지 컴퓨터', title: '엣지 컴퓨터 3D', alt: 'Jetson Orin NX 를 얹은 Advantech 캐리어 보드', kicker: 'Advantech MIC-711D-OX 위의 Jetson Orin NX',
+    lede: '엣지 추론, 연산 장비입니다. 관절 검출부터 하중 계산까지 모두 여기서 끝납니다.',
     spec: [
       ['모듈', 'Jetson Orin NX 16 GB, 157 TOPS'],
       ['GPU', 'CUDA 코어 1,024개, DLA 2개'],
@@ -51,7 +50,7 @@ const parts = [
   },
   {
     id: 'camera', tab: '카메라 모듈', title: '카메라 모듈 3D', alt: 'AR0234 센서를 단 카메라 모듈 보드', kicker: 'onsemi AR0234 센서를 단 DECXIN-3081V1',
-    lede: '카메라 세 대 중 하나를 케이스 없이 보인 것입니다. 38 mm 보드에 글로벌 셔터 센서와 넓고 왜곡이 적은 M12 렌즈가 달려 있습니다. 세 대가 하드웨어 트리거 한 줄로 함께 찍기 때문에, 빠르게 움직이는 바와 팔다리가 세 시점에서 같은 순간에 휘지 않고 잡힙니다.',
+    lede: '세 대 중 한 대, 케이스를 벗긴 보드입니다. 글로벌 셔터라 빠르게 움직이는 바와 팔다리가 휘지 않고, 트리거 한 줄로 세 대가 같은 순간을 찍습니다.',
     spec: [
       ['센서', 'onsemi AR0234CS, 글로벌 셔터'],
       ['해상도', '1920 × 1200, 30 fps'],
@@ -205,17 +204,17 @@ const parts = [
           </div>
         </div>
         <div class="hw-side">
-          <p class="lede">RackTracker 는 실물 제품입니다. 글로벌 셔터 카메라 세 대와 NVIDIA Jetson 을 랙에 고정하고, 그 위에서 도는 소프트웨어까지 랙 한 대에 한 벌로 설치합니다. 세 시점에서 찾은 관절을 교차해 3D 위치를 얻고, 한 시점이 가려지면 나머지 둘이 이어 갑니다.</p>
-          <p>설치가 바뀌지 않으니 세션마다 같은 조건으로 지난 세션과 비교합니다. 처리는 랙 옆 컴퓨터에서 닫힌 네트워크로 끝나므로 회원 영상이 체육관 밖으로 나가지 않습니다.</p>
+          <p class="lede">카메라 세 대와 엣지 컴퓨터, 소프트웨어까지 랙 한 대에 한 벌로 설치합니다. 세 방향에서 찾은 관절을 교차해 3D 위치를 얻고, 한 대가 가려져도 나머지 둘로 이어 갑니다.</p>
+          <p>카메라가 랙에 고정돼 있어 촬영 환경을 표준화할 수 있습니다. 영상은 리그 밖으로 유출되지 않습니다.</p>
           <dl class="facts row">
-            <div><dt>카메라 세 대의 셔터 시차</dt><dd>0.12 ms<small>로직 분석기로 측정</small></dd></div>
-            <div><dt>카메라 세 대로 복원한 관절</dt><dd>70%<small>CMU Panoptic. 표준 삼각측량은 40%</small></dd></div>
-            <div><dt>관절 위치 오차</dt><dd>약 3 cm<small>카메라 두 대일 때와 같음</small></dd></div>
+            <div><dt>세 대의 촬영 시차</dt><dd>0.12 ms<small>로직 분석기 실측, 트리거 없이는 최대 16.7 ms</small></dd></div>
+            <div><dt>복원되는 관절</dt><dd>70%<small>표준 삼각측량은 40%, 같은 세 대, 공개 데이터셋 기준</small></dd></div>
+            <div><dt>관절 위치 오차</dt><dd>3.6 cm<small>다듬기 전 4.5 cm, Fit3D 기준</small></dd></div>
           </dl>
           {parts.map((p, i) => (
             <div class="hw-panel" id={`hw-${p.id}`} data-page={p.id} role="tabpanel" aria-labelledby={`tab-${p.id}`} hidden={i !== 0}>
-              <p class="kicker">{p.kicker}</p>
-              <p>{p.lede}</p>
+              {p.kicker && <p class="kicker">{p.kicker}</p>}
+              {p.lede && <p>{p.lede}</p>}
               <dl class="spec">
                 {p.spec.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}
               </dl>
