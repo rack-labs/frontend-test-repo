@@ -3,8 +3,9 @@
 The landing hero's second sequence plays the post-processed MHR body of one
 real set, rendered on the page colour (the first is the live measurement
 scene, `../hero-scene/`). This folder rebuilds that loop from a set's body file.
-Nothing here ships; `public/assets/hero-mhr-*.{webm,mp4}`, `hero-mhr.webp` and
-`og.png` are the outputs.
+Nothing here ships; `public/assets/hero-mhr-*.{webm,mp4}` and `hero-mhr.webp`
+are the outputs. (`out/og.png` was the share card until 2026-11-02; the site
+now uses the logo card `public/assets/og-logo.png`, cropped from the brand image.)
 
 Current loop: set `measure_20261005-174755_01`, recorded on the prototype rig
 on 5 October 2026 (three cameras, NVIDIA Jetson), MHR fit on CUDA, frames
@@ -32,4 +33,4 @@ toward the first so the loop closes on itself.
 4. Encode and copy into the site:
 
        bash encode.sh
-       cp out/hero-mhr-2160.* out/hero-mhr-1080.* out/hero-mhr.webp out/og.png ../../public/assets/
+       cp out/hero-mhr-2160.* out/hero-mhr-1080.* out/hero-mhr.webp ../../public/assets/
