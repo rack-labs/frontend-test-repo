@@ -12,11 +12,11 @@ const chapters = getHeadings().filter((h) => h.depth === 2);
 
 // The demo video: the narrated demo of one full set (5 min 19 s, 88 MB). Files over the 25 MiB
 // static-asset limit live in the R2 bucket racktracker-files behind files.racktracker.dev (dated
-// keys, immutable cache); the poster is a frame of its measuring-screen scene. A YouTube id,
+// keys, immutable cache); the poster is the RackTracker title card. A YouTube id,
 // when set, adds a link beside it.
 const FILES = 'https://files.racktracker.dev';
 const DEMO = {
-  src: `${FILES}/demo/RackTracker_demo_2026-11-01.mp4`, type: 'video/mp4', poster: '/assets/demo/demo-2026-11-01.webp', width: 1920, height: 1080,
+  src: `${FILES}/demo/RackTracker_demo_2026-11-01.mp4`, type: 'video/mp4', poster: '/assets/demo/demo-thumbnail.webp', width: 1920, height: 1080,
   youtube: '',
   note: 'Five minutes 19 seconds, narrated in Korean with Korean subtitles.',
 };
