@@ -276,9 +276,11 @@ const frameOf = (P, f = 0) => {
 const FIG = frameOf(poseAt(1).map(r2f));
 
 /* ── frame after frame (the 'burst' beat): the same for every frame of the set. Frames come
-   0.36 s apart at first and close up to 0.15 s, while the body squats twice from the bottom
-   at an even pace, so the first and the last frame are FIG ── */
-const BURST = { dur: 6.0, t0: 0.35, first: 0.36, min: 0.15, decay: 0.85, hold: 0.5, reps: 2, rayIn: 0.06 };
+   0.36 s apart at first and close up to 1/30 s (30 Hz) about 2 s in, while the body squats
+   twice from the bottom at an even pace, so the first and the last frame are FIG. Frames
+   slower than 'slow' grow their rays, fade them and pop the joints; towards 30 Hz the rays
+   and joints stay lit and just jump to each new frame ── */
+const BURST = { dur: 6.0, t0: 0.35, first: 0.36, min: 1 / 30, decay: 0.8, hold: 0.5, reps: 2, rayIn: 0.06, slow: 0.15 };
 const BURST_AT = [];
 for (let t = BURST.t0, i = 0; t < BURST.dur - BURST.hold; i++) { BURST_AT.push(t); t += Math.max(BURST.min, BURST.first * BURST.decay ** i); }
 const burstK = t => (1 - Math.cos(Math.PI * (1 + 2 * BURST.reps * clamp01((t - BURST.t0) / (BURST_AT[BURST_AT.length - 1] - BURST.t0))))) / 2;
@@ -691,16 +693,18 @@ function buildScene(bt) {
       person.setPhase(f < 0 ? 1 : burstK(BURST_AT[f]));                        // the body is the frame being measured
       flat.forEach(fl => { fl.rays.g.visible = false; });
       if (f < 0) return;
-      const at = BURST_AT[f], per = f + 1 < n ? BURST_AT[f + 1] - at : BURST.min, a = clamp01((t - at) / BURST.rayIn);
+      const at = BURST_AT[f], per = f + 1 < n ? BURST_AT[f + 1] - at : BURST.min;
+      const sl = clamp01((per - BURST.min) / (BURST.slow - BURST.min));           // 1 slow frames .. 0 at 30 Hz
+      const rin = BURST.rayIn * sl, a = rin > 1e-3 ? clamp01((t - at) / rin) : 1;  // at 30 Hz the rays are whole at once
       const cur = F3[f];
-      const op = 0.7 * (a < 1 ? 1 : 1 - easeOut(clamp01((t - at - BURST.rayIn) / Math.max(0.06, 0.75 * per - BURST.rayIn))));
+      const op = 0.7 * (a < 1 ? 1 : 1 - sl * easeOut(clamp01((t - at - rin) / Math.max(0.06, 0.75 * per - rin))));
       flat.forEach((fl, ci) => {
         fl.dots.forEach((m, j) => m.position.copy(cur.O[ci][j]));
         fl.bones.update(pairsOf(cur.O[ci], BONES));
         fl.rays.update(cur.ends[ci].map(e => [C3[ci], C3[ci].clone().lerp(e, easeOut(a))]));
         fl.rays.mat.opacity = op; fl.rays.g.visible = op > 0.01;
       });
-      const pop = a < 1 ? 1 : 1 + 0.45 * (1 - clamp01((t - at - BURST.rayIn) / 0.14));
+      const pop = a < 1 ? 1 : 1 + 0.45 * sl * (1 - clamp01((t - at - rin) / 0.14));
       dots.forEach((m, j) => { m.position.copy(cur.T[j]); m.scale.setScalar(pop); });
       bones.update(pairsOf(cur.T, BONES));
     });
